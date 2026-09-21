@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "course": "<course>",
+  "phase": "setup",
+  "lesson_id": null,
+  "readiness": {
+    "catalog": "missing",
+    "prep": "missing",
+    "runtime": "ok",
+    "reteach": "clear"
+  },
+  "blockers": [
+    "missing_coursebook",
+    "missing_prep"
+  ],
+  "updated_at": "<ISO-8601>"
+}

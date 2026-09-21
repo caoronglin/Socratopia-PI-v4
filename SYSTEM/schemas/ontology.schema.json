@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://socratopia.local/schema/ontology.schema.json",
+  "title": "Socratopia Course Ontology Projection",
+  "description": "Derived, non-authoritative projection rebuilt from DATA/<course>/ontology/graph.jsonl. Mastery fields are forbidden here; mastery is derived only from PROGRESS/assessment/review.",
+  "type": "object",
+  "required": ["schema_version", "course", "generated_at", "derived", "authoritative", "nodes", "edges"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "course": { "type": "string", "minLength": 1 },
+    "generated_at": { "type": "string", "minLength": 1 },
+    "derived": { "const": true },
+    "authoritative": { "const": false },
+    "nodes": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/node" }
+    },
+    "edges": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/edge" }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "node": {
+      "type": "object",
+      "required": ["id", "type", "props"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "type": {
+          "enum": ["Course", "Chapter", "KnowledgePoint", "Concept", "Example", "Method", "Equation", "Experiment"]
+        },
+        "props": {
+          "type": "object",
+          "propertyNames": {
+            "not": { "enum": ["mastered", "understood", "score", "passed", "failed", "current_progress"] }
+          }
+        },
+        "updated_at": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "edge": {
+      "type": "object",
+      "required": ["from", "rel", "to"],
+      "properties": {
+        "from": { "type": "string", "minLength": 1 },
+        "rel": {
+          "enum": ["contains", "prerequisite", "related_to", "contrast_with", "derived_from", "example_of", "applies_to"]
+        },
+        "to": { "type": "string", "minLength": 1 },
+        "props": { "type": "object" }
+      },
+      "additionalProperties": true
+    }
+  }
+}

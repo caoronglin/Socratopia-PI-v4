@@ -1,0 +1,141 @@
+{
+  "schema_version": 1,
+  "description": "Phase 0 外部 Skill 隔离审查清单。源文件不复制进本仓库，仅在原只读位置静态审查；此处登记版本/许可/复合哈希/裁决/运行权限。composite_sha256 = 对该源目录内全部文件（排除 .git 与 __pycache__）排序后 sha256sum 再取 sha256。",
+  "generated_for": "Socratopia-PI-v4 skills 合并 Phase 0",
+  "governing_doc": "Socratopia_PI_v4_Skills_Merge_Approval_Plan.md",
+  "active_skill_freeze": 3,
+  "sources": [
+    {
+      "slug": "ontology",
+      "version": "1.0.4",
+      "path": "/home/rlcao/下载/ontology-1.0.4",
+      "license": "no LICENSE file (clawhub-published)",
+      "composite_sha256": "f60df5440f9d50a9ba0aab36a49d089b67fee9f50b5d89f1894455689f305f23",
+      "has_code": true,
+      "network": false,
+      "decision": "accept_rewrite",
+      "final_destination": "scripts/ontology.py + SYSTEM/schemas/ontology.schema.json + .pi/skills/socratopia-learning/references/graph.md",
+      "runtime_permission": "local-only (S1 write)"
+    },
+    {
+      "slug": "learning-feynman",
+      "version": "unversioned",
+      "path": "/home/rlcao/下载/learning-feynman-1.0.0",
+      "license": "no LICENSE file",
+      "composite_sha256": "3fa11dc58308320f7d30965ace835f480bda9e2b2f0f8d59a3e36faf64d0a837",
+      "has_code": false,
+      "network": false,
+      "decision": "accept_method",
+      "final_destination": ".pi/skills/socratopia-learning/references/pedagogy.md",
+      "runtime_permission": "local-only (reference)"
+    },
+    {
+      "slug": "humanizer-zh",
+      "version": "git main 91f3d39",
+      "path": "/home/rlcao/.agents/skills/skills-sh-ILcMqL",
+      "license": "MIT (c) 2026 歸藏",
+      "composite_sha256": "56694541591e484dec33867a509888c15aab762e1c17b1eb6c7bfdfde87a8500",
+      "has_code": false,
+      "network": false,
+      "decision": "accept_rules",
+      "final_destination": ".pi/skills/socratopia-tutor/references/style.md",
+      "runtime_permission": "local-only (reference)"
+    },
+    {
+      "slug": "libai",
+      "version": "1.0.4",
+      "path": "/home/rlcao/.agents/skills/@user_741dc82b/libai",
+      "license": "no LICENSE file (clawhub-published)",
+      "composite_sha256": "bac777ca63d25c6c1fdc9bd2c532b83d4edeecf406f527fb7f15c1b15c99592f",
+      "has_code": false,
+      "network": false,
+      "decision": "accept_merge",
+      "final_destination": ".pi/skills/socratopia-tutor/references/style.md",
+      "runtime_permission": "local-only (reference)"
+    },
+    {
+      "slug": "self-improving",
+      "version": "1.2.16",
+      "path": "/home/rlcao/.agents/skills/@clawhub_ivangdavila/self-improving",
+      "license": "no LICENSE file (clawhub-published)",
+      "composite_sha256": "81afb2020fab82ba7596cb240f7c3e1413a3be98e1f79851ac887d54223ffdc0",
+      "has_code": false,
+      "network": false,
+      "decision": "accept_split",
+      "final_destination": ".pi/skills/socratopia-tutor/references/self-improving.md + .pi/skills/socratopia-learning/references/reflection.md",
+      "runtime_permission": "local-only (S1 write; DATA/SELF_IMPROVING/<tutor>.jsonl)"
+    },
+    {
+      "slug": "deep-research",
+      "version": "unversioned",
+      "path": "/home/rlcao/.agents/skills/deep-research",
+      "license": "no LICENSE file",
+      "composite_sha256": "0ab12ab3c9a95b5755026b7bd2c84c8680589d09fdefb06d3c340e77c7e52145",
+      "has_code": false,
+      "network": true,
+      "decision": "conditional_accept",
+      "final_destination": ".pi/skills/socratopia-learning/references/external-research.md",
+      "runtime_permission": "network-gated (S3, explicit external intent only)"
+    },
+    {
+      "slug": "academic-researcher",
+      "version": "1.0.0",
+      "path": "/home/rlcao/.agents/skills/academic-researcher",
+      "license": "no LICENSE file",
+      "composite_sha256": "d0e95d9c2ae292ddd2a251e44e56cbd7b3ce1925fbbc3fd2edd4d681fe0b735b",
+      "has_code": false,
+      "network": true,
+      "decision": "conditional_accept",
+      "final_destination": ".pi/skills/socratopia-learning/references/external-research.md",
+      "runtime_permission": "network-gated (S3, explicit external intent only)"
+    },
+    {
+      "slug": "courseware-generator",
+      "version": "1.0.0",
+      "path": "/home/rlcao/下载/courseware-generator-1.0.0",
+      "license": "no LICENSE file (clawhub-published)",
+      "composite_sha256": "259f6a057a144b61660411dd52450c1e77f6de564275061ad8c69a95fcb5c406",
+      "has_code": false,
+      "network": false,
+      "decision": "accept_method_only",
+      "final_destination": ".pi/skills/socratopia-learning/references/courseware.md (Phase 7, optional)",
+      "runtime_permission": "local-only (reference; output-only)"
+    },
+    {
+      "slug": "ppt-master",
+      "version": "unversioned",
+      "path": "/home/rlcao/.agents/skills/ppt-master",
+      "license": "MIT (c) 2025-2026 Hugo He",
+      "composite_sha256": "8191c8784bf3f685e6e1092ff1eb3762b83a307e0a57ebad5cb15ed9bf300792",
+      "has_code": true,
+      "network": true,
+      "decision": "optional_backend",
+      "final_destination": "optional PPTX output backend (invoked only on explicit courseware task)",
+      "runtime_permission": "output-only / network-gated (S3)"
+    },
+    {
+      "slug": "pptx",
+      "version": "unversioned",
+      "path": "/home/rlcao/.agents/skills/pptx",
+      "license": "© 2025 Anthropic, PBC. All rights reserved (proprietary)",
+      "composite_sha256": "b8b10d4148e262adce4c47b5564f6800e20a91d281bac5e747022e1b60661ecf",
+      "has_code": false,
+      "network": false,
+      "decision": "reference_only",
+      "final_destination": "design reference for optional PPTX backend (prefer MIT ppt-master)",
+      "runtime_permission": "output-only (reference)"
+    },
+    {
+      "slug": "interactive-courseware-designer",
+      "version": "1.0.0",
+      "path": "/home/rlcao/下载/interactive-courseware-designer-1.0.0",
+      "license": "no LICENSE file (clawhub-published)",
+      "composite_sha256": "a5cc48f0c7ddeea90ebeea4ca6f392fda888647de7a1d78e571d052c54381669",
+      "has_code": false,
+      "network": true,
+      "decision": "reject_as_code_accept_as_ideas",
+      "final_destination": "ideas only → courseware.md (manual extraction, first-party rewrite)",
+      "runtime_permission": "none (not integrated)"
+    }
+  ]
+}

@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://socratopia.local/schema/handoff.schema.json",
+  "title": "Socratopia Tutor Handoff",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "lesson_id",
+    "from_tutor",
+    "to_tutor",
+    "carry"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "lesson_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "from_tutor": {
+      "type": "string",
+      "minLength": 1
+    },
+    "to_tutor": {
+      "type": "string",
+      "minLength": 1
+    },
+    "carry": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "knowledge_point",
+          "status",
+          "evidence"
+        ],
+        "properties": {
+          "knowledge_point": {
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "verified",
+              "needs_review",
+              "introduced",
+              "unseen"
+            ]
+          },
+          "evidence": {
+            "type": "string"
+          },
+          "recommended_angle": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "opening_anchor": {
+      "type": "string"
+    },
+    "tone_note": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false
+}

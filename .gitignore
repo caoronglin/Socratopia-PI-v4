@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+*.bak
+# User course data — never commit (runtime PROGRESS/ontology/learner data).
+DATA/
+TEXTBOOK/
