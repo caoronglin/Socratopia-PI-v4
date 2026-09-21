@@ -1,6 +1,6 @@
 # Changelog
 
-## 4.1.0-pi.alpha.1
+## 0.0.1
 
 ### Added
 - 外部 Skill 隔离审查：`quarantine/sources.json` + `docs/SKILL_TRIAGE.md`（版本/许可/复合哈希/裁决/运行权限）。

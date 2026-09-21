@@ -1,6 +1,6 @@
 {
   "name": "Socratopia-PI-v4",
-  "version": "4.1.0-pi.alpha.1",
+  "version": "0.0.1",
   "active_skills": [
     "socratopia-learning",
     "socratopia-tutor",
