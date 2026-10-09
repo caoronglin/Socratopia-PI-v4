@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from scripts.lib.assessment import quality_report, reteach_candidates  # noqa: E402
+from scripts.lib.assessment import quality_report, reteach_candidates, validate_objective  # noqa: E402
 from scripts.lib.repository import course_dir, read_json_list, validate_course_name, write_json_atomic  # noqa: E402
 
 
@@ -30,9 +30,16 @@ def main() -> int:
     items = read_json_list(runtime / "assessment_items.json", "items")
     objective_ids = {str(r.get("id")) for r in objectives if r.get("id")}
     report = quality_report(items, objective_ids)
+    report["objective_errors"] = {
+        str(obj.get("id") or f"objective[{i}]"): validate_objective(obj)
+        for i, obj in enumerate(objectives)
+    }
 
     if args.command == "validate":
         errors = [e for errs in report["errors"].values() for e in errs]
+        errors += [f"{key}: 缺少 {field}" for key, missing in report["objective_errors"].items() for field in missing]
+        if not objectives or not items:
+            errors.append("学习目标与评估题目均不能为空")
         print("有效" if not errors else "\n".join(errors))
         return 0 if not errors else 1
     if args.command == "report":
