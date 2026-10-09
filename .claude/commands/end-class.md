@@ -5,4 +5,4 @@ description: 结束当前课堂并提交核心学习状态
 
 仅在用户明确结束课堂时执行。按 `references/memory.md` 走 Core → Derived → Review → Maintenance：核心写入失败时停止后续并报告，不把部分保存说成全部成功；核心保存后重建投影、按需处理 handoff 与复习资产、维护失败登记待处理项但不撤销已保存事实。
 
-没有待提交课堂时不新建 lesson；只入队的任务不描述成后台正在执行；不编造掌握或完成状态。
+没有待提交课堂时不新建 lesson；只入队的任务不描述成后台正在执行；不编造掌握或完成状态。 调用 `scripts/lesson_timer.py finish` 核实至少 2700 秒；提前退出标为 interrupted，不谎称完成。
