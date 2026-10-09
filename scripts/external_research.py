@@ -24,7 +24,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from scripts.lib.repository import course_dir, redact, textbook_dir, validate_course_name, write_json_atomic  # noqa: E402
+from scripts.lib.repository import course_dir, redact, safe_child_path, textbook_dir, validate_course_name, write_json_atomic  # noqa: E402
 
 ENV_FLAG = "SOCRATOPIA_EXTERNAL"
 
@@ -44,7 +44,7 @@ def _slug(text: str) -> str:
 
 
 def _external_dir(root: Path, course: str) -> Path:
-    return textbook_dir(root, course) / "SOURCES" / "_external"
+    return safe_child_path(textbook_dir(root, course), "SOURCES", "_external")
 
 
 def plan(root: Path, course: str, intent: str) -> dict[str, Any]:
@@ -69,8 +69,8 @@ def _register(root: Path, course: str, url: str, title: str, content: bytes, via
     digest = hashlib.sha256(content).hexdigest()
     slug = _slug(title or url)
     source_id = hashlib.sha256(url.encode("utf-8")).hexdigest()[:12]
-    body_path = ext / f"{slug}-{source_id}.md"
-    meta_path = ext / f"{slug}-{source_id}.meta.json"
+    body_path = safe_child_path(ext, f"{slug}-{source_id}.md")
+    meta_path = safe_child_path(ext, f"{slug}-{source_id}.meta.json")
     header = (
         f"# {title}\n\n"
         f"> source_url: {url}\n> fetched_at: {_now()}\n> via: {via}\n"
