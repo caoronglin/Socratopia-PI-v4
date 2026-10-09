@@ -2,6 +2,22 @@
 
 PREP 字段权威是 `SYSTEM/SPEC/CONTENT_MODEL.md`；课堂循环权威是 `classroom.md`。本文件管**开课前的设计**，并由 `scripts/prep.py` 执行。
 
+## 默认：一章一份逻辑教案
+
+- **一章 = 一份 chapter-mode PREP**，不等于限定课时长度；本章可拆多个 Teaching Unit（每次通常1–3核心点）并跨会话继续，章节未达到 coverage 门槛不宣告学完。
+- 优先运行 `python scripts/prep.py chapter --course "课程" --chapter "第2章"` 只读预览；核对实际目录后再加 `--apply` 写入 draft。自动分配未占用 `lesson_XXX`，同一章已有 PREP 则复用，不覆盖。
+- 如需外部文章/博客/补充 PDF：**先在本课 `SOURCES/` 登记**，再加 `--source "SOURCES/_external/article.md"`（可重复）。来源、SHA256、用途、教材锚点、可靠性必须可追溯；修改后预检报 stale。Cherry 网页工具可读取来源，但未经保存不能冒充已登记资料。
+- 生成的章节小节清单必须来自 `_outline.md` / `book.md`，覆盖所有小节；缺章、重名或无法核验就停止，不编造章节。
+- 备课者需补全每节知识点、教学活动、可观察证据、误概念与反例、不同表征、学习者易卡点，并设计章末主线、综合题、迁移题、图表例题习题处理。未填完只保留 draft，不强行 ready。
+
+```bash
+python scripts/prep.py chapter --course '遗传学' --chapter '第2章'
+python scripts/prep.py chapter --course '遗传学' --chapter '第2章' --source 'SOURCES/_external/article.md' --apply
+python scripts/prep.py check --course '遗传学' --lesson-id lesson_003
+```
+
+课时调度、具体例子和来源登记详见 `docs/CHAPTER_PREP.md`。旧的 `prep.py new --lesson-id ...` 仍可用于特定非按章计划，历史 PREP 不迁移。
+
 ## 流程
 
 ```bash
