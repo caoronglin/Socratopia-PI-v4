@@ -32,6 +32,7 @@ import os
 import re
 import sys
 import urllib.parse
+import urllib.request
 from pathlib import Path
 from typing import Any
 
@@ -87,14 +88,23 @@ def _headers() -> dict[str, str]:
     return {"Authorization": f"Bearer {_token()}", "Content-Type": "application/json"}
 
 
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    """Never resend the bearer token to a redirected URL."""
+
+    def redirect_request(self, *args: Any, **kwargs: Any) -> None:
+        return None
+
+
+def _open_no_redirect(request: urllib.request.Request, timeout: float = 20):
+    return urllib.request.build_opener(_NoRedirect).open(request, timeout=timeout)
+
+
 def _request(method: str, url: str, payload: dict[str, Any] | None = None) -> dict[str, Any]:
     """Single authorized network call. Never logs headers or token."""
-    import urllib.request  # imported only inside the authorized branch
-
     body = json.dumps(payload, ensure_ascii=False).encode("utf-8") if payload is not None else None
     request = urllib.request.Request(url, data=body, headers=_headers(), method=method)  # noqa: S310
     try:
-        with urllib.request.urlopen(request, timeout=20) as resp:  # noqa: S310 — gated
+        with _open_no_redirect(request, timeout=20) as resp:  # noqa: S310 — gated, redirect denied
             return json.loads(resp.read().decode("utf-8"))
     except Exception as exc:  # noqa: BLE001 — redact before surfacing
         raise SystemExit(f"memos 请求失败（已脱敏）：{redact(str(exc))}") from exc
