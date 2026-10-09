@@ -4,3 +4,4 @@ __pycache__/
 # User course data — never commit (runtime PROGRESS/ontology/learner data).
 DATA/
 TEXTBOOK/
+dist/
