@@ -145,7 +145,7 @@ def import_article(root: Path, course: str, url: str, raw: bytes, *,
     url = check_url(url)
     body, detected_title, meta = extract_article(raw, content_type=content_type)
     heading = title or detected_title or urlsplit(url).path.rsplit("/", 1)[-1] or url
-    heading = re.sub(r"[\\r\\n\\t]+", " ", heading).strip()[:180] or "Article"
+    heading = re.sub(r"[\r\n\t]+", " ", heading).strip()[:180] or "Article"
     saved = ext._register(root, course, url, heading, body.encode("utf-8"), via)
     info = read_json(Path(saved["meta"])) or {}
     info.update({"source_type": "web-article", "extraction": meta["extractor"],
