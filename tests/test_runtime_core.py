@@ -349,11 +349,12 @@ class AuditRegressionTests(unittest.TestCase):
             first = br.build_queue(root, "bio")
             ctx = repository.course_dir(root, "bio") / "CONTEXT"
             ctx.mkdir(parents=True)
-            (ctx / "RETEACH_QUEUE.md").write_text(first, encoding="utf-8")
+            (ctx / "RETEACH_QUEUE.md").write_text(first.replace("| pending |", "| needs_review |"), encoding="utf-8")
             second = br.build_queue(root, "bio")
             self.assertIn("细胞结构", first)
             self.assertIn("细胞结构", second)
             self.assertEqual(first.count("RQ-"), second.count("RQ-"))
+            self.assertIn("| needs_review |", second)
 
     def test_invalid_assessment_does_not_claim_coverage(self):
         sample = {"id": "q1", "objective_id": "1", "type": "recall",
