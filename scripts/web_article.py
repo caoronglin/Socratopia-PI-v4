@@ -74,7 +74,7 @@ class _Reader(HTMLParser):
                 if tag not in _VOID:
                     self.depth[region] += 1
                 if not self.omit and tag in _BLOCKS:
-                    self.parts[region].append("\n" + ("#" + tag[1] + " " if re.fullmatch(r"h[1-6]", tag) else ""))
+                    self.parts[region].append("\n" + ("#" * int(tag[1]) + " " if re.fullmatch(r"h[1-6]", tag) else ""))
         if not self.omit and tag == "br":
             for region in self.depth:
                 if self.depth[region]:
