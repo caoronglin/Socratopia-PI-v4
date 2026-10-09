@@ -13,7 +13,7 @@
 ## 节奏
 
 - 一轮修一个关键推理断点，解释有必要可分步骤；清楚的短答不扩写成整节课。
-- 连续两轮无新信息，按 `pedagogy.md` 变更策略；不要为了模仿“苏格拉底”不断发问。
+- 连续两轮无新信息，按 learning 的 `references/pedagogy.md` 变更策略；不要为了模仿“苏格拉底”不断发问。
 - **卡住升级阶梯**：详见 learning 的 `references/classroom.md` 与 `references/pedagogy.md`；换表征 → 最小台阶 → 必要时直接讲。
 - 如需区分导师口吻，备课或评测时再读 `voice-examples.md`；普通课堂不加载完整示例。
 
