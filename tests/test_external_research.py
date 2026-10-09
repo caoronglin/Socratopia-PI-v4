@@ -72,8 +72,8 @@ class ExternalResearchTests(unittest.TestCase):
             buf = io.BytesIO("抓取到的内容".encode("utf-8"))
 
             class _Resp:
-                def read(self):
-                    return buf.getvalue()
+                def read(self, limit=-1):
+                    return buf.getvalue()[:limit]
             yield _Resp()
 
         with mock.patch.object(er, "_open_https", fake_urlopen):
