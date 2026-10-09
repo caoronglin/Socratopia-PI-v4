@@ -2,14 +2,16 @@
 
 ## 概念
 
-Session：开课至明确下课，可含多个 Teaching Unit（通常 1–3 核心点）。Chapter：教材范围，章级完成条件见 `coverage.md`。歧义读 `course-binding.md`。
+Session：明确开课至下课；可含多个 Unit（通常1–3核心点）。Chapter：完整教材范围，完成条件见 `coverage.md`；歧义按 `course-binding.md`。
+
+**按章备课**：`prep.py chapter` 一章一份 PREP，按小节拆 Unit，可跨会话；未完成留断点，不重建同章教案。旧 PREP 不迁移，见 `lesson-planning.md`。
 
 ## 开课 gate
 
-- 唯一课程/课号：显式 `lesson_id` 核对 PREP/章节/断点；冲突确认续课/另开，不静默忽略、替换、递增。否则据 runtime/PROGRESS，不明就问。
-- `runtime/course_state.json` 须存在、对象、课程匹配；`python scripts/course_runtime.py validate --course X`。缺文件返回默认值，PASS≠落盘。缺/非法/校验失败/`readiness.runtime=invalid` 禁新授课；先修复，仅澄清/据实复习。
-- phase 不豁免 readiness/blockers：catalog 缺/过期、prep 未就绪、未解 blocker 禁新内容；reteach pending 先补讲/检索再测，不清空未解项。
-- **教研会已开**：ready 的 PREP 必须已填 `## 教研会决议` 与 `## 预期误概念`（内部教研组协议见 tutor `moe.md`）；缺它不得开新课。
+- 课号须核对 PREP/章节/断点；冲突时确认续课或另开，不静默忽略/递增。无明确课号据 runtime/PROGRESS，不明则问。
+- runtime 必须落盘且课程匹配；`course_runtime.py validate --course X`。默认值 PASS≠文件存在；缺/非法/`readiness.runtime=invalid` 禁新授课，仅能澄清/复习。
+- phase 不豁免 readiness/blockers：catalog 过期、prep 未就绪、blocker 未解均禁新内容；reteach pending 先补讲后测。
+- **教研会已开**：ready 需 `## 教研会决议` 和 `## 预期误概念`（tutor `moe.md`）；缺项不得新授课。
 - `python scripts/prep.py status --course X`、`python scripts/prep.py check --course X --lesson-id lesson_XXX`；prep=ok、PASS≠逐课 ready。
 
 | PREP | 分支（未通过不新授课） |

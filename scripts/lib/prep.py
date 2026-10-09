@@ -26,6 +26,12 @@ MASTERY_CLAIMS = ("已掌握", "已学会", "掌握度为", "宣布掌握")
 OBJECTIVE_HEADERS = ["id", "学习目标", "问题/活动", "可观察证据", "支架"]
 SECTION_OBJECTIVES = "教学评一致性"
 SECTION_SEEDS = "Coverage 种子"
+SECTION_CHAPTER = "章节小节与教学单元"
+SECTION_SUPPLEMENTS = "补充资料"
+SECTION_CLOSURE = "章末收束"
+CHAPTER_HEADERS = ["小节", "教材锚点", "核心知识/活动", "可观察证据", "计划状态"]
+SUPPLEMENT_HEADERS = ["来源", "SHA256", "使用目的", "关联教材锚点", "可靠性"]
+CLOSURE_FIELDS = ("主线复述", "综合题", "迁移题", "图表/例题/习题")
 SECTION_MISCONCEPTIONS = "预期误概念"
 SECTION_MOE = "教研会决议"
 MC_HEADERS = ["误概念", "触发条件", "纠偏问法"]
@@ -113,11 +119,15 @@ def parse_prep(text: str) -> dict[str, Any]:
     header, rows = _table(sections.get(SECTION_OBJECTIVES, ""))
     seed_header, seed_rows = _table(sections.get(SECTION_SEEDS, ""))
     mc_header, mc_rows = _table(sections.get(SECTION_MISCONCEPTIONS, ""))
+    chapter_header, chapter_rows = _table(sections.get(SECTION_CHAPTER, ""))
+    source_header, source_rows = _table(sections.get(SECTION_SUPPLEMENTS, ""))
     return {
         "front": front, "body": body, "sections": sections,
         "objective_header": header, "objectives": rows,
         "seed_header": seed_header, "seeds": seed_rows,
         "misconception_header": mc_header, "misconceptions": mc_rows,
+        "chapter_header": chapter_header, "chapter_rows": chapter_rows,
+        "source_header": source_header, "source_rows": source_rows,
     }
 
 
@@ -140,6 +150,46 @@ def check_prep_text(text: str, *, course: str, lesson_id: str, current_hash: str
         errors.append(f"status={status!r} 必须是 {sorted(STATUSES)}")
     ready = status == "ready"
 
+    # Chapter-mode is opt-in; all legacy prep-1 plans keep their existing gates.
+    if front.get("plan_mode") == "chapter":
+        chapter_head, chapter_rows = parsed["chapter_header"], parsed["chapter_rows"]
+        if chapter_head != CHAPTER_HEADERS:
+            errors.append("章节小节表头缺失或不匹配")
+        elif not chapter_rows:
+            errors.append("章节小节必须逐项编排，不得把整章缩成一个空目标")
+        seen_anchors: set[str] = set()
+        for row in chapter_rows if chapter_head == CHAPTER_HEADERS else []:
+            cells = (row + [""] * 5)[:5]
+            heading, anchor, activity, evidence, state = cells
+            if not heading or not anchor or anchor in seen_anchors:
+                errors.append(f"章节小节锚点缺失或重复：{anchor!r}")
+            seen_anchors.add(anchor)
+            if ready and (not activity or not evidence or not state or
+                          any("TODO" in field for field in cells)):
+                errors.append(f"章节小节「{heading}」未完成教学活动/可观察证据/计划状态")
+        material_head, material_rows = parsed["source_header"], parsed["source_rows"]
+        if material_head != SUPPLEMENT_HEADERS:
+            errors.append("补充资料表头缺失或不匹配")
+        declared_sources = front.get("sources", [])
+        if not isinstance(declared_sources, list):
+            errors.append("章节计划的 sources 必须是来源列表")
+            declared_sources = []
+        listed = [row[0] for row in material_rows if row]
+        if sorted(listed) != sorted(declared_sources):
+            errors.append("补充资料表与 front matter sources 不一致")
+        for row in material_rows:
+            cells = (row + [""] * 5)[:5]
+            if len(row) != 5 or not re.fullmatch(r"[a-f0-9]{12}", cells[1]):
+                errors.append("补充资料 SHA256/表格格式无效")
+            if ready and (any(not value or "TODO" in value for value in cells) or
+                          cells[4] not in {"待核实", "已核实", "存在冲突"}):
+                errors.append(f"补充资料 {cells[0]!r} 需填写用途、关联锚点和可靠性")
+        if ready:
+            closure = parsed["sections"].get(SECTION_CLOSURE, "")
+            for item in CLOSURE_FIELDS:
+                lines = [line for line in closure.splitlines() if line.lstrip().startswith("- ") and item in line]
+                if not lines or any("TODO" in line or not line.split("：", 1)[-1].strip() for line in lines):
+                    errors.append(f"章末收束缺少可执行项：{item}")
     # --- teaching-assessment alignment ---------------------------------------------------
     header, rows = parsed["objective_header"], parsed["objectives"]
     if header != OBJECTIVE_HEADERS:
@@ -224,8 +274,32 @@ def check_prep(root: Path, course: str, lesson_id: str) -> tuple[list[str], list
     path = prep_path(root, course, lesson_id)
     if not path.is_file():
         return [f"PREP 不存在：{path.name}"], []
-    return check_prep_text(path.read_text(encoding="utf-8", errors="replace"),
-                           course=course, lesson_id=lesson_id, current_hash=book_hash(root, course))
+    text = path.read_text(encoding="utf-8", errors="replace")
+    errors, warnings = check_prep_text(text, course=course, lesson_id=lesson_id,
+                                       current_hash=book_hash(root, course))
+    front, _ = parse_front_matter(text)
+    if front.get("plan_mode") == "chapter":
+        from scripts.lib.chapter_prep import chapter_outline, resolve_sources
+        try:
+            canonical, sections = chapter_outline(root, course, str(front.get("chapter", "")))
+            parsed = parse_prep(text)
+            planned = [row[1] for row in parsed["chapter_rows"] if len(row) > 1]
+            if canonical != front.get("chapter") or sorted(planned) != sorted(sections):
+                errors.append("教材章节小节与本教案不一致：必须逐项检查章节范围")
+            entries = parsed["source_rows"]
+            for entry in entries:
+                if len(entry) != 5:
+                    continue
+                try:
+                    actual = resolve_sources(root, course, [entry[0]])[0]
+                except ValueError as exc:
+                    errors.append(f"补充资料不存在或越界：{exc}")
+                    continue
+                if actual["sha256"] != entry[1]:
+                    warnings.append(f"stale：补充资料 {entry[0]} 内容已变化，需要复核")
+        except ValueError as exc:
+            errors.append(f"章节范围不可核验：{exc}")
+    return errors, warnings
 
 
 def is_opted_in(path: Path) -> bool:
@@ -250,8 +324,12 @@ def prep_status(root: Path, course: str) -> dict[str, str]:
             out[lesson_id] = "legacy"
             continue
         text = path.read_text(encoding="utf-8", errors="replace")
-        errors, warnings = check_prep_text(text, course=course, lesson_id=lesson_id,
-                                           current_hash=book_hash(root, course))
+        front, _ = parse_front_matter(text)
+        if front.get("plan_mode") == "chapter":
+            errors, warnings = check_prep(root, course, lesson_id)
+        else:
+            errors, warnings = check_prep_text(text, course=course, lesson_id=lesson_id,
+                                               current_hash=book_hash(root, course))
         front, _ = parse_front_matter(text)
         if any(w.startswith("stale") for w in warnings):
             out[lesson_id] = "stale"

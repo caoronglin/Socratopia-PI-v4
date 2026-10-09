@@ -1,49 +1,38 @@
 # 课前设计与教学评一致性
 
-PREP 字段权威是 `SYSTEM/SPEC/CONTENT_MODEL.md`；课堂循环权威是 `classroom.md`。本文件管**开课前的设计**，并由 `scripts/prep.py` 执行。
+PREP 字段权威是 `SYSTEM/SPEC/CONTENT_MODEL.md`；课堂执行见 `classroom.md`；实际规则由 `scripts/prep.py` 校验。具体章节示例见 `docs/CHAPTER_PREP.md`。
 
-## 流程
+## 默认按章备课
+
+- **一章一份逻辑 PREP**，按真实小节拆成 Teaching Unit（通常1–3个核心点），允许跨会话继续；章末覆盖不足不能宣称完成。
+- `python scripts/prep.py chapter --course X --chapter "第2章"` 只读预览，`--apply` 写 draft；按真实目录分配未占用课号。同章已有 PREP 只复用，不能覆盖。
+- 可重复加 `--source "SOURCES/_external/article.md"`：资料必须先登记在**当前课程** SOURCES；记录来源、SHA256、用途、教材锚点和可靠性，修改后会报 stale。Cherry 网页工具只负责取得来源，不能代替编目。
+- 每节填核心知识/活动/证据，章末设计**主线复述、综合题、迁移题、图表例题与未覆盖项**。缺章或目录不唯一就停止，不造内容。旧 `new --lesson-id`、旧 PREP 继续有效。
 
 ```bash
-python scripts/prep.py new    --course X --lesson-id lesson_003 --chapter "第2章" [--apply]   # 生成骨架
-python scripts/prep.py check  --course X --lesson-id lesson_003                              # 一致性/就绪检查
-python scripts/prep.py status --course X                                                     # ready/draft/stale/invalid/legacy
+python scripts/prep.py chapter --course X --chapter '第2章' [--apply]
+python scripts/prep.py check --course X --lesson-id lesson_003
+python scripts/prep.py status --course X
 ```
-
-骨架只用**真实状态**：`PROGRESS.md` 的 `needs_review`、待补讲队列、`unseen/introduced` 条目、`_outline.md` 锚点、当前 `book.md` 哈希。没有就明说“无”，不编造。**绝不覆盖已有 PREP**。
 
 ## 教学评一致性
 
-```
-学习目标 ──决定──→ 问题/活动 ──决定──→ 可观察证据
-```
+学习目标 → 问题/活动 → 可观察证据。ready 的硬要求：
 
-`prep.py check` 的硬规则（违反为 ERROR）：
+- 每个目标都有活动和证据；支架 A/B/C，同目标最多相邻两级。
+- Coverage 种子只能 unseen/introduced；期望元素不能空，绝不在 PREP 写 verified。
+- `status: ready` 需真实 `anchors` 与 `book_hash`、无 TODO、已完成预期误概念和 `## 教研会决议`。
+- chapter 模式增加逐节覆盖、来源路径与哈希核验，以及章末主线、综合/迁移与遗漏处理。
+- 支架 A=完整定义+例子，B=关键线索，C=无提示变式；不是给学习者贴能力标签。
 
-- 每个目标必须同时有活动与证据，缺一不可；
-- 支架只用 A/B/C，且同一目标最多相邻两级（跨三级说明目标切得太粗，先拆目标）；
-- Coverage 种子只能是 `unseen`/`introduced`，**PREP 不能把任何条目写成 verified**；
-- PREP 里不得出现掌握声明；`course` 必须等于所在课程；
-- `status: ready` 需要：无 TODO、有教材锚点 `anchors`、记录 `book_hash`。
+备课至少设计关键误概念、判别问题、卡住时替代表征和独立理解验证。真实课堂按学习者回答选路线，不强迫一次走完。
 
-三者错位即降级：活动与目标脱节 → 删活动；证据与目标脱节 → 换证据形式，不换目标。**不得为了凑题型改写目标**。
+## 过期与来源
 
-支架指同一目标的深度：**A** 完整定义+例子；**B** 只给关键线索；**C** 不提示直接变式（迁移证据）。支架等级属于**备课候选方案**，不是给学习者贴的永久能力标签。
-
-备课时为每个主要目标至少预想：一个常见误概念及其判别问题、一个无进展时的替代表征/示范、一项可观察的独立验证。真实课堂依据回答选择其中一条路线，而不是强制走完全部步骤（策略与对照示例只在 `references/pedagogy.md` 定义）。别把一次学生沉默解释为能力或性格特征。
-
-## 过期
-
-`book_hash` 与当前 `book.md` 不一致即 `stale`（doctor WARN）：重建前先对照锚点，不静默沿用。无 front matter 的旧 PREP 为 `legacy`，**不评判、不改写**。
-
-## 单元与来源
-
-多单元之间显式写先修关系，并落成 `prerequisite` 候选边。课文分析、生字词等是**来源侧**事实，进 `SOURCES/` 并登记锚点；不进 `PROGRESS.md`，不自动改写 `book.md`。长章节允许跨单元；未完成保留为未完成。
+`book_hash` 不匹配即 stale；章级补充资料哈希变化也 stale。复核原文、锚点和教学设计后才能更新记录，**不能只刷新哈希**。无 front matter 的旧 PREP 为 legacy，不自动修改。SOURCES 只补充证据，不自动覆盖 `book.md`、`PROGRESS.md`。
 
 ## 明确拒绝
 
-- ❌ 绑定特定学段课标（如 2022 版课程标准）：本系统是课程隔离的个人学习系统。
-- ❌ 教案成果包/批量模板清单：与最小上下文预算冲突。
-- ❌ 教案一键转 PPT：课件路径见 `courseware.md`。
-- ❌ “你已安装以下 Skill，按步骤串联”的编排前提：active skill 恒为 3。
-- ❌ 宿主专属导出声明：`SYSTEM/SPEC/` 不出现宿主细节。
+- ❌ 固定学段课标或学员证书/机构培训；
+- ❌ 一键教案成果包/批量课件（课件见 `courseware.md`）；
+- ❌ 依赖额外安装的 Skill、宿主专属导出或后台心跳。

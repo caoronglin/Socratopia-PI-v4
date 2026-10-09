@@ -47,6 +47,10 @@ python scripts/web_article.py study --course '课程' --url 'https://example.org
 4. **不承诺后台工作。** 入队到 `runtime/tasks.json` ≠ Cherry 定时任务已创建；调用宿主 `cron/notify/session_*` 时只有实际成功返回才可报告。
 5. **Pi 与 Claude 兼容不是两套教学事实。** 主运行时建议 Pi；Claude Code 可继续用于开发/审计，教学和掌握规则不复制两份。
 
+## 章节备课与补充资料
+
+Cherry Pi Agent 收到“备第 N 章”时，先检查课程及主课本，再调用 `prep.py chapter` 只读预览。用户确认写入后加 `--apply`；若章节已有 PREP 只复用并检查状态，不覆盖。网页文章经 Cherry 读取后，可登记为本课 `SOURCES/_external/`，再以 `--source` 加入章级 PREP 并注明引用目的，不把检索结果当已核验。详见 `docs/CHAPTER_PREP.md`；真实章节课堂不因章末就自动下课。
+
 ## 5. Agent Loop 与停止条件
 
 详见 `SYSTEM/SPEC/AGENT_LOOP.md`（工作目录为本仓库时按需读取）。**同一用户请求**采用 `定位 → 必要动作 → 校验 → 结束/等待`：明确达成目标立即终止当前回答；遇缺失工具/审批拒绝停止，不借 shell 绕过；课堂每次提出一个主要问题后等待，不循环发送提示或自动下课。不要误把 Pi 的底层 agent loop 当成系统提示词可强制限制的执行次数。排查重复工具调用时，在真实 Cherry 会话记录步骤、输入、输出与最终停止原因。

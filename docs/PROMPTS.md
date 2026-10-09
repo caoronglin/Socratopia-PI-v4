@@ -292,6 +292,10 @@ python -m unittest discover -s tests      # test_skillhub_education / test_tutor
 
 Socratopia 可在 Cherry Studio **Work → Agent** 以内置 **Pi runtime** 运行，Agent 使用 Cherry 的原生网页、知识库、文件与记忆工具；**不是新建 MCP Server**。完整配置、权限边界和网页资料导入见 [`docs/CHERRY_STUDIO_AGENT.md`](CHERRY_STUDIO_AGENT.md) 与 `integrations/cherry-studio/AGENT_PROMPT.md`；按需加载的网页教学规则由 `references/web-article.md` 唯一维护。
 
+## 按章节备课（默认）
+
+`python scripts/prep.py chapter --course X --chapter "第2章" [--source "SOURCES/..."] [--apply]`：从当前教材 `_outline.md` / `book.md` 找实际章与小节，一个章节生成/复用一份 PREP（不强制一次会话讲完）。自动选未使用 `lesson_XXX`；来源必须在当前课 SOURCES 已登记、记录 SHA256，变更报 stale；章节 READY 需逐节活动/证据、章末综合与迁移、原有教研会门禁均通过。详细约束及实例见 [`docs/CHAPTER_PREP.md`](CHAPTER_PREP.md)。历史 PREP 无须迁移。
+
 ## Agent Loop · 精确停止与最小提示词（2026-10）
 
 - [`SYSTEM/SPEC/AGENT_LOOP.md`](../SYSTEM/SPEC/AGENT_LOOP.md)：统一规定 `ROUTE → INSPECT → ACT → VERIFY → DONE/YIELD/BLOCKED/NEXT`，不同业务只引用这份决策契约。
