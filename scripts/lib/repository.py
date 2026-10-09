@@ -50,6 +50,22 @@ def textbook_dir(root: Path, course: str) -> Path:
     return _safe_dir(root, "TEXTBOOK", course)
 
 
+def validate_lesson_id(value: str) -> str:
+    """Validate lesson identifiers used as filenames."""
+    if not isinstance(value, str) or not re.fullmatch(r"lesson_[0-9]{3,}", value):
+        raise ValueError(f"Invalid lesson identifier: {value!r}")
+    return value
+
+
+def safe_child_path(base: Path, *parts: str) -> Path:
+    """Check that a resolved target remains under its intended directory."""
+    root = base.resolve()
+    target = root.joinpath(*parts).resolve()
+    if root not in target.parents:
+        raise ValueError(f"Target is outside the allowed directory: {target}")
+    return target
+
+
 def iter_course_paths(root: Path, top: str = "DATA", course: str | None = None) -> list[Path]:
     """List course roots without reading another course when a scope is supplied."""
     base = root / top
