@@ -8,6 +8,7 @@
 - **覆盖判到期望元素**：新增 `references/coverage.md`（五态 + 期望元素 + 章节质量门，从 `classroom.md` 拆出）；PREP 的 Coverage 种子与 PROGRESS 的 ledger 增列期望元素，`parse_coverage` 按表头识别新列且兼容旧三列账本；元素未逐个取证则条目停留 `introduced`。
 - **陷题深度计数与干预切换**：`classroom.md` 按连续无进展轮数强制升级（换表征 → 最小台阶 → 停止提问直接纠错），替代「靠感觉」。依据：每多卡一轮恢复概率降 12.7%，重复同一问法恢复率约 28%、改为直接处理错误约 40%。
 - 回归与消融：`test_prep.py` 新增 8 项门禁测试，`test_tutor_profiles.py` 新增两层边界测试，`test_prompt_catalog.py` 新增门禁接线断言，`test_ablation.py` 新增 4 项消融（教研会 gate / 期望元素 gate / 幕后再分 / 深度计数）。守卫经注入移除验证确实会红。
+- **修正 Claude Code 权限语义**：`git push` 原被放进 `deny`，但 Claude Code 的 `deny` 是彻底阻断而非「需确认」，导致仓库在该宿主下永远推不了；已移至 `ask`。`deny` 保留真正的破坏性操作（`reset --hard`/`clean`/`rm -rf`）与凭据读取。
 - **Claude Code 适配层（分支 `claude-code`）**：官方文档确认 Claude Code 原生读取仓库 `AGENTS.md`，故不创建根 `CLAUDE.md`；新增 `.claude/skills/*/SKILL.md`（3 个）与 `.claude/commands/*.md`（5 个）作为**薄指针**，frontmatter `name`/`description` 与 `.pi/` 逐字一致，正文只指向权威文件、不复制规则。`.claude/settings.json` 收敛权限（deny 凭据读取与 `git push`/`reset --hard`/`clean`/`rm -rf`；ask `git commit`、MinerU 远程解析、memos push/pull），只把 AGENTS.md §6 既有约束显式化。命令占位符由 Pi 的 `$@` 改为 Claude Code 的 `$ARGUMENTS`。`tests/test_claude_portability.py`（14 项）+ `docs/CLAUDE_CODE.md`。ADR-013。静态校验已通过并经注入漂移验证会失败；**未在真实 Claude Code 会话中端到端运行**。
 
 ### Fixed

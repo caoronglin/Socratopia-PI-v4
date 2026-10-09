@@ -46,11 +46,15 @@ Claude Code 会**直接读取仓库的 `AGENTS.md`**，替代 `CLAUDE.md`
 
 `.claude/settings.json` 只做**收敛**，不放宽任何既有安全边界：
 
-- `deny`：读取 `.env` / `*.pem` / `id_rsa*` / `credentials*`；`git push`、`git reset --hard`、`git clean -f`、`rm -rf`
-- `ask`：`git commit`；MinerU 远程解析；memos `push` / `pull`
+- `deny`（彻底阻断）：读取 `.env` / `*.pem` / `id_rsa*` / `credentials*`；`git reset --hard`、`git clean`、`rm -rf`
+- `ask`（每次确认）：`git push`、`git commit`；MinerU 远程解析；memos `push` / `pull`
 
 这与 AGENTS.md §6 的既有要求一致（凭据不外读、远程操作须逐次授权、删除须显式许可），
 属于把已有约束在 Claude Code 侧显式化，不是新增策略。
+
+**实测教训**：`deny` 是彻底阻断，不是「需要确认」——被 deny 的命令不会弹确认框，
+模型直接拿到拒绝。所以**想让用户每次确认的操作必须放 `ask`，不能放 `deny`**。
+最初把 `git push` 写进 `deny`，结果本仓库在 Claude Code 里**永远推不了**。
 
 ## 使用方式
 
