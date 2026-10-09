@@ -52,6 +52,7 @@ reference 或 script」，而不是新增 skill。
 
 | 意图 | 读取 |
 |---|---|
+| 首次使用、引导初始化、新建课程 | `references/onboarding.md` |
 | 开始/继续上课、章节推进、补讲 | `references/classroom.md` + `references/memory.md` + `references/lesson-timer.md` |
 | 覆盖账本、期望元素、章节完成判据、卡住升级 | `references/coverage.md` |
 | 备课、PREP 设计、教学评一致性、分层支架 | `references/lesson-planning.md` |
