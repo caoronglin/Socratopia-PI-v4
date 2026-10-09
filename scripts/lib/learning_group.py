@@ -35,6 +35,7 @@ def _read(root: Path, course: str) -> dict[str, Any] | None:
         raise ValueError("学习小组记录与课程/schema 不一致")
     members = state.get("members")
     if (not isinstance(members, list) or not 2 <= len(members) <= 3
+            or any(not isinstance(m, str) for m in members)
             or len(set(members)) != len(members)
             or any(m not in VALID_TUTORS for m in members)
             or state.get("lead") not in members):
@@ -54,6 +55,21 @@ def _read(root: Path, course: str) -> dict[str, Any] | None:
         turns = session.get("turns")
         if not isinstance(turns, list) or len(turns) > len(members) * rounds:
             raise ValueError("讨论记录超出受限范围")
+        if not isinstance(session.get("topic"), str) or not session["topic"].strip():
+            raise ValueError("讨论主题无效")
+        if not isinstance(session.get("id"), str) or len(session["id"]) != 32:
+            raise ValueError("讨论 ID 无效")
+        for index, item in enumerate(turns):
+            if (not isinstance(item, dict) or item.get("speaker") != members[index % len(members)]
+                    or item.get("round") != index // len(members) + 1
+                    or not isinstance(item.get("text"), str)
+                    or not 0 < len(item["text"]) <= MAX_UTTERANCE):
+                raise ValueError("讨论记录中的发言人、轮次或内容不匹配")
+        expected_count = (session["round"] - 1) * len(members) + session["index"]
+        if len(turns) != expected_count:
+            raise ValueError("讨论发言游标与已保存记录不一致")
+        if session["phase"] in {"awaiting_user", "finished"} and session["index"] != len(members):
+            raise ValueError("讨论阶段与本轮发言数不一致")
     return state
 
 
