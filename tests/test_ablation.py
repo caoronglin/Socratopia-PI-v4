@@ -267,6 +267,11 @@ except ValueError as exc:
         self.patch("scripts/lib/repository.py",
                    "    if base != result and base not in result.parents:",
                    "    if False:")
+        # Disable the additional course-directory symlink guard as well; either
+        # guard independently blocks this path, so the mutant must remove both.
+        self.patch("scripts/lib/repository.py",
+                   "    if (base / safe_name).is_symlink():",
+                   "    if False:")
         after = probe_once()
         self.assertTrue(
             after.startswith("ESCAPED"),
