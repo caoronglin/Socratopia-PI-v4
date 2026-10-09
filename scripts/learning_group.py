@@ -28,7 +28,7 @@ def main(argv: list[str] | None = None) -> int:
             sub.add_argument("--rounds", type=int, choices=(1, 2, 3), default=2)
         if action == "record":
             sub.add_argument("--speaker", required=True)
-            sub.add_argument("--text-file", default="-", help="发言正文文件或 -（stdin），不作为 shell 指令")
+            sub.add_argument("--text-file", default="-", help="仅支持 -（stdin），不读取任意本地文件")
         if action == "continue":
             sub.add_argument("--question", default="")
     args = parser.parse_args(argv)
@@ -43,11 +43,7 @@ def main(argv: list[str] | None = None) -> int:
             if args.text_file == "-":
                 statement = sys.stdin.read(group.MAX_UTTERANCE + 1)
             else:
-                # Local user-supplied text; treated only as data.
-                file = Path(args.text_file)
-                if not file.is_file() or file.stat().st_size > 16000:
-                    raise ValueError("发言文件不存在或超过读取上限")
-                statement = file.read_text(encoding="utf-8")
+                raise ValueError("仅支持从 stdin 获取实际展示的导师发言，禁止读取任意文件")
             result = group.record(ROOT, args.course, args.speaker, statement)
         elif args.action == "continue":
             result = group.continue_round(ROOT, args.course, args.question)
