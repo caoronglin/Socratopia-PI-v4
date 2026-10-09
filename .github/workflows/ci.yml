@@ -2,25 +2,42 @@ name: ci
 
 on:
   push:
+    branches: [main, claude-code]
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
 
+# Cancel older runs on the same branch / pull request instead of wasting
+# runners while a series of quick commits is pushed.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   verify:
+    name: Python ${{ matrix.python-version }} / doctor and tests
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
         python-version: ["3.11", "3.13"]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Checkout (pinned v4)
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Set up Python (pinned v5)
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Install test runner
-        run: python -m pip install pytest
-      # Runs scripts/pi_arch_doctor.py then the full test suite; --strict makes doctor WARNs fail.
-      - name: Doctor + tests
+          cache: pip
+          cache-dependency-path: requirements-ci.txt
+      - name: Install pinned test runner
+        run: python -m pip install -r requirements-ci.txt
+      - name: Verify installed requirements
+        run: python -m pip check
+      - name: Doctor and complete regression suite
         run: python scripts/check.py --strict

@@ -49,6 +49,7 @@
     ".pi/skills/socratopia-learning/references/reflection.md",
     ".pi/skills/socratopia-learning/references/stellar-export.md",
     ".pi/skills/socratopia-learning/references/trust.md",
+    ".pi/skills/socratopia-learning/references/web-article.md",
     ".pi/skills/socratopia-tutor/SKILL.md",
     ".pi/skills/socratopia-tutor/moe/TUTOR_A.md",
     ".pi/skills/socratopia-tutor/moe/TUTOR_B.md",
@@ -80,6 +81,7 @@
     "SYSTEM/schemas/handoff.schema.json",
     "SYSTEM/schemas/ontology.schema.json",
     "SYSTEM/schemas/tasks.schema.json",
+    "docs/CHERRY_STUDIO_AGENT.md",
     "docs/CLAUDE_CODE.md",
     "docs/DESIGN_DECISIONS.md",
     "docs/PERSONA_SOURCES.md",
@@ -87,9 +89,11 @@
     "docs/SESSION_REPORT.md",
     "docs/SKILL_TRIAGE.md",
     "docs/SOURCE_MAPPING.md",
+    "integrations/cherry-studio/AGENT_PROMPT.md",
     "manifest.json",
     "plan.md",
     "quarantine/sources.json",
+    "requirements-ci.txt",
     "scripts/assessment.py",
     "scripts/build_reteach_queue.py",
     "scripts/check.py",
@@ -123,6 +127,7 @@
     "scripts/scaffold_course.py",
     "scripts/task_queue.py",
     "scripts/vector_index.py",
+    "scripts/web_article.py",
     "templates/CONTEXT_INDEX.md",
     "templates/LEARNER.md",
     "templates/PREP.md",
@@ -154,6 +159,7 @@
     "tests/test_runtime_core.py",
     "tests/test_skillhub_education.py",
     "tests/test_stellar_export.py",
-    "tests/test_tutor_profiles.py"
+    "tests/test_tutor_profiles.py",
+    "tests/test_web_article_agent.py"
   ]
 }

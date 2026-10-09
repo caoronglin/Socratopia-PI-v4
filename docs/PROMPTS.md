@@ -60,6 +60,7 @@ reference 或 script」，而不是新增 skill。
 | 教材上传、编目、重编、来源冲突 | `references/content.md` |
 | 知识图谱、先修关系、概念结构 | `references/graph.md` |
 | 搜教材、本地检索、定位锚点 | `references/local-search.md` |
+| 网页文章、知乎/博客、URL 学习（用户提供链接或正文） | `references/web-article.md` + `references/external-research.md` |
 | 外部研究、最新论文、外部事实（显式意图） | `references/external-research.md` |
 | memos 记忆同步、跨工具记忆（显式意图） | `references/memo-sync.md` |
 | 上传 PDF/OCR/MinerU 远程解析（须逐次授权） | `references/mineru-ingest.md` |
@@ -286,3 +287,7 @@ python -m unittest discover -s tests      # test_skillhub_education / test_tutor
 | 简单事实/工程需求 | 直接完成任务 | 启动课堂套路 |
 
 **静态门禁**：`tests/test_pedagogical_prompt_design.py` 检查跨层路由、直讲覆盖、候选策略、对照示例与无依据量化禁令。**动态验证仍待执行**：使用相同题目、课程上下文和模型配置，录制多轮对话，按上表进行人工/模型双重评审，记录答复正确性、支架匹配、重复提问率、虚假掌握率、来源准确度与迁移表现。静态测试通过不表示实际教学效果已改进。
+
+## Cherry Studio Agent 宿主集成
+
+Socratopia 可在 Cherry Studio **Work → Agent** 以内置 **Pi runtime** 运行，Agent 使用 Cherry 的原生网页、知识库、文件与记忆工具；**不是新建 MCP Server**。完整配置、权限边界和网页资料导入见 [`docs/CHERRY_STUDIO_AGENT.md`](CHERRY_STUDIO_AGENT.md) 与 `integrations/cherry-studio/AGENT_PROMPT.md`；按需加载的网页教学规则由 `references/web-article.md` 唯一维护。
