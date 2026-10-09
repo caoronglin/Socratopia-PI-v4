@@ -96,6 +96,21 @@ class ChapterPreparationTests(unittest.TestCase):
                 plan_chapter(self.root, COURSE, "第2章", sources=[source], apply=True)
         self.assertFalse(prep_path(self.root, COURSE, "lesson_003").exists())
 
+    def test_symlink_alias_is_not_a_registered_source(self):
+        alias = self.source.parent / "alias.md"
+        try:
+            alias.symlink_to(self.source)
+        except (OSError, NotImplementedError):
+            self.skipTest("symlinks unavailable")
+        with self.assertRaises(ValueError):
+            plan_chapter(self.root, COURSE, "第2章",
+                         sources=["SOURCES/_external/alias.md"], apply=True)
+
+    def test_source_filename_cannot_break_frontmatter(self):
+        with self.assertRaises(ValueError):
+            plan_chapter(self.root, COURSE, "第2章",
+                         sources=['SOURCES/_external/"injection".md'])
+
     def test_rejects_missing_chapter_or_ambiguous_heading(self):
         for chapter in ("第9章", "第2章\ninjected: value", " "):
             with self.subTest(chapter=chapter), self.assertRaises(ValueError):
