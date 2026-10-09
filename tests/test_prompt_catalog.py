@@ -54,7 +54,7 @@ class PromptVerbatimTests(unittest.TestCase):
         self.prompts = sorted(PROMPTS.glob("*.md"))
 
     def test_all_prompts_documented(self):
-        self.assertEqual(len(self.prompts), 5)
+        self.assertEqual(len(self.prompts), 7)
         for path in self.prompts:
             self.assertIn(f"/{path.stem}", self.doc, f"{path.stem} 未出现在目录中")
 
