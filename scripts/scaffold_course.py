@@ -32,20 +32,17 @@ def write_if_missing(path: Path, text: str) -> str:
     return "create"
 
 
-def main() -> int:
-    ap = argparse.ArgumentParser(description="Create missing Socratopia course scaffolding without overwriting existing files.")
-    ap.add_argument("course", type=valid_course)
-    args = ap.parse_args()
-
-    course = args.course
-    data = course_dir(ROOT, course)
-    book = textbook_dir(ROOT, course)
+def scaffold(root: Path, course: str) -> list[str]:
+    """Initialize missing course files only; never overwrite existing progress."""
+    course = validate_course_name(course)
+    data = course_dir(root, course)
+    book = textbook_dir(root, course)
     now = datetime.now(timezone.utc).isoformat()
 
     created = []
     for path, text in [
-        (safe_child_path(data, "PROGRESS.md"), (ROOT / "templates/PROGRESS.md").read_text(encoding="utf-8")),
-        (safe_child_path(data, "CONTEXT/CONTEXT_INDEX.md"), (ROOT / "templates/CONTEXT_INDEX.md").read_text(encoding="utf-8")),
+        (safe_child_path(data, "PROGRESS.md"), (root / "templates/PROGRESS.md").read_text(encoding="utf-8")),
+        (safe_child_path(data, "CONTEXT/CONTEXT_INDEX.md"), (root / "templates/CONTEXT_INDEX.md").read_text(encoding="utf-8")),
         (safe_child_path(data, "CONTEXT/LESSON_SUMMARIES.md"), "# Lesson Summaries\n"),
         (safe_child_path(data, "CONTEXT/RETEACH_QUEUE.md"), "# Reteach Queue\n"),
         (safe_child_path(data, "DIARY.md"), "# Learning Diary\n"),
@@ -54,16 +51,16 @@ def main() -> int:
         (safe_child_path(book, "PREP/_index.md"), "# Lesson Prep Index\n"),
     ]:
         if write_if_missing(path, text) == "create":
-            created.append(path.relative_to(ROOT))
+            created.append(path.relative_to(root))
 
     # Single producer: templates/course_state.json is documentation, locked to this by tests.
     state = default_state(course)
     if write_if_missing(safe_child_path(data, "runtime/course_state.json"), json.dumps(state, ensure_ascii=False, indent=2)+"\n") == "create":
-        created.append((safe_child_path(data, "runtime/course_state.json")).relative_to(ROOT))
-    if write_if_missing(safe_child_path(data, "runtime/handoff.json"), (ROOT / "templates/handoff.json").read_text(encoding="utf-8")) == "create":
-        created.append((safe_child_path(data, "runtime/handoff.json")).relative_to(ROOT))
-    if write_if_missing(safe_child_path(data, "runtime/tasks.json"), (ROOT / "templates/tasks.json").read_text(encoding="utf-8")) == "create":
-        created.append((safe_child_path(data, "runtime/tasks.json")).relative_to(ROOT))
+        created.append((safe_child_path(data, "runtime/course_state.json")).relative_to(root))
+    if write_if_missing(safe_child_path(data, "runtime/handoff.json"), (root / "templates/handoff.json").read_text(encoding="utf-8")) == "create":
+        created.append((safe_child_path(data, "runtime/handoff.json")).relative_to(root))
+    if write_if_missing(safe_child_path(data, "runtime/tasks.json"), (root / "templates/tasks.json").read_text(encoding="utf-8")) == "create":
+        created.append((safe_child_path(data, "runtime/tasks.json")).relative_to(root))
     projection = {
         "schema_version": 1,
         "course": course,
@@ -74,17 +71,25 @@ def main() -> int:
         "edges": [],
     }
     if write_if_missing(safe_child_path(data, "ontology/graph.jsonl"), "") == "create":
-        created.append((safe_child_path(data, "ontology/graph.jsonl")).relative_to(ROOT))
+        created.append((safe_child_path(data, "ontology/graph.jsonl")).relative_to(root))
     if write_if_missing(safe_child_path(data, "ontology/projection.json"), json.dumps(projection, ensure_ascii=False, indent=2) + "\n") == "create":
-        created.append((safe_child_path(data, "ontology/projection.json")).relative_to(ROOT))
+        created.append((safe_child_path(data, "ontology/projection.json")).relative_to(root))
 
     (safe_child_path(book, "SOURCES/_raw")).mkdir(parents=True, exist_ok=True)
     (safe_child_path(book, "images")).mkdir(parents=True, exist_ok=True)
 
-    print(f"course={course}")
+    return [str(path) for path in created]
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description="Create missing Socratopia course scaffolding without overwriting existing files.")
+    ap.add_argument("course", type=valid_course)
+    args = ap.parse_args()
+    created = scaffold(ROOT, args.course)
+    print(f"course={args.course}")
     print(f"created={len(created)}")
-    for p in created:
-        print(f"+ {p}")
+    for path in created:
+        print(f"+ {path}")
     print("Existing files were never overwritten.")
     return 0
 

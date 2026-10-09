@@ -92,7 +92,7 @@ class CommandPointerTests(unittest.TestCase):
 
     def test_command_sets_match(self):
         self.assertEqual(self.commands, self.prompts)
-        self.assertEqual(len(self.commands), 5)
+        self.assertEqual(len(self.commands), 7)
 
     def test_every_command_points_at_existing_prompt(self):
         for name in self.commands:
@@ -165,6 +165,8 @@ class ManifestTests(unittest.TestCase):
             ".claude/skills/socratopia-engineering/SKILL.md",
             ".claude/commands/start-class.md",
             ".claude/commands/end-class.md",
+            ".claude/commands/initialize.md",
+            ".claude/commands/study-group.md",
             ".claude/commands/health.md",
             ".claude/commands/materials-ready.md",
             ".claude/commands/switch-course.md",
