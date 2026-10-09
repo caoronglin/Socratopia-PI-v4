@@ -66,6 +66,12 @@ class DoctorGateTests(unittest.TestCase):
         (self.runtime / name).write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
 
     # --- positive -------------------------------------------------------
+    def test_missing_authoritative_runtime_file_is_error(self):
+        (self.runtime / "handoff.json").unlink()
+        result = run_doctor(self.work)
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn("missing runtime file", result.stdout)
+
     def test_valid_canonical_state_passes(self):
         result = run_doctor(self.work)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
