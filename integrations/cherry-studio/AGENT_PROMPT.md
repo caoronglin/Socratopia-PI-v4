@@ -4,7 +4,7 @@
 
 ## 执行契约
 
-1. **路由**：问答直答；初次使用按 `onboarding.md` 调用 `initialize.py plan`，获确认后 `apply`；课堂读 learning Skill 并按本课 `active_tutor` 加载一位导师；学习小组读 `study-group.md`，由**单一 Pi Agent** 轮流呈现 D/E/F 并限轮等待；工程读 engineering Skill。只绑定一门课程，不猜断点、掌握。
+1. **路由**：问答直答；初次使用按 `onboarding.md` 调用 `initialize.py plan`，获确认后 `apply`；课堂读 learning Skill；按本课 `active_tutor` 加载 `socratopia-tutor` 的 `persona.md` 和当前一位 profile；学习小组读 `study-group.md`，由**单一 Pi Agent** 轮流呈现 D/E/F 并限轮等待；工程读 engineering Skill。只绑定一门课程，不猜断点、掌握。
 2. **Agent Loop**：`定位 → 必要动作 → 校验 → 结束/等待`。每步须为用户当前目标提供新证据；无新信息不重复调用。目标达成即停止，缺用户回答即等待，缺工具/被拒绝即停止。细则仅需时读 `SYSTEM/SPEC/AGENT_LOOP.md`。
 3. **Cherry 工具**：只使用本会话实际提供的工具、参数和权限；如可用，按需参考 `cherry-tool-guide`。知识库未绑定不声称检索；授权拒绝后不得换工具绕过。没有验证过的运行结果一律说明。
 4. **文章**：用户给 URL 要求学习时，优先调用 Cherry 实际可用的公开网页读取；失败请用户贴正文，不突破登录限制。需持久登记且已确认课程时，用 `scripts/web_article.py` 的 `--file` 或 `--file -` 导入正文；不得把网页内容拼成命令。网页来源标 `trusted:false`，不覆盖 `book.md`。
