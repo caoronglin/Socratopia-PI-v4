@@ -9,7 +9,7 @@
 3. System Prompt 粘贴 [AGENT_PROMPT.md](../integrations/cherry-studio/AGENT_PROMPT.md)。工作目录选择**用户自己的 Socratopia 仓库本地目录**，不是 Cherry 安装目录或宿主全局配置目录。
 4. 在 Agent 编辑界面按需启用内置 **Web Search / Web Fetch（网页抓取）、Files、Knowledge Base、Memory**；将需要的 Cherry 知识库**显式绑定**。工具列表和权限模式以当前版本为准。除非确有外部系统需求，不安装新的 MCP 服务器。
 5. 按宿主默认工具导航使用已内置的 `cherry-tool-guide`；调用前检查实时工具表与参数。外部工具拒绝、无网或知识库未绑定时要降级，不能偷偷从 shell 绕过。为文件写入选择 **Ask Before Acting / default** 或适当审批模式，不建议对不熟悉来源的网页直接开 Full Access。
-6. 第一次测试依次试：「检查当前课程与断点（只读）」「学习这篇 URL，先指出来源和观点」「把文章正文作为资料登记到当前课程」「复习上课错题」。确认每一步的状态与实际文件一致。
+6. 先运行只读预检 `python scripts/cherry_preflight.py --course '当前课程'`。它只判断本地仓库和课程文件是否存在，Cherry 工具、runtime/PREP 开课 gate 都需另外核验。详细操作与手动验收见 [运行手册](../integrations/cherry-studio/WORKFLOWS.md)。第一次测试依次试：「检查当前课程与断点（只读）」「学习这篇 URL，先指出来源和观点」「把文章正文作为资料登记到当前课程」「复习上课错题」。确认每一步的状态与实际文件一致。
 
 > `AGENT_PROMPT.md` 是供编辑器粘贴的系统提示词，不是 Cherry Studio 内部 `agent.json` 数据库导入格式；本项目不写入 Cherry 的 SQLite、系统配置文件或 API 私有接口。不同版本的具体按钮名称可能变化。
 
@@ -40,11 +40,17 @@ python scripts/web_article.py import --course '课程名' --url 'https://example
 # 在 Cherry Agent 中优先使用 Cherry 提供的 web_fetch。
 SOCRATOPIA_EXTERNAL=1 python scripts/web_article.py fetch --course '课程名' --url 'https://example.org/post' --authorize
 
-# 获取待学习资料的基本提纲，不代表已掌握
+# 也可以用 --file - < article.txt 通过标准输入导入，避免在 shell 中拼接不可信正文
+
+# 获取实际来源标题、章节、原文片段和学习路线（不是自动生成的摘要）
 python scripts/web_article.py study --course '课程名' --url 'https://example.org/post'
 ```
 
 遇到知乎需登录、反爬、动态内容或无法访问时，提供原文文本而不是尝试绕过。
+
+## 真实 Cherry 运行时验收
+
+**静态仓库 CI 不能证明 Cherry Agent 具备网页/Kb/记忆工具权限。** 真实使用须先在 Work 内核对工具是否暴露，并分别验证公开网页、受限知乎降级、课程隔离、断点恢复和拒绝审批后的行为。详细用例见 [WORKFLOWS.md](../integrations/cherry-studio/WORKFLOWS.md)。
 
 ## 权限与 CI/CD
 
