@@ -19,6 +19,7 @@ description: 处理 Socratopia 的教材、资料编目、PREP、课堂、章节
 | 教材上传、编目、重编、来源冲突 | `references/content.md` |
 | 知识图谱、先修关系、概念结构 | `references/graph.md` |
 | 搜教材、本地检索、定位锚点 | `references/local-search.md` |
+| 网页文章、知乎/博客、URL 学习（用户提供链接或正文） | `references/web-article.md` + `references/external-research.md` |
 | 外部研究、最新论文、外部事实（显式意图） | `references/external-research.md` |
 | memos 记忆同步、跨工具记忆（显式意图） | `references/memo-sync.md` |
 | 上传 PDF/OCR/MinerU 远程解析（须逐次授权） | `references/mineru-ingest.md` |
