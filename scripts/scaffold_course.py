@@ -51,16 +51,16 @@ def scaffold(root: Path, course: str) -> list[str]:
         (safe_child_path(book, "PREP/_index.md"), "# Lesson Prep Index\n"),
     ]:
         if write_if_missing(path, text) == "create":
-            created.append(path.relative_to(ROOT))
+            created.append(path.relative_to(root))
 
     # Single producer: templates/course_state.json is documentation, locked to this by tests.
     state = default_state(course)
     if write_if_missing(safe_child_path(data, "runtime/course_state.json"), json.dumps(state, ensure_ascii=False, indent=2)+"\n") == "create":
-        created.append((safe_child_path(data, "runtime/course_state.json")).relative_to(ROOT))
+        created.append((safe_child_path(data, "runtime/course_state.json")).relative_to(root))
     if write_if_missing(safe_child_path(data, "runtime/handoff.json"), (root / "templates/handoff.json").read_text(encoding="utf-8")) == "create":
-        created.append((safe_child_path(data, "runtime/handoff.json")).relative_to(ROOT))
+        created.append((safe_child_path(data, "runtime/handoff.json")).relative_to(root))
     if write_if_missing(safe_child_path(data, "runtime/tasks.json"), (root / "templates/tasks.json").read_text(encoding="utf-8")) == "create":
-        created.append((safe_child_path(data, "runtime/tasks.json")).relative_to(ROOT))
+        created.append((safe_child_path(data, "runtime/tasks.json")).relative_to(root))
     projection = {
         "schema_version": 1,
         "course": course,
@@ -71,9 +71,9 @@ def scaffold(root: Path, course: str) -> list[str]:
         "edges": [],
     }
     if write_if_missing(safe_child_path(data, "ontology/graph.jsonl"), "") == "create":
-        created.append((safe_child_path(data, "ontology/graph.jsonl")).relative_to(ROOT))
+        created.append((safe_child_path(data, "ontology/graph.jsonl")).relative_to(root))
     if write_if_missing(safe_child_path(data, "ontology/projection.json"), json.dumps(projection, ensure_ascii=False, indent=2) + "\n") == "create":
-        created.append((safe_child_path(data, "ontology/projection.json")).relative_to(ROOT))
+        created.append((safe_child_path(data, "ontology/projection.json")).relative_to(root))
 
     (safe_child_path(book, "SOURCES/_raw")).mkdir(parents=True, exist_ok=True)
     (safe_child_path(book, "images")).mkdir(parents=True, exist_ok=True)
