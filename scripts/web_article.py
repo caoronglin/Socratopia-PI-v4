@@ -112,12 +112,12 @@ class _Reader(HTMLParser):
 
 def _decode_article(raw: bytes, content_type: str) -> tuple[str, str]:
     """Use declared text encodings, then strict UTF-8/GB18030 fallback for older blogs."""
-    if b"\\x00" in raw[:4096]:
+    if b"\x00" in raw[:4096]:
         raise ValueError("疑似二进制文件，拒绝作为文章正文")
-    declared = re.search(r"charset\\s*=\\s*['\\\"]?([a-zA-Z0-9_-]+)",
+    declared = re.search(r"charset\s*=\s*['\"]?([a-zA-Z0-9_-]+)",
                          content_type, flags=re.I)
     if not declared:
-        declared = re.search(rb"charset\\s*=\\s*['\\\"]?([a-zA-Z0-9_-]+)",
+        declared = re.search(rb"charset\s*=\s*['\"]?([a-zA-Z0-9_-]+)",
                              raw[:4096], flags=re.I)
     alias = {"utf-8": "utf-8-sig", "utf8": "utf-8-sig", "gbk": "gb18030",
              "gb2312": "gb18030", "gb18030": "gb18030", "big5": "big5"}
@@ -228,11 +228,11 @@ def study_outline(root: Path, course: str, url: str) -> dict:
     start = next((index + 1 for index, line in enumerate(lines) if line.startswith(marker)), -1)
     if start < 0:
         raise ValueError("来源缺少不可信数据标记，拒绝作为已登记文章使用")
-    paragraphs = [p.strip() for p in re.split(r"\\n\\s*\\n+", "\\n".join(lines[start:]))
+    paragraphs = [p.strip() for p in re.split(r"\n\s*\n+", "\n".join(lines[start:]))
                   if len(p.strip()) >= 15]
-    headings = [re.sub(r"^#{1,4}\\s+", "", line).strip()
-                for line in lines[start:] if re.match(r"^#{1,4}\\s+\\S", line)][:10]
-    excerpts = [re.sub(r"\\s+", " ", p)[:280] for p in paragraphs[:6]]
+    headings = [re.sub(r"^#{1,4}\s+", "", line).strip()
+                for line in lines[start:] if re.match(r"^#{1,4}\s+\S", line)][:10]
+    excerpts = [re.sub(r"\s+", " ", p)[:280] for p in paragraphs[:6]]
     return {"course": course, "title": info["title"], "url": url,
             "source": str(path), "sha256": info.get("sha256"),
             "headings": headings, "excerpts": excerpts,
