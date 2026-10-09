@@ -146,6 +146,7 @@
     "tests/test_mineru_ingest.py",
     "tests/test_obsidian_export.py",
     "tests/test_ontology.py",
+    "tests/test_pedagogical_prompt_design.py",
     "tests/test_prep.py",
     "tests/test_prompt_catalog.py",
     "tests/test_reflection_split.py",
