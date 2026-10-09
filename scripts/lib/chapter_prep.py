@@ -67,11 +67,17 @@ def _source_file(root: Path, course: str, label: str) -> Path:
     if not label.startswith("SOURCES/"):
         raise ValueError("补充资料必须是 SOURCES/ 下的已登记相对路径")
     rel = label.removeprefix("SOURCES/")
+    raw = base / rel
+    # Check every original path component BEFORE resolving, including an alias
+    # pointing to another file within SOURCES (or to a different course).
+    probe = raw
+    while probe != base and base in probe.parents:
+        if probe.is_symlink():
+            raise ValueError("拒绝读取符号链接补充资料")
+        probe = probe.parent
     target = safe_child_path(base, rel)
     if not target.is_file():
         raise ValueError(f"补充资料尚未登记：{label}")
-    if target.is_symlink() or any(p.is_symlink() for p in target.parents if p != base.parent):
-        raise ValueError("拒绝读取符号链接补充资料")
     if target.suffix.lower() not in {".md", ".txt", ".html", ".htm", ".pdf"}:
         raise ValueError("补充资料类型不支持；请先编目为文本或 PDF")
     return target
@@ -90,7 +96,7 @@ def resolve_sources(root: Path, course: str, sources: list[str]) -> list[dict[st
         raise ValueError("单章最多登记16份补充资料，避免无界加载")
     result = []
     for label in sources:
-        if not isinstance(label, str) or any(c in label for c in "\r\n|<>") or len(label) > 240:
+        if not isinstance(label, str) or any(c in label for c in "\r\n|<>\"\\") or len(label) > 240:
             raise ValueError("补充资料路径包含非法字符")
         path = _source_file(root, course, label)
         result.append({"path": label, "sha256": source_digest(path),
