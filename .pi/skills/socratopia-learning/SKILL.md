@@ -35,10 +35,10 @@ description: 处理 Socratopia 的教材、资料编目、PREP、课堂、章节
 
 ## 核心动作
 
-1. 先读当前课程 runtime 与热上下文。
-2. 再读当前 PREP；仅按锚点读取必要 `book.md` 片段。
-3. 教学推进以理解证据和 coverage ledger 为准。
-4. 写入时先提交核心课堂事实，再生成复习资产，最后处理可延迟维护项。
-5. 任何评估失败只生成 `needs_review`，不能自动宣布“不掌握/掌握”。
+1. 先读本课 runtime 与热上下文。
+2. 只读当前 PREP 和必要的 `book.md` 锚点。
+3. 教学依据理解证据和 coverage ledger。
+4. 先提交课堂事实，再派生复习资产，最后维护。
+5. 评估失败只生成 `needs_review`，不得判定掌握。
 
-缺文件时按 reference 中的降级规则执行，不虚构内容。
+缺文件按 reference 降级，不编造。
