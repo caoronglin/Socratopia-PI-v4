@@ -17,7 +17,7 @@
 
 ## 1. Kernel · `AGENTS.md`
 
-唯一常驻层，956 汉字 / 75 行。会话开始即全量注入，因此**任何新增能力细节都不得写在这里**。
+唯一常驻层，应保持简短；执行细则在 `SYSTEM/SPEC/AGENT_LOOP.md`，仅必要时加载。不要把变动的工具 API 或完整流程放进 Kernel。
 
 10 节结构：
 
@@ -291,3 +291,25 @@ python -m unittest discover -s tests      # test_skillhub_education / test_tutor
 ## Cherry Studio Agent 宿主集成
 
 Socratopia 可在 Cherry Studio **Work → Agent** 以内置 **Pi runtime** 运行，Agent 使用 Cherry 的原生网页、知识库、文件与记忆工具；**不是新建 MCP Server**。完整配置、权限边界和网页资料导入见 [`docs/CHERRY_STUDIO_AGENT.md`](CHERRY_STUDIO_AGENT.md) 与 `integrations/cherry-studio/AGENT_PROMPT.md`；按需加载的网页教学规则由 `references/web-article.md` 唯一维护。
+
+## Agent Loop · 精确停止与最小提示词（2026-10）
+
+- [`SYSTEM/SPEC/AGENT_LOOP.md`](../SYSTEM/SPEC/AGENT_LOOP.md)：统一规定 `ROUTE → INSPECT → ACT → VERIFY → DONE/YIELD/BLOCKED/NEXT`，不同业务只引用这份决策契约。
+- [`integrations/cherry-studio/AGENT_PROMPT.md`](../integrations/cherry-studio/AGENT_PROMPT.md)：Cherry Pi 入口只写路由、工具边界、回答风格和停止条件；不重复 Kernel/Skills 内容。
+- Pi 官方 [How Pi Works](https://pi.dev/docs/latest/how-pi-works) 说明的是 **runtime** 模型请求与工具循环；项目约束属于 **prompt-level**，不能冒充底层强制 max-turn/max-tool-call。Cherry 原生工具使用 [官方工具与知识库契约](https://cherryai.com/docs/en/advanced-basic/agent-workspace/tools-knowledge-skills-mcp/)。
+- 动态工具确认、强制中断或超时限制需要独立的兼容性验证；未添加未经测试的 Pi Extension。
+
+### 场景验收（静态契约，不等于模型实测）
+
+| 场景 | 预期分支与停止点 |
+|---|---|
+| 简短定义 | 直接回答 → DONE；不读取整套 Skill |
+| 开课与追问 | 绑定单课、查 gate、只问一个主要问题 → YIELD |
+| 用户要直接讲 | 先解释，不为 Socratic 套问 → DONE 或一个可选验证后 YIELD |
+| 网页打不开 | 不猜正文、不绕限制 → BLOCKED；建议粘贴原文 |
+| 工具审批被拒 | 立即停止该副作用 → BLOCKED；不换工具绕开 |
+| 修复代码 | 调查 → 修改 → 相关测试 → DONE；测试失败则修具体问题、无法修时如实报告 |
+| 学生说“懂了” | 不自动写 `verified`，可选验证 → YIELD |
+| 本轮目标已完成 | 立即 DONE，不进行额外检索或重复工具调用 |
+
+静态测试只验证文本和路径契约；真实 Agent Loop 的调用次数、工具行为与学习质量要通过 Cherry Pi 实机会话评估。
