@@ -83,7 +83,7 @@ reference 或 script」，而不是新增 skill。
 导师是 **presentation layer**，不改事实/权限/课程边界/掌握标准/文件状态。
 
 按需读取：日常课堂 = `profiles/TUTOR_X.md` + `persona.md`；备课会 / 下课复盘 = `moe.md` + `moe/TUTOR_X.md`；
-去 AI 味 → `style.md`；导师复盘 → `self-improving.md`；轮换 → `handoff.md` + `runtime/handoff.json`；
+去 AI 味 → `style.md`；口吻评测 → `voice-examples.md`（仅按需）；导师复盘 → `self-improving.md`；轮换 → `handoff.md` + `runtime/handoff.json`；
 群聊场景 → `social.md`。
 
 #### 面向学习者的导师（`profiles/`，3 位）
