@@ -8,6 +8,8 @@
 
 因此，“章必须完整覆盖”不等于“一次 Unit 必须讲完整章”。
 
+新建 PREP 默认按 Chapter 范围建立**一份逻辑教案**，不强制一个 Session/Unit 塞完整章。章内多个 Unit 可跨 Session，尚缺的 required 小节继续未完成。真实会话断点和掌握证据归单课 runtime/PROGRESS，不由 chapter plan 自动推断。
+
 ## 掌握证据
 
 可靠度从弱到强大致为：自述 < 提示后复述 < 独立解释/基础题 < 辨析/反例 < 迁移/综合应用。
