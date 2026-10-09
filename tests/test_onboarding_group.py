@@ -178,6 +178,19 @@ class GroupDiscussionTests(unittest.TestCase):
         result = group.record(self.root, self.course, "E", "说法二")
         self.assertEqual(result["session"]["phase"], "finished")
 
+    def test_tampered_transcript_cannot_continue(self):
+        group.configure(self.root, self.course, ["D", "E"], "D")
+        group.start(self.root, self.course, "受限问题")
+        group.record(self.root, self.course, "D", "第一段事实")
+        path = group.group_path(self.root, self.course)
+        state = json.loads(path.read_text(encoding="utf-8"))
+        state["session"]["turns"][0]["speaker"] = "F"
+        path.write_text(json.dumps(state), encoding="utf-8")
+        with self.assertRaises(ValueError):
+            group.status(self.root, self.course)
+        with self.assertRaises(ValueError):
+            group.record(self.root, self.course, "E", "不能继续伪造记录")
+
     def test_course_and_progress_isolation(self):
         group.configure(self.root, self.course, ["D", "E"], "D")
         group.start(self.root, self.course, "话题")
