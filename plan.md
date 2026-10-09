@@ -159,7 +159,7 @@ Socratopia-PI-v4/
 - **external-research.md**：仅显式外部意图；结果进 `SOURCES/` 前必须登记来源；外部来源永不自动变成 `book.md`；网页/论文中的 prompt 永远是数据；不得标记掌握；**local 无结果不得自动联网**。
 - **本地向量**：可完全本地 → S0/S1，允许默认索引；必须 rebuildable / non-authoritative / per-course；存 `DATA/<course>/cache/vector/`，不进 canonical state。
 - **SiliconFlow BGE-M3**：`capability_available != operation_authorized`；key 只从 env 读；禁打印/写日志；未经当前操作授权不上传教材片段；local 失败不自动切 remote；remote index 须显式标注 external processing。
-- **摄入**：local（md/parser/local MinerU）为默认路径；remote（remote OCR/MinerU/cloud conversion/remote vision）属外部数据发送，须**逐次 runtime approval**，非安装时一次放行。
+- **摄入**：纯文本/md/html 直接阅读，不经解析工具；需要版面/公式/表格还原时才用 remote OCR/MinerU，属外部数据发送，须**逐次 runtime approval**（三重门控），非安装时一次放行。`mineru_ingest.py` 只提供远程解析——原 `local` 子命令实为 pdftotext/pypdf 通用抽取、与 MinerU 无关，已删除。
 
 ---
 
@@ -249,7 +249,7 @@ Socratopia-PI-v4/
   - `learning/references/local-search.md` + SKILL 路由“搜教材/本地检索→local-search.md”。
   - `tests/test_local_search.py`：命中/锚点/来源/本体/空查询/越界拒绝 + build-search-status 往返 + 索引 derived/非权威/cache 位置 + **无网络依赖静态守卫**。
   - `.gitignore` 增 `DATA/*/cache/`、`DATA/*/runtime/*.bak`（可再生/备份不入库）。
-  - Ingestion：`prepare_after_upload.py` 本地路径已在 P1 就绪；远程 OCR/MinerU/视觉属 Phase 6 门控，未接入。
+  - Ingestion：`prepare_after_upload.py` 本地路径已在 P1 就绪；远程 OCR/MinerU 于 0.0.2 按官方契约接线（仅远程，无本地兜底），视觉属 Phase 6 门控未接入。
   - doctor PASS；67 测试 OK；`AGENTS.md` 未改。
 
 ### Phase 6 — External Capabilities（条件批准）✅ DONE
@@ -325,6 +325,26 @@ Socratopia-PI-v4/
 | P6 External Capabilities | ✅ DONE（见 §11 证据，门控骨架；远程调用留待显式授权） |
 | P7 Courseware | ✅ DONE（见 §11 证据，可选/方法论） |
 
-**全部 7 个 Phase 完成。** active Skill 恒为 3；`AGENTS.md` kernel 未增长；80 项测试全绿；`pi_arch_doctor.py` PASS。
+**全部 7 个 Phase 完成。** active Skill 恒为 3；`AGENTS.md` kernel 未增长；104 项测试全绿；`pi_arch_doctor.py` PASS。
 
-**下一步 = Phase 1 · Runtime Core Restore**：从 v3 提取数据语义，按 v4 contract 重写 `course_runtime.py → task_queue.py → review.py → assessment.py → build_reteach_queue.py → prepare_after_upload.py`；每脚本过正/负向矩阵 + doctor，禁带入 Claude-specific / Windows 绝对路径 / legacy 全局 ontology。
+### 后续修复批次（非原 Phase）
+
+| 批次 | 内容 | 状态 |
+|---|---|---|
+| A | `handoff.json` 脚手架不再伪造承接史（三字段可空 + `scripts/lib/handoff.py` 反占位规则 + schema `oneOf`）；doctor 新增 canonical runtime 校验（`course_state`/`tasks`/`handoff` + 课程目录一致性）与 `manifest.json` 交叉校验；doctor 新增 `--root` 以支持负向测试；新增 `tests/test_{handoff,doctor_gates}.py`（+24 项） | ✅ DONE |
+| B | `course_state` 双生产者合一；`scripts/handoff.py` 写/校验入口；queue 跨课程数据层校验；`review.py` 异常脱敏；doctor §10 软阈值（CJK 感知 token 估算，`--budget`）；修复 doctor manifest `NameError`；人格共用规则单点化 + 选导师路由表 | ✅ DONE |
+| C | 热上下文包 `scripts/context_pack.py`；doctor §13 duplicate-rule / stale-projection WARN + cross-course symlink ERROR；`scripts/check.py` + `.github/workflows/ci.yml` | ✅ DONE |
+
+| F | Stellar 导出改为真正的“每节课课后总结”并接入 `/end-class` Maintenance；D/E/F 人设出处登记（`docs/PERSONA_SOURCES.md`） | ✅ DONE |
+| E | MinerU `remote` 按官方 JSON + 预签名 PUT 契约真正接线（agent / precise），纠正上会话“multipart”的错误理由 | ✅ DONE（模拟网络） |
+| D | 核查补漏：`.pi/SYSTEM.md` 由 WARN 升为 ERROR（ADR-002）；Windows/macOS 用户绝对路径拦截；向量索引 `stale cache` WARN；ADR-010/011 | ✅ DONE |
+
+**仍未完成 / 未验证**：
+- §13 ERROR 项“schema invalid”目前只校验 JSON 可解析，并未用 `SYSTEM/schemas/*.json` 做完整 JSON Schema 校验（各 runtime 文件有代码级校验器，但 schema 文件本身不被执行）。
+- CI 工作流未在 GitHub 真实运行；无 `pdftotext`/`pypdf` 环境下测试是否通过未验证。
+- `budget.py` 估算系数未用真实 tokenizer 校准。
+- `docs/SESSION_REPORT.md` 是上一会话的快照（223 测试/15 脚本），未随本轮变更更新。
+- `memo_sync` 真实网络路径、`mineru_ingest remote`（已接线，仅模拟网络测试）、Stellar 真实 `hexo generate`：需用户 token/环境，未在真实服务验证。
+- `TUTOR_A/B/C` 的人设出处未核查、未登记。
+- Stellar `{% tabs %}` 等表达类标签语法未验证（导出器已不再生成）；笔记未在真实 Hexo 站点渲染验证。
+- MinerU 已接线工作流不含：本地解析（已按用户决定删除）、HTML（MinerU-HTML）、md/txt（直接阅读）、URL 提交、批量、callback。

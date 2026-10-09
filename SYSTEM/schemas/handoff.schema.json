@@ -2,6 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://socratopia.local/schema/handoff.schema.json",
   "title": "Socratopia Tutor Handoff",
+  "description": "ADR-006 authoritative cross-tutor carry-over. A course with no handoff yet declares all party fields null with an empty carry; a real carry-over names the tutors and carries at least one evidenced item. The oneOf below forbids placeholder handoffs that would fabricate teaching history. Executed by scripts/lib/handoff.py.",
   "type": "object",
   "required": [
     "schema_version",
@@ -15,16 +16,13 @@
       "const": 1
     },
     "lesson_id": {
-      "type": "string",
-      "minLength": 1
+      "type": ["string", "null"]
     },
     "from_tutor": {
-      "type": "string",
-      "minLength": 1
+      "type": ["string", "null"]
     },
     "to_tutor": {
-      "type": "string",
-      "minLength": 1
+      "type": ["string", "null"]
     },
     "carry": {
       "type": "array",
@@ -37,7 +35,8 @@
         ],
         "properties": {
           "knowledge_point": {
-            "type": "string"
+            "type": "string",
+            "minLength": 1
           },
           "status": {
             "enum": [
@@ -48,7 +47,8 @@
             ]
           },
           "evidence": {
-            "type": "string"
+            "type": "string",
+            "minLength": 1
           },
           "recommended_angle": {
             "type": "string"
@@ -64,5 +64,25 @@
       "type": "string"
     }
   },
-  "additionalProperties": false
+  "additionalProperties": false,
+  "oneOf": [
+    {
+      "title": "no handoff yet",
+      "properties": {
+        "lesson_id": { "type": "null" },
+        "from_tutor": { "type": "null" },
+        "to_tutor": { "type": "null" },
+        "carry": { "maxItems": 0 }
+      }
+    },
+    {
+      "title": "real carry-over",
+      "properties": {
+        "lesson_id": { "type": "string", "minLength": 1 },
+        "from_tutor": { "type": "string", "minLength": 1 },
+        "to_tutor": { "type": "string", "minLength": 1 },
+        "carry": { "minItems": 1 }
+      }
+    }
+  ]
 }

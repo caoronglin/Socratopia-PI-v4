@@ -24,8 +24,14 @@ Tutor              = presentation layer only
 6. 运行：
 
 ```bash
-python scripts/pi_arch_doctor.py
-python -m unittest discover -s tests
+python scripts/check.py --strict          # doctor + 全部测试（CI 同款）
+python scripts/pi_arch_doctor.py --budget # 上下文 token 预算报告
+```
+
+## 省 token 工具
+
+```bash
+python scripts/context_pack.py --course "课程名" [--budget 3000]   # 只读：开课所需最小热上下文
 ```
 
 ## 新建课程骨架

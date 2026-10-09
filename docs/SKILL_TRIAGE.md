@@ -305,3 +305,111 @@
 
 ## 附：旧 v3 skills 处置
 - `socratopia-knowledge` / `socratopia-works`：**不恢复**，标记 legacy/archive；其有效能力已由 learning 的 materials/review/assessment/memory 等 reference 覆盖，不重建并行规则源。
+
+---
+
+# SkillHub education 专家包（skillset）
+
+## 安装器审查结论（未执行安装）
+
+`skillhub` CLI 实际不可用：`/home/rlcao/.local/bin/skillhub` 只是 shim，依赖的
+`~/.skillhub/skills_store_cli.py` 不存在。静态审查 `install.sh`（548 行，
+sha256 `e6ba486b5fa7cffc24faeb94baf4936a08f95e5e65848ccc3309ceacd5fdf450`）后**决定不执行**：
+
+- 下载 `latest.tar.gz` 后直接 `tar -xzf` 并 `python3` 执行，**无 sha256 / 签名校验**；
+- 默认写入 `~/.openclaw/workspace/skills/skillhub-preference`——**不是 Pi 的 skills 路径**（Pi 用 `~/.pi/skills/`、`~/.agents/skills/`），真正落位全靠 `--dir`；
+- 会持久化 `install_workspace_skills` 与自升级偏好；
+- 站点为 SPA，`/api/pack/*` 返回 HTML，**装之前无法审阅内容**。
+
+**替代路径**：从 kit 的 `metadata.json` 得知 skillset 下载端点为
+`/api/v1/skillsets/{slug}/download`，直接下载 4 个 zip 做静态审查，全程不安装 CLI。
+
+> 注：kit tarball sha256 `3bbe2ba15ada2eb7a94a2b760fead83be5f4164ab28a6c8b0944dbc539f7e236`，
+> 9 个条目，无路径穿越、无 symlink。
+
+## 逐源记录
+
+| slug | sha256 (zip) | 体积 | 落地 |
+|---|---|---|---|
+| `education-quiz-generation` | `8bb03c6c…` | 6356 B | `references/quiz-generation.md` |
+| `education-lesson-planning` | `f8b68b99…` | 8187 B | `references/lesson-planning.md` |
+| `education-student-assessment` | `74d09e89…` | 7627 B | 归并入现有 owner `references/assessment.md` |
+| `education-training-program` | `eaf5a7f3…` | 7787 B | `references/course-program.md` |
+
+**Reviewed files**：`manifest.json` + `identify.md`（每包仅此两个文件，`files[].sha256` 已逐包校验通过）。
+
+**has_code**: false　**network**: false　**Security**: 无脚本、无网络调用、无凭据读取、无 prompt-injection 措辞。
+
+### Accepted（仅思想，重写为一方规则）
+- 难度分级（基础/中等/拔高）→ 按认知操作而非题量分级。
+- 题型矩阵 → 辨析/因果/反例/迁移/先修五型，由图谱关系选型。
+- 教学评一致性 → 目标—提问—证据三者对齐，错位即降级。
+- 分层支架 → 同一目标的支架深度（A/B/C），非不同目标。
+- 错因分类 → 概念缺口/机制断链/误读/流程/过度推广/检索失败。
+- Rubric 多维 → 用于定位差距维度，不产出总分排名。
+- 单元先修 + 证据型里程碑 → 替代时间型/进度型里程碑。
+
+### Rejected
+- 编排式前提「你已安装以下 Skill，请按步骤串联使用」：24 个 child skill **未安装**，前提为假。
+- K12 / 新课标 2022 / 九大学科 / 考点作战地图：与课程隔离的个人学习模型无关。
+- 批量成果包（题库/试卷/教案/培训资料全套）：违反最小上下文预算。
+- 「自动批改」「一键生成」：自动判定只能产生 `needs_review`，不得替代真实证据。
+- **掌握度图谱 / 掌握度打分**：直接冲突 `SYSTEM/schemas/ontology.schema.json` 的 mastery 字段禁令。
+- 家长沟通 / 成绩单评语 / 学员成长档案 / 证书模板 / 营销文案：机构与外发产物（S3）。
+- Claude Code / Codex 导出声明：宿主专属，违反 `ARCHITECTURE.md`。
+
+### Final destination
+- 3 个新 reference + 1 处归并；**active skill 仍为 3**，doctor PASS。
+
+### Runtime permission
+- none（仅 reference，`local-only`）。
+
+---
+
+# 消融测试报告（ablation）
+
+工具：`tests/test_ablation.py`（21 项）。方法：逐个移除单一护栏，然后验证失败**被检出**。
+问题不是「护栏在不在」，而是「护栏被拿掉之后，有人会发现吗」。没有检出的护栏是装饰品。
+
+## 结论
+
+| 护栏 | 消融后 | 判定 |
+|---|---|---|
+| active skill 恒为 3（doctor 门禁） | doctor 静默通过；测试套件失败 | **load-bearing**（双重） |
+| canonical state 校验（doctor） | doctor 静默通过 | **load-bearing**（测试套件兜底） |
+| `manifest.json` 交叉校验 | doctor 静默通过 | **load-bearing**（测试套件兜底） |
+| quarantine 清单必需 | doctor 静默通过 | **load-bearing**（测试套件兜底） |
+| handoff 反占位伪造 | 仍报错（rc=1） | **load-bearing** |
+| handoff 模板无占位 | `test_handoff.py` 失败 | **load-bearing** |
+| ontology 禁止字段（代码） | `test_ontology.py` 失败 | **load-bearing** |
+| ontology 禁止字段（schema） | ~~静默~~ → 已修 | **曾为装饰品，已修复** |
+| 课程名校验 | `test_runtime_core.py` 失败 | **load-bearing** |
+| 路径包含性检查 | 合法课程名不触发；**symlink 逃逸触发** | **load-bearing（仅 symlink）** |
+| 原子写 `os.replace` | `test_runtime_core.py` 失败 | **load-bearing** |
+| secret 脱敏 | `test_memo_sync.py` 失败 | **load-bearing** |
+| memos 双门控 | `test_memo_sync.py` 失败 | **load-bearing** |
+| Stellar 导出 `--apply` | 无 flag 时未写文件 | **load-bearing** |
+| MinerU `--confirm-upload` | `test_mineru_ingest.py` 失败 | **load-bearing** |
+| 本地优先：不支持格式拒绝 | `test_mineru_ingest.py` 失败 | **load-bearing** |
+| 三月七「元气不提降门槛」 | `test_tutor_profiles.py` 失败 | **load-bearing** |
+| 外部包拒绝域（掌握度图谱） | `test_skillhub_education.py` 失败 | **load-bearing** |
+
+## 消融查出的一处真实缺陷（已修）
+
+`SYSTEM/schemas/ontology.schema.json` 的 `propertyNames` 禁止字段集**没有任何代码执行**，
+只有 `scripts/ontology.py:FORBIDDEN_PROPS` 在运行时生效。两者可以静默漂移 ——
+把 schema 里的 enum 清空，整套测试依然全绿。**schema 层的掌握度禁令原本是装饰品。**
+
+修复：`tests/test_ontology.py::test_schema_forbidden_props_match_code` 断言
+schema 的禁止集合与代码的 `FORBIDDEN_PROPS` **完全相等**。此后任一侧被改动都会失败。
+
+## 方法论备注
+
+- **消融必须有对应夹具**：路径包含性检查在「非法课程名」下永远不触发（被
+  `validate_course_name` 抢先拦截）；只有构造 `DATA/evil -> 外部目录` 的 symlink 才能证明它有效。
+  没夹具的消融是无效实验。
+- **多道门要分别消融**：doctor 门禁被移除后，测试套件仍会失败 —— 这说明防线是分层的，
+  单点移除不等于失守。报告必须区分「哪一层还在」。
+- **检测信号是退出码，不是报错文案**：改写文案不等于移除护栏。
+- **必须用 subprocess 探测**：在测试进程内 `import` 会解析回原始仓库，改到的是副本、
+  跑的是原件，实验结果无效。

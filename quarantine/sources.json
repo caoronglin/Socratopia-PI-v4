@@ -136,6 +136,99 @@
       "decision": "reject_as_code_accept_as_ideas",
       "final_destination": "ideas only → courseware.md (manual extraction, first-party rewrite)",
       "runtime_permission": "none (not integrated)"
+    },
+    {
+      "slug": "education-quiz-generation",
+      "version": "1.0.0",
+      "path": "https://api.skillhub.cn/api/v1/skillsets/education-quiz-generation/download",
+      "license": "no LICENSE file (clawhub-published)",
+      "composite_sha256": "8bb03c6cf95af2bba07fe3ca9b57d0c515dbf24cb9a65a15af3e7a740a0ad333",
+      "has_code": false,
+      "network": false,
+      "decision": "accept_method",
+      "final_destination": ".pi/skills/socratopia-learning/references/quiz-generation.md",
+      "runtime_permission": "local-only (reference)",
+      "package_type": "skillset (manifest.json + identify.md only)",
+      "review_method": "static read of extracted zip; manifest sha256 verified; no CLI install executed",
+      "rejected": [
+        "orchestrator premise 'you have installed the following skills' (24 child skills NOT installed)",
+        "K12 / 新课标2022 / 九大学科 / 考点作战地图应试框架",
+        "batch artifact packages (题库/试卷/教案/培训资料 全套成果包)",
+        "auto-grading / auto-feedback standing in for real evidence",
+        "mastery graph / 掌握度图谱 (conflicts with ontology mastery ban)",
+        "家长沟通 / 成绩单评语 / 学员档案 / 证书模板 / 营销文案 (institutional artifacts)",
+        "host-specific export claims (Claude Code / Codex)"
+      ]
+    },
+    {
+      "slug": "education-lesson-planning",
+      "version": "1.0.0",
+      "path": "https://api.skillhub.cn/api/v1/skillsets/education-lesson-planning/download",
+      "license": "no LICENSE file (clawhub-published)",
+      "composite_sha256": "f8b68b99bb357d7797b3f0b6c7a820ffaaf3b62289f4ee28ced4aaefbc7205ab",
+      "has_code": false,
+      "network": false,
+      "decision": "accept_method",
+      "final_destination": ".pi/skills/socratopia-learning/references/lesson-planning.md",
+      "runtime_permission": "local-only (reference)",
+      "package_type": "skillset (manifest.json + identify.md only)",
+      "review_method": "static read of extracted zip; manifest sha256 verified; no CLI install executed",
+      "rejected": [
+        "orchestrator premise 'you have installed the following skills' (24 child skills NOT installed)",
+        "K12 / 新课标2022 / 九大学科 / 考点作战地图应试框架",
+        "batch artifact packages (题库/试卷/教案/培训资料 全套成果包)",
+        "auto-grading / auto-feedback standing in for real evidence",
+        "mastery graph / 掌握度图谱 (conflicts with ontology mastery ban)",
+        "家长沟通 / 成绩单评语 / 学员档案 / 证书模板 / 营销文案 (institutional artifacts)",
+        "host-specific export claims (Claude Code / Codex)"
+      ]
+    },
+    {
+      "slug": "education-student-assessment",
+      "version": "1.0.0",
+      "path": "https://api.skillhub.cn/api/v1/skillsets/education-student-assessment/download",
+      "license": "no LICENSE file (clawhub-published)",
+      "composite_sha256": "74d09e89364be5193307e997328dde0fe16f4f7a31cc18dcb6a0f404df58617b",
+      "has_code": false,
+      "network": false,
+      "decision": "accept_method",
+      "final_destination": ".pi/skills/socratopia-learning/references/assessment.md (folded into existing owner)",
+      "runtime_permission": "local-only (reference)",
+      "package_type": "skillset (manifest.json + identify.md only)",
+      "review_method": "static read of extracted zip; manifest sha256 verified; no CLI install executed",
+      "rejected": [
+        "orchestrator premise 'you have installed the following skills' (24 child skills NOT installed)",
+        "K12 / 新课标2022 / 九大学科 / 考点作战地图应试框架",
+        "batch artifact packages (题库/试卷/教案/培训资料 全套成果包)",
+        "auto-grading / auto-feedback standing in for real evidence",
+        "mastery graph / 掌握度图谱 (conflicts with ontology mastery ban)",
+        "家长沟通 / 成绩单评语 / 学员档案 / 证书模板 / 营销文案 (institutional artifacts)",
+        "host-specific export claims (Claude Code / Codex)"
+      ]
+    },
+    {
+      "slug": "education-training-program",
+      "version": "1.0.0",
+      "path": "https://api.skillhub.cn/api/v1/skillsets/education-training-program/download",
+      "license": "no LICENSE file (clawhub-published)",
+      "composite_sha256": "eaf5a7f3f5e820df81c761c183834d6b9cbcedde14bdb5b8fee667515ece1f1f",
+      "has_code": false,
+      "network": false,
+      "decision": "accept_method",
+      "final_destination": ".pi/skills/socratopia-learning/references/course-program.md",
+      "runtime_permission": "local-only (reference)",
+      "package_type": "skillset (manifest.json + identify.md only)",
+      "review_method": "static read of extracted zip; manifest sha256 verified; no CLI install executed",
+      "rejected": [
+        "orchestrator premise 'you have installed the following skills' (24 child skills NOT installed)",
+        "K12 / 新课标2022 / 九大学科 / 考点作战地图应试框架",
+        "batch artifact packages (题库/试卷/教案/培训资料 全套成果包)",
+        "auto-grading / auto-feedback standing in for real evidence",
+        "mastery graph / 掌握度图谱 (conflicts with ontology mastery ban)",
+        "家长沟通 / 成绩单评语 / 学员档案 / 证书模板 / 营销文案 (institutional artifacts)",
+        "host-specific export claims (Claude Code / Codex)"
+      ]
     }
-  ]
+  ],
+  "notes_skillhub": "2026-10 复核：skillhub CLI 缺失（/home/rlcao/.skillhub/skills_store_cli.py 不存在）。install.sh 静态审查结论：下载 latest.tar.gz 后 tar 解包并 python3 执行，无 sha256/校验；默认写 ~/.openclaw/workspace/skills（非 Pi skills 路径）。因此未执行 curl|bash 安装，改为直接下载 skillset zip 静态审查后吸收为 reference。active skill 仍为 3。"
 }

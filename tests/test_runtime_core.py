@@ -1,10 +1,14 @@
 """Phase 1 · Runtime Core Restore — positive + negative tests."""
 
+import io
 import json
+import subprocess
 import sys
 import tempfile
 import unittest
+from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
+from unittest.mock import call, patch
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
@@ -12,6 +16,95 @@ if str(ROOT) not in sys.path:
 
 from scripts.lib import assessment, course_state, repository, review  # noqa: E402
 from scripts.lib import task_queue as tq  # noqa: E402
+from scripts import prepare_after_upload  # noqa: E402
+
+
+class PrepareAfterUploadTests(unittest.TestCase):
+    def setUp(self):
+        temporary = tempfile.TemporaryDirectory(prefix="socr-upload-")
+        self.addCleanup(temporary.cleanup)
+        self.root = Path(temporary.name)
+        self.course = "回归课程 with spaces"
+        book = self.root / "TEXTBOOK" / self.course / "book.md"
+        book.parent.mkdir(parents=True)
+        book.write_text("# Synthetic textbook\n", encoding="utf-8")
+        self.commands = [
+            [sys.executable, "scripts/build_reteach_queue.py", "--course", self.course],
+            [sys.executable, "scripts/course_runtime.py", "migrate", "--course", self.course],
+            [sys.executable, "scripts/pi_arch_doctor.py", "--course", self.course],
+        ]
+
+    def invoke(self, course, side_effect=None):
+        stdout, stderr = io.StringIO(), io.StringIO()
+        with patch.object(prepare_after_upload, "ROOT", self.root), \
+                patch.object(sys, "argv", ["prepare_after_upload.py", "--course", course]), \
+                patch.object(prepare_after_upload, "run", side_effect=side_effect) as run, \
+                redirect_stdout(stdout), redirect_stderr(stderr):
+            try:
+                result = prepare_after_upload.main()
+            except SystemExit as exc:
+                result = exc
+        return result, run, stdout.getvalue(), stderr.getvalue()
+
+    def test_safe_current_course_is_normalized_and_passed_to_every_stage(self):
+        result, run, stdout, stderr = self.invoke(f"  {self.course}  ")
+        self.assertEqual(result, 0)
+        self.assertEqual(run.call_args_list, [call(command) for command in self.commands])
+        self.assertIn("架构 doctor 已通过", stdout)
+        self.assertEqual(stderr, "")
+
+    def test_invalid_course_paths_never_run_a_stage(self):
+        for course in ("../outside", "..", ".", "a/b", "a\\b", "/absolute", "", "   "):
+            with self.subTest(course=course):
+                result, run, stdout, stderr = self.invoke(course)
+                self.assertIsInstance(result, SystemExit)
+                self.assertEqual(result.code, 2)
+                run.assert_not_called()
+                self.assertIn("非法课程名", stderr)
+                self.assertNotIn("完成：", stdout)
+
+    def test_escaping_textbook_symlink_never_runs_a_stage(self):
+        # The target is synthetic too; nothing outside this temporary root is read.
+        outside = self.root / "outside"
+        outside.mkdir()
+        (outside / "book.md").write_text("# Outside fixture\n", encoding="utf-8")
+        (self.root / "TEXTBOOK" / "escaping").symlink_to(outside, target_is_directory=True)
+        result, run, stdout, stderr = self.invoke("escaping")
+        self.assertIsInstance(result, SystemExit)
+        self.assertEqual(result.code, 2)
+        run.assert_not_called()
+        self.assertIn("课程路径越界", stderr)
+        self.assertNotIn("完成：", stdout)
+
+    def test_missing_active_book_never_runs_a_stage(self):
+        result, run, stdout, stderr = self.invoke("missing")
+        self.assertIsInstance(result, SystemExit)
+        self.assertIn("缺少 active 主课本", str(result.code))
+        run.assert_not_called()
+        self.assertNotIn("完成：", stdout)
+        self.assertEqual(stderr, "")
+
+    def test_stage_failure_stops_and_reports_exact_completed_stages_without_rollback(self):
+        labels = ["补讲候选刷新", "runtime 迁移与投影", "单课健康检查"]
+        for failed_index, label in enumerate(labels):
+            with self.subTest(stage=label):
+                failure = subprocess.CalledProcessError(17, self.commands[failed_index])
+                result, run, stdout, stderr = self.invoke(
+                    self.course, [None] * failed_index + [failure]
+                )
+                self.assertEqual(result, 1)
+                self.assertEqual(
+                    run.call_args_list,
+                    [call(command) for command in self.commands[:failed_index + 1]],
+                )
+                completed = "、".join(labels[:failed_index]) or "无"
+                self.assertEqual(
+                    stderr,
+                    f"\n失败：{label}（exit=17）。已完成：{completed}。\n"
+                    "已完成阶段的写入未回滚；未执行后续阶段，不宣称流水线完成。\n",
+                )
+                self.assertNotIn("完成：", stdout)
+                self.assertNotIn("架构 doctor 已通过", stdout)
 
 
 class RepositorySafetyTests(unittest.TestCase):

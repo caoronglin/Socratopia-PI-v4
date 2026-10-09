@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "lesson_id": "lesson_001",
-  "from_tutor": "TUTOR_A",
-  "to_tutor": "TUTOR_B",
+  "lesson_id": null,
+  "from_tutor": null,
+  "to_tutor": null,
   "carry": [],
   "opening_anchor": "",
   "tone_note": ""

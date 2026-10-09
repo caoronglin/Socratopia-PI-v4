@@ -13,7 +13,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from scripts.lib import review as review_lib  # noqa: E402
-from scripts.lib.repository import course_dir, validate_course_name  # noqa: E402
+from scripts.lib.repository import course_dir, redact, validate_course_name  # noqa: E402
 
 
 def _write_plan(root: Path, course: str, lesson_id: str, kind: str, items: list) -> Path:
@@ -200,7 +200,7 @@ def main() -> int:
     try:
         return args.func(args)
     except Exception as exc:  # noqa: BLE001
-        print(f"✗ {kind} 执行失败：{exc}")
+        print(f"✗ {kind} 执行失败：{redact(str(exc), 300)}")
         if lesson_id and kind in review_lib.REVIEW_TASK_KINDS:
             task = review_lib.enqueue_review_task(ROOT, args.course, lesson_id, kind, summary=f"自动入队（{kind} 失败待重跑）")
             print(f"已自动入队待重跑：{task['kind']}（{task['id'][:8]}）")

@@ -166,6 +166,25 @@ class OntologyTests(unittest.TestCase):
         for node in proj["nodes"].values():
             self.assertFalse(onto.FORBIDDEN_PROPS & set(node["props"]))
 
+    def test_schema_forbidden_props_match_code(self):
+        """Schema and runtime must ban exactly the same mastery fields.
+
+        The schema is not executed by any runtime code, so without this parity
+        check the schema's `propertyNames` ban is decorative and can drift
+        silently away from `ontology.FORBIDDEN_PROPS`.
+        """
+        schema = json.loads((ROOT / "SYSTEM/schemas/ontology.schema.json").read_text(encoding="utf-8"))
+        banned = set(schema["$defs"]["node"]["properties"]["props"]["propertyNames"]["not"]["enum"])
+        self.assertEqual(
+            banned, onto.FORBIDDEN_PROPS,
+            "SYSTEM/schemas/ontology.schema.json 与 scripts/ontology.py 的禁止字段集合不一致",
+        )
+
+    def test_schema_marks_projection_non_authoritative(self):
+        schema = json.loads((ROOT / "SYSTEM/schemas/ontology.schema.json").read_text(encoding="utf-8"))
+        self.assertEqual(schema["properties"]["derived"]["const"], True)
+        self.assertEqual(schema["properties"]["authoritative"]["const"], False)
+
 
 if __name__ == "__main__":
     unittest.main()

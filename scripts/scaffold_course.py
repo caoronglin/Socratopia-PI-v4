@@ -3,18 +3,25 @@ from __future__ import annotations
 
 import argparse
 import json
-import re
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scripts.lib.course_state import default_state  # noqa: E402
+from scripts.lib.repository import validate_course_name  # noqa: E402
 
 
 def valid_course(name: str) -> str:
-    name = name.strip()
-    if not name or name in {".", ".."} or "/" in name or "\\" in name or "\x00" in name:
-        raise argparse.ArgumentTypeError("course must be a single safe directory name")
-    return name
+    try:
+        if "\x00" in name:
+            raise ValueError(name)
+        return validate_course_name(name)
+    except ValueError:
+        raise argparse.ArgumentTypeError("course must be a single safe directory name") from None
 
 
 def write_if_missing(path: Path, text: str) -> str:
@@ -49,9 +56,8 @@ def main() -> int:
         if write_if_missing(path, text) == "create":
             created.append(path.relative_to(ROOT))
 
-    state = json.loads((ROOT / "templates/course_state.json").read_text(encoding="utf-8"))
-    state["course"] = course
-    state["updated_at"] = now
+    # Single producer: templates/course_state.json is documentation, locked to this by tests.
+    state = default_state(course)
     if write_if_missing(data / "runtime/course_state.json", json.dumps(state, ensure_ascii=False, indent=2)+"\n") == "create":
         created.append((data / "runtime/course_state.json").relative_to(ROOT))
     if write_if_missing(data / "runtime/handoff.json", (ROOT / "templates/handoff.json").read_text(encoding="utf-8")) == "create":

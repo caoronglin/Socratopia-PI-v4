@@ -13,5 +13,8 @@
     "missing_coursebook",
     "missing_prep"
   ],
-  "updated_at": "<ISO-8601>"
+  "current_chapter": "",
+  "active_tutor": null,
+  "updated_at": "<ISO-8601>",
+  "source_of_truth": "DATA/<course>/PROGRESS.md"
 }

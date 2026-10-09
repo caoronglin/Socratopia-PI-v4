@@ -50,6 +50,18 @@ def textbook_dir(root: Path, course: str) -> Path:
     return _safe_dir(root, "TEXTBOOK", course)
 
 
+def iter_course_paths(root: Path, top: str = "DATA", course: str | None = None) -> list[Path]:
+    """List course roots without reading another course when a scope is supplied."""
+    base = root / top
+    if course is not None:
+        name = validate_course_name(course)
+        path = base / name
+        return [path] if path.exists() or path.is_symlink() else []
+    if not base.is_dir():
+        return []
+    return sorted(p for p in base.iterdir() if p.is_dir() or p.is_symlink())
+
+
 def read_json(path: Path) -> dict[str, Any] | None:
     """Read a JSON object or return None when the file does not exist."""
     if not path.exists():

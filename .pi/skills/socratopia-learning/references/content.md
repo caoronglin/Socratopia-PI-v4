@@ -18,7 +18,7 @@
 
 1. 确定课程；
 2. 判断主课本是否存在；
-3. 有项目脚本时调用项目现有受控流水线；没有则只生成可审计草案；
+3. 有 active book 时运行 `python scripts/prepare_after_upload.py --course "<课程>"`：补讲候选 → runtime 迁移/投影 → 单课 doctor；缺主课本时先报告编目缺口，不让流水线生成正文。失败分别报告已完成写入、失败阶段和未执行阶段，不把部分成功当作完成；
 4. 检查 `book.md`、`_outline.md`、manifest、当前 PREP 与来源元数据；
 5. 生成补讲候选，不自动修改掌握状态。
 

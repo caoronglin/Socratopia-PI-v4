@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "deny": [
+      "Read(./**/.env)",
+      "Read(./**/.env.*)",
+      "Read(./**/*.pem)",
+      "Read(./**/id_rsa*)",
+      "Read(./**/credentials*)",
+      "Bash(git push:*)",
+      "Bash(git reset --hard:*)",
+      "Bash(git clean:*)",
+      "Bash(rm -rf:*)"
+    ],
+    "ask": [
+      "Bash(git commit:*)",
+      "Bash(python scripts/mineru_ingest.py remote:*)",
+      "Bash(python scripts/memo_sync.py push:*)",
+      "Bash(python scripts/memo_sync.py pull:*)"
+    ]
+  }
+}
