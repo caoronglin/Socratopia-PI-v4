@@ -120,7 +120,7 @@ PI 约束：根入口用 `AGENTS.md`；项目 skill 在 `.pi/skills/`；可重�
 
 ---
 
-## 3. Prompt Templates（5 个显式命令）
+## 3. Prompt Templates（7 个显式命令）
 
 放这里的标准：**用户会重复敲、且流程固定的命令**。一次性流程不要建 prompt。
 
@@ -129,9 +129,29 @@ PI 约束：根入口用 `AGENTS.md`；项目 skill 在 `.pi/skills/`；可重�
 | `/end-class` | 结束当前课堂并提交核心学习状态 | 无 |
 | `/health` | 只读检查 Socratopia 架构和当前课程健康状态 | `[课程名，可省略]` |
 | `/materials-ready` | 处理新上传或更新的教材/补充资料 | `[课程名，可省略]` |
+| `/initialize` | 引导初始化课程与可选多导师学习小组 | `[课程名，可省略]` |
+| `/study-group` | 选择多位导师围绕当前知识点讨论 | `[课程名与讨论主题，可省略]` |
 | `/start-class` | 开始或继续当前 Socratopia 课程 | `[课程名或 lesson_id，可省略]` |
 | `/switch-course` | 安全切换当前课程 | `<目标课程>` |
 
+
+### `/initialize [课程名，可省略]`
+
+```
+初始化目标参数：$@。使用 socratopia-learning，按 `references/onboarding.md` 操作。
+
+先确认本次课程；缺少课程名只问课程名，不枚举其他课程。先执行 `python scripts/initialize.py plan --course "课程"` 只读检查，并展示已存在的 runtime、教材和待补条件；让学习者选择主导师 D/E/F 与可选学习小组成员（2–3 位）。
+
+获得本次创建的明确确认后执行 `python scripts/initialize.py apply --course "课程" --tutor F [--members D E F]`，用真实选择替换示例值；不要把命令示例中的占位参数当成最终事实。只补缺失文件，原有 PROGRESS/教材/runtime 不覆盖。初始化不代表可以开课，提醒后续教材编目、按章备课和课堂就绪验证。
+```
+
+### `/study-group [课程名与讨论主题，可省略]`
+
+```
+学习小组请求参数：$@。使用 socratopia-tutor，按 `references/study-group.md` 在唯一课程内执行。
+
+用户选 2–3 位可见导师 D/E/F 和主持人。先通过 `python scripts/learning_group.py status --course "课程"` 核对现状；需要时明确配置 `configure`，再以具体主题 `start`。逐位只读当前导师 profile 后，生成一段实际展示给学习者的有依据发言，用 `record` 经 stdin 记录，不伪造其他发言；每轮结束只提出一个问题并等待，用户说继续才运行 `continue`，最多三轮。用户随时可停止；不修改 active_tutor/PROGRESS/正式课堂计时。单一 Pi Agent 模拟多个导师视角，不宣称已经启动多独立模型。
+```
 
 ### `/start-class [课程/lesson]`
 
