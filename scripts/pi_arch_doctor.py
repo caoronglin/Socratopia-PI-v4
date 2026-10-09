@@ -111,7 +111,7 @@ def check_canonical_state(root: Path, errors: list[str], warnings: list[str],
             target = runtime / name
             shown = target.relative_to(root)
             if not target.exists():
-                warnings.append(f"missing runtime file: {shown}")
+                fail(f"missing runtime file: {shown}", errors)
                 continue
             payload, problem = _read_json_object(target)
             if problem:
