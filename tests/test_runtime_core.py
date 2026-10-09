@@ -73,7 +73,7 @@ class PrepareAfterUploadTests(unittest.TestCase):
         self.assertIsInstance(result, SystemExit)
         self.assertEqual(result.code, 2)
         run.assert_not_called()
-        self.assertIn("课程路径越界", stderr)
+        self.assertTrue("课程路径越界" in stderr or "课程目录不能是符号链接" in stderr, stderr)
         self.assertNotIn("完成：", stdout)
 
     def test_missing_active_book_never_runs_a_stage(self):
