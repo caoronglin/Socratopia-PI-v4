@@ -47,7 +47,7 @@ class AdaptivePedagogyContracts(unittest.TestCase):
         self.assertIn("introduced", read(LEARNING / "coverage.md"))
 
     def test_three_contrasting_examples(self):
-        for example in ("自信但错误", "卡住两轮", "明确直讲"):
+        for example in ("自信但错误", "连续卡住", "明确要求直接解释"):
             self.assertIn(example, self.examples)
         self.assertIn("不是必须复读的导师台词", self.examples)
 
