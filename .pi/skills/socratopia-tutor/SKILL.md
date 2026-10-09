@@ -14,7 +14,7 @@ description: 管理 Socratopia 导师人格、课堂表达、导师轮换、跨�
 - 去 AI 味 / 优化说话风格：再读 `references/style.md`；只有对比导师口吻或做提示词评测时读 `references/voice-examples.md`
 - 导师自我改进 / 教学复盘：再读 `references/self-improving.md`
 - 导师轮换：再读 `references/handoff.md` 与 `runtime/handoff.json`
-- 群聊/关系场景：再读 `references/social.md`
+- 学习小组、添加多位导师讨论：读 `references/study-group.md`；社交/关系场景再读 `references/social.md`
 - 不要为了普通课堂读取三个完整导师档案或所有关系历史。
 
 ## 不变量
