@@ -89,6 +89,11 @@ def build_queue(root: Path, course: str) -> str:
                 and row.get("evidence", "").strip() not in {"", "-"}]
     verified_titles = {strip_md(str(row["item"])).strip() for row in verified}
     coverage_text = strip_md("\n".join(str(row["item"]) + " " + str(row["evidence"]) for row in verified))
+    previous_states: dict[str, str] = {}
+    for line in read_text(context_dir / "RETEACH_QUEUE.md").splitlines():
+        cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
+        if len(cells) >= 5 and cells[0].startswith("RQ-") and cells[4] in {"pending", "needs_review", "blocked"}:
+            previous_states[cells[0]] = cells[4]
     items: list[dict] = []
     all_titles = [str(c.get("title") or f"第{i + 1}章") for i, c in enumerate(chapters)]
     for idx, ch in enumerate(chapters, 1):
@@ -115,7 +120,7 @@ def build_queue(root: Path, course: str) -> str:
             rid = "RQ-" + hashlib.sha256(
                 (course + "|" + item["chapter"] + "|" + item["type"] + "|" + item["evidence"]).encode("utf-8")
             ).hexdigest()[:12]
-            row = [rid, item["chapter"], item["type"], item["priority"], item["status"], item["evidence"], item["reason"], item["check"]]
+            row = [rid, item["chapter"], item["type"], item["priority"], previous_states.get(rid, item["status"]), item["evidence"], item["reason"], item["check"]]
             row = [str(x).replace("|", "/").replace("\n", " ") for x in row]
             lines.append("| " + " | ".join(row) + " |")
     lines += ["", "## 课堂处理规则", "", "- `pending` / `needs_review` 项优先于新章节推进。", "- 每项补讲必须完成：证据定位 → 苏格拉底追问 → 示例/反例 → 理解验证题 → 学习者复述。", "- 未通过理解验证则保持 `needs_review`，并写入下次入口。"]
