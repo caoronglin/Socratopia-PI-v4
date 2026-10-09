@@ -113,10 +113,10 @@ class ArticleTests(unittest.TestCase):
 
     def test_title_injection_is_not_multiline(self):
         result = article.import_article(self.root, self.course, self.url, ARTICLE,
-                                        title="Correct title\\n# forged heading")
+                                        title="Correct title\n# forged heading")
         first_line = Path(result["source"]).read_text(encoding="utf-8").splitlines()[0]
-        self.assertNotIn("\\n", first_line)
-        self.assertTrue(first_line.startswith("# Correct title"))
+        self.assertEqual(result["title"], "Correct title # forged heading")
+        self.assertEqual(first_line, "# Correct title # forged heading")
 
 
 class CherryAgentContracts(unittest.TestCase):
