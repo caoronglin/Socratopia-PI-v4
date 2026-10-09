@@ -1,6 +1,6 @@
 """Memos sync: double gate, derived-only payload, PRIVATE-only, no secret leakage.
 
-Network is mocked at `urllib.request.urlopen`, so these tests never touch the
+Network is mocked at `memo_sync._open_no_redirect`, so these tests never touch the
 real service. Token handling is verified by asserting it never appears in any
 returned value or error message.
 """
@@ -169,7 +169,7 @@ class GateTests(EnvBase):
         """Every refusal must happen BEFORE any socket is opened."""
         self.enable()
         fake_urlopen.seen.clear()
-        with mock.patch("urllib.request.urlopen", fake_urlopen):
+        with mock.patch("scripts.memo_sync._open_no_redirect", fake_urlopen):
             with self.assertRaises(SystemExit):
                 ms.push(self.root, COURSE, "lesson_001", authorize=False)
             with self.assertRaises(SystemExit):
@@ -186,7 +186,7 @@ class AuthorizedTests(EnvBase):
     def test_push_uses_bearer_and_private_visibility(self):
         self.enable()
         fake_urlopen.seen.clear()
-        with mock.patch("urllib.request.urlopen", fake_urlopen):
+        with mock.patch("scripts.memo_sync._open_no_redirect", fake_urlopen):
             result = ms.push(self.root, COURSE, "lesson_001", authorize=True)
         request = fake_urlopen.seen[-1]
         self.assertEqual(request.get_method(), "POST")
@@ -199,7 +199,7 @@ class AuthorizedTests(EnvBase):
     def test_push_does_not_modify_progress(self):
         self.enable()
         before = (repository.course_dir(self.root, COURSE) / "PROGRESS.md").read_text(encoding="utf-8")
-        with mock.patch("urllib.request.urlopen", fake_urlopen):
+        with mock.patch("scripts.memo_sync._open_no_redirect", fake_urlopen):
             ms.push(self.root, COURSE, "lesson_001", authorize=True)
         self.assertEqual(
             (repository.course_dir(self.root, COURSE) / "PROGRESS.md").read_text(encoding="utf-8"), before
@@ -207,7 +207,7 @@ class AuthorizedTests(EnvBase):
 
     def test_evidence_opt_in_embeds_table(self):
         self.enable()
-        with mock.patch("urllib.request.urlopen", fake_urlopen):
+        with mock.patch("scripts.memo_sync._open_no_redirect", fake_urlopen):
             ms.push(self.root, COURSE, "lesson_001", include_evidence=True,
                     confirm_publish=True, authorize=True)
         body = json.loads(fake_urlopen.seen[-1].data.decode("utf-8"))
@@ -216,7 +216,7 @@ class AuthorizedTests(EnvBase):
     def test_pull_lands_in_sources_external_as_untrusted(self):
         self.enable()
         fake_urlopen.seen.clear()
-        with mock.patch("urllib.request.urlopen", fake_urlopen):
+        with mock.patch("scripts.memo_sync._open_no_redirect", fake_urlopen):
             result = ms.pull(self.root, COURSE, authorize=True)
         ext = repository.textbook_dir(self.root, COURSE) / "SOURCES/_external"
         self.assertTrue((ext / "memo_memos_abc123.md").exists())
@@ -246,7 +246,7 @@ class AuthorizedTests(EnvBase):
         response = {"memos": memos, "nextPageToken": "next-page"}
         progress = repository.course_dir(self.root, COURSE) / "PROGRESS.md"
         before = progress.read_bytes()
-        with mock.patch("urllib.request.urlopen", return_value=io.BytesIO(
+        with mock.patch("scripts.memo_sync._open_no_redirect", return_value=io.BytesIO(
                 json.dumps(response).encode("utf-8"))) as urlopen:
             result = ms.pull(self.root, COURSE, page_size=200, authorize=True)
         request = urlopen.call_args.args[0]
@@ -280,7 +280,7 @@ class AuthorizedTests(EnvBase):
                 plan = ms.plan(self.root, padded_course, "lesson_001")
                 self.assertEqual(plan["course"], course)
                 self.assertEqual(plan["content_preview"].split("\n", 1)[0], expected_marker)
-                with mock.patch("urllib.request.urlopen", fake_urlopen):
+                with mock.patch("scripts.memo_sync._open_no_redirect", fake_urlopen):
                     pushed = ms.push(self.root, padded_course, "lesson_001", authorize=True)
                 self.assertEqual(pushed["course"], course)
                 content = json.loads(fake_urlopen.seen[-1].data.decode("utf-8"))["content"]
@@ -294,7 +294,7 @@ class AuthorizedTests(EnvBase):
                     {"name": "memos/loose", "content": content.replace(
                         "<!-- socratopia: course=", "<!-- socratopia:  course=", 1)},
                 ]}
-                with mock.patch("urllib.request.urlopen", return_value=io.BytesIO(
+                with mock.patch("scripts.memo_sync._open_no_redirect", return_value=io.BytesIO(
                         json.dumps(response).encode("utf-8"))):
                     pulled = ms.pull(self.root, padded_course, authorize=True)
                 self.assertEqual(pulled["pulled"], 1)
@@ -312,7 +312,7 @@ class AuthorizedTests(EnvBase):
              "<!-- socratopia: course=math lesson=lesson_001 -->"},
             {"name": "memos/unmarked", "content": "geo"},
         ]}
-        with mock.patch("urllib.request.urlopen", return_value=io.BytesIO(
+        with mock.patch("scripts.memo_sync._open_no_redirect", return_value=io.BytesIO(
                 json.dumps(response).encode("utf-8"))):
             result = ms.pull(self.root, COURSE, authorize=True)
         self.assertEqual(result["pulled"], 0)
@@ -323,7 +323,7 @@ class AuthorizedTests(EnvBase):
     def test_pull_never_writes_book_or_progress(self):
         self.enable()
         book = repository.textbook_dir(self.root, COURSE) / "book.md"
-        with mock.patch("urllib.request.urlopen", fake_urlopen):
+        with mock.patch("scripts.memo_sync._open_no_redirect", fake_urlopen):
             ms.pull(self.root, COURSE, authorize=True)
         self.assertFalse(book.exists())
         self.assertTrue((repository.course_dir(self.root, COURSE) / "PROGRESS.md").exists())
@@ -335,7 +335,7 @@ class AuthorizedTests(EnvBase):
         def boom(request, timeout=0):
             raise RuntimeError(f"connection failed for token={SECRET}")
 
-        with mock.patch("urllib.request.urlopen", boom):
+        with mock.patch("scripts.memo_sync._open_no_redirect", boom):
             with self.assertRaises(SystemExit) as ctx:
                 ms.push(self.root, COURSE, "lesson_001", authorize=True)
         message = str(ctx.exception)
@@ -363,6 +363,12 @@ class CliTests(EnvBase):
         result = self.run_cli("push", "--course", COURSE, "--lesson-id", "lesson_001", "--authorize")
         self.assertNotEqual(result.returncode, 0)
         self.assertNotIn(SECRET, result.stdout + result.stderr)
+
+
+class RedirectSafetyTests(unittest.TestCase):
+    def test_no_redirect_handler_refuses_forwarding(self):
+        self.assertIsNone(ms._NoRedirect().redirect_request(
+            None, None, 302, "Moved", {}, "https://other.example/"))
 
 
 if __name__ == "__main__":
