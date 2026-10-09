@@ -60,7 +60,7 @@ def main(argv: list[str] | None = None) -> int:
             preview = result.pop("preview", None)
             print(json.dumps(result, ensure_ascii=False, indent=2))
             if preview:
-                print("\\n--- 章节教案预览（--apply 写入 draft）---\\n" + preview)
+                print("\n--- 章节教案预览（--apply 写入 draft）---\n" + preview)
             return 0
         if args.command == "check":
             errors, warnings = check_prep(ROOT, course, args.lesson_id)
