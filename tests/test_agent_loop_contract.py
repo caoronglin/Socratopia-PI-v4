@@ -52,7 +52,7 @@ class AgentLoopPromptContracts(unittest.TestCase):
         for phrase in ("最多一个", "等待回答", "直接讲", "PROGRESS.md", "verified", "不自行下课"):
             self.assertIn(phrase, self.prompt)
         self.assertIn("YIELD", self.spec)
-        self.assertIn("不能", self.kernel)
+        self.assertIn("PROGRESS.md", self.kernel)
 
     def test_fallback_does_not_bypass_approval(self):
         for phrase in ("工具", "拒绝", "停止", "trusted:false", "web_article.py"):
@@ -70,7 +70,7 @@ class AgentLoopPromptContracts(unittest.TestCase):
         for scenario in ("简短定义", "开课与追问", "网页打不开", "工具审批被拒",
                          "修复代码", "学生说“懂了”", "本轮目标已完成"):
             self.assertIn(scenario, self.doc)
-        self.assertIn("无需依赖工具的任务不调用工具", self.spec)
+        self.assertIn("无须依赖工具的任务不调用工具", self.spec)
         self.assertIn("不暗中重试", self.spec)
 
 
