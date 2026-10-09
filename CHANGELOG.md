@@ -107,3 +107,5 @@
 - `AGENT_SYSTEM_PROMPT.md` compatibility prompt.
 - Legacy knowledge/works skills.
 - Hard dependency on Claude subagents and Windows-specific tool rules.
+
+<!-- Runtime safety audit fixes are under development on this branch. -->
