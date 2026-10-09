@@ -248,8 +248,8 @@ class AssessmentTests(unittest.TestCase):
     def test_quality_report_coverage_and_duplicates(self):
         obj = {"1", "2"}
         items = [
-            {"id": "a", "objective_id": "1", "type": "recall", "difficulty": "easy", "prompt": "same", "answer": "x", "rationale": "r", "source_anchor": "book.md#a"},
-            {"id": "b", "objective_id": "1", "type": "recall", "difficulty": "easy", "prompt": "same", "answer": "x", "rationale": "r", "source_anchor": "book.md#a"},
+            {"id": "a", "objective_id": "1", "type": "short_answer", "difficulty": "easy", "prompt": "same", "answer": "x", "rationale": "r", "source_anchor": "book.md#a"},
+            {"id": "b", "objective_id": "1", "type": "short_answer", "difficulty": "easy", "prompt": "same", "answer": "x", "rationale": "r", "source_anchor": "book.md#a"},
         ]
         rep = assessment.quality_report(items, obj)
         self.assertEqual(rep["uncovered_objectives"], ["2"])
