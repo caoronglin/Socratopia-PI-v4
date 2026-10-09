@@ -27,6 +27,10 @@
 - coverage ledger seed
 - expected evidence
 
+## 按章备课（向后兼容）
+
+默认新建方式为 `prep.py chapter`：一章对应一份逻辑 PREP（`plan_mode: chapter`），按当前教材目录逐项列出小节，并记录章末综合与迁移设计；若内容较多，可跨多个 Session/Teaching Unit 完成。旧 `prep-1` 无 `plan_mode` 的文件继续按旧规则读取。章级 PREP 与课后 Session/PROGRESS 事实分开：同章教案不等于一次会话，也不自动写 mastery。补充资料只允许本课已登记 `SOURCES/`，记录 SHA256；内容变化标记 stale，复核后使用。
+
 ## 主课本替换
 
 显式操作：归档旧版本 → 新旧锚点映射 → 生成新书与导航 → 重建受影响 PREP → 生成补讲候选 → 验证。`PROGRESS.md` 永不因换书被重写。
