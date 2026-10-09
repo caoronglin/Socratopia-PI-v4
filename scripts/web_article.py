@@ -74,7 +74,7 @@ class _Reader(HTMLParser):
                 if tag not in _VOID:
                     self.depth[region] += 1
                 if not self.omit and tag in _BLOCKS:
-                    self.parts[region].append("\n" + ("#" + tag[1] + " " if re.fullmatch(r"h[1-6]", tag) else ""))
+                    self.parts[region].append("\n" + ("#" * int(tag[1]) + " " if re.fullmatch(r"h[1-6]", tag) else ""))
         if not self.omit and tag == "br":
             for region in self.depth:
                 if self.depth[region]:
@@ -110,6 +110,30 @@ class _Reader(HTMLParser):
                 self.parts[region].append(value)
 
 
+def _decode_article(raw: bytes, content_type: str) -> tuple[str, str]:
+    """Use declared text encodings, then strict UTF-8/GB18030 fallback for older blogs."""
+    if b"\x00" in raw[:4096]:
+        raise ValueError("疑似二进制文件，拒绝作为文章正文")
+    declared = re.search(r"charset\s*=\s*['\"]?([a-zA-Z0-9_-]+)",
+                         content_type, flags=re.I)
+    if not declared:
+        declared = re.search(rb"charset\s*=\s*['\"]?([a-zA-Z0-9_-]+)",
+                             raw[:4096], flags=re.I)
+    alias = {"utf-8": "utf-8-sig", "utf8": "utf-8-sig", "gbk": "gb18030",
+             "gb2312": "gb18030", "gb18030": "gb18030", "big5": "big5"}
+    name = declared.group(1).decode("ascii").lower() if declared and isinstance(
+        declared.group(1), bytes) else declared.group(1).lower() if declared else ""
+    if name and name not in alias:
+        raise ValueError("未支持的文章字符编码，请转换为 UTF-8 后离线导入")
+    candidates = [alias[name]] if name else ["utf-8-sig", "gb18030"]
+    for codec in candidates:
+        try:
+            return raw.decode(codec), codec
+        except UnicodeDecodeError:
+            continue
+    raise ValueError("正文编码无法解码，请先转换为 UTF-8")
+
+
 def extract_article(raw: bytes, *, content_type: str = "") -> tuple[str, str, dict[str, str]]:
     if len(raw) > MAX_INPUT_BYTES:
         raise ValueError("文章超出 10 MiB 上限")
@@ -117,8 +141,7 @@ def extract_article(raw: bytes, *, content_type: str = "") -> tuple[str, str, di
         raise ValueError("页面为空")
     if content_type and not any(x in content_type.lower() for x in ("html", "text", "markdown")):
         raise ValueError("该链接不是支持的文本网页；请提供文章正文")
-    # Only text, not executable scripts or browser DOM, is ingested.
-    text = raw.decode("utf-8-sig", errors="replace")
+    text, codec = _decode_article(raw, content_type)
     if "<html" not in text[:4096].lower() and "<article" not in text[:4096].lower() and "<body" not in text[:4096].lower():
         if re.search(r"<(?:p|h[1-6]|div)\b", text[:4096], re.I):
             pass
@@ -126,7 +149,7 @@ def extract_article(raw: bytes, *, content_type: str = "") -> tuple[str, str, di
             plain = text.strip()
             if len(plain) < 30:
                 raise ValueError("正文过短；请提供可阅读的文章文本")
-            return plain[:MAX_TEXT_CHARS], "", {"extractor": "plain-text"}
+            return plain[:MAX_TEXT_CHARS], "", {"extractor": "plain-text", "encoding": codec}
     reader = _Reader()
     reader.feed(text)
     reader.close()
@@ -136,7 +159,7 @@ def extract_article(raw: bytes, *, content_type: str = "") -> tuple[str, str, di
         if len(extracted) >= 40:
             title = reader.meta.get("og:title") or "".join(reader.title_parts).strip()
             return html.unescape(extracted[:MAX_TEXT_CHARS]), title[:200], {
-                **reader.meta, "extractor": f"html-{region}"}
+                **reader.meta, "extractor": f"html-{region}", "encoding": codec}
     raise ValueError("未提取到可靠的文章正文；知乎登录墙/动态渲染页面请粘贴正文，禁止绕过限制")
 
 
@@ -150,7 +173,8 @@ def import_article(root: Path, course: str, url: str, raw: bytes, *,
     info = read_json(Path(saved["meta"])) or {}
     info.update({"source_type": "web-article", "extraction": meta["extractor"],
                  "published_at": meta.get("article:published_time") or None,
-                 "author": meta.get("author") or None, "chars": len(body)})
+                 "author": meta.get("author") or None, "chars": len(body),
+                 "source_encoding": meta.get("encoding")})
     write_json_atomic(Path(saved["meta"]), info)
     return {"course": course, "title": heading, "url": url, "chars": len(body),
             "source": saved["registered"], "meta": saved["meta"],
@@ -184,7 +208,7 @@ def fetch_article(root: Path, course: str, url: str, *,
 def study_outline(root: Path, course: str, url: str) -> dict:
     url = check_url(url)
     folder = safe_child_path(textbook_dir(root, course), "SOURCES", "_external")
-    found = []
+    found: list[tuple[dict, Path]] = []
     if folder.is_dir():
         for meta_path in folder.glob("*.meta.json"):
             meta = read_json(meta_path)
@@ -194,16 +218,27 @@ def study_outline(root: Path, course: str, url: str) -> dict:
                     found.append((meta, source))
     if not found:
         raise ValueError("这篇文章尚未导入当前课程")
-    info, path = found[-1]
-    text = path.read_text(encoding="utf-8")
-    headings = [re.sub(r"^#+\s*", "", line).strip() for line in text.splitlines()
-                if re.match(r"^#{1,4}\s+\S", line)][:10]
+    # Select by persisted retrieval timestamp, with deterministic tie-breaking.
+    info, path = max(found, key=lambda item: (item[0].get("fetched_at") or "", item[1].name))
+    saved = path.read_text(encoding="utf-8")
+    # Only extract the body after the known source header; never claim the header
+    # itself is a section of the user's article.
+    marker = "> trusted: false"
+    lines = saved.splitlines()
+    start = next((index + 1 for index, line in enumerate(lines) if line.startswith(marker)), -1)
+    if start < 0:
+        raise ValueError("来源缺少不可信数据标记，拒绝作为已登记文章使用")
+    paragraphs = [p.strip() for p in re.split(r"\n\s*\n+", "\n".join(lines[start:]))
+                  if len(p.strip()) >= 15]
+    headings = [re.sub(r"^#{1,4}\s+", "", line).strip()
+                for line in lines[start:] if re.match(r"^#{1,4}\s+\S", line)][:10]
+    excerpts = [re.sub(r"\s+", " ", p)[:280] for p in paragraphs[:6]]
     return {"course": course, "title": info["title"], "url": url,
-            "source": str(path), "headings": headings,
-            "study_steps": ["指出文章核心论点及来源", "区分事实、观点与证据",
-                            "对照当前主教材寻找冲突或补充",
-                            "用自己的话解释并回答一题迁移问题"],
-            "note": "这是学习提纲，不代表已授课、核验或掌握；需要人工/模型按正文进一步提问。"}
+            "source": str(path), "sha256": info.get("sha256"),
+            "headings": headings, "excerpts": excerpts,
+            "study_steps": ["核对文章主张及来源", "区分事实、作者观点和证据",
+                            "对比课本中的相关结论", "按学习者意愿提问或直接解释"],
+            "note": "仅输出原文片段及阅读路线；不是 AI 生成的摘要，不代表已授课、核验或掌握。"}
 
 
 def main() -> int:
@@ -212,7 +247,7 @@ def main() -> int:
     parser.add_argument("--course", required=True)
     parser.add_argument("--url", required=True)
     parser.add_argument("--title", default="")
-    parser.add_argument("--file", type=Path)
+    parser.add_argument("--file", help="本地文件路径，或 - 表示从标准输入读取")
     parser.add_argument("--authorize", action="store_true")
     args = parser.parse_args()
     if args.command == "plan":
@@ -221,10 +256,17 @@ def main() -> int:
                   "changes": ["SOURCES/_external"], "not_changed": ["book.md", "PROGRESS.md"]}
     elif args.command == "import":
         if args.file is None:
-            parser.error("离线导入必须指定 --file（HTML、Markdown 或纯文本）")
-        if args.file.stat().st_size > MAX_INPUT_BYTES:
-            parser.error("文件超出 10 MiB 上限")
-        result = import_article(ROOT, args.course, args.url, args.file.read_bytes(), title=args.title)
+            parser.error("离线导入必须指定 --file（文件路径或 - 标准输入）")
+        if args.file == "-":
+            raw = sys.stdin.buffer.read(MAX_INPUT_BYTES + 1)
+        else:
+            file_path = Path(args.file)
+            if not file_path.is_file() or file_path.stat().st_size > MAX_INPUT_BYTES:
+                parser.error("文件不存在或超出 10 MiB 上限")
+            raw = file_path.read_bytes()
+        if len(raw) > MAX_INPUT_BYTES:
+            parser.error("正文超出 10 MiB 上限")
+        result = import_article(ROOT, args.course, args.url, raw, title=args.title)
     elif args.command == "fetch":
         result = fetch_article(ROOT, args.course, args.url, authorize=args.authorize, title=args.title)
     else:

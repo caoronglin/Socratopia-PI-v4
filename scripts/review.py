@@ -21,7 +21,7 @@ def _write_plan(root: Path, course: str, lesson_id: str, kind: str, items: list)
     d = safe_child_path(course_dir(root, course), "PRACTICE")
     d.mkdir(parents=True, exist_ok=True)
     json_path = safe_child_path(d, f"{lesson_id}_{kind}.json")
-    md_path = safe_child_path(d, f"{lesson_id}_{kind}.md"
+    md_path = safe_child_path(d, f"{lesson_id}_{kind}.md")
     title = "本节结束练习" if kind == "exit" else "前课检索练习"
     json_path.write_text(
         json.dumps({"lesson_id": lesson_id, "kind": kind, "items": items}, ensure_ascii=False, indent=2) + "\n",
