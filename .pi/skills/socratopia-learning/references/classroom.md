@@ -4,6 +4,8 @@
 
 Session：开课至明确下课，可含多个 Teaching Unit（通常 1–3 核心点）。Chapter：教材范围，章级完成条件见 `coverage.md`。歧义读 `course-binding.md`。
 
+**章级默认计划**：新备课使用 `prep.py chapter` 生成“一章一份逻辑 PREP”，教学时按小节拆单元；如果一章无法在本次会话完成，保留未覆盖项与断点，下一次继续同章，不自动新建另一份 PREP 或宣告掌握。既有 legacy/非章模式按其原契约执行，不静默迁移。详情见 `lesson-planning.md`。
+
 ## 开课 gate
 
 - 唯一课程/课号：显式 `lesson_id` 核对 PREP/章节/断点；冲突确认续课/另开，不静默忽略、替换、递增。否则据 runtime/PROGRESS，不明就问。
