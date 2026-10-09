@@ -38,6 +38,10 @@ def main(argv: list[str] | None = None) -> int:
         print("✗ --strict：doctor 存在 WARN", file=sys.stderr)
         failed = True
 
+    # Static compilation catches script entrypoints that test discovery never imports.
+    if _run("compile", [sys.executable, "-m", "compileall", "-q", "scripts", "tests"]).returncode != 0:
+        failed = True
+
     if importlib.util.find_spec("pytest") is not None:
         tests = [sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", "tests"]
     else:
