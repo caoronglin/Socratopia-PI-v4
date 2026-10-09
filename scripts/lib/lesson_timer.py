@@ -216,7 +216,10 @@ def transition(root: Path, course: str, action: str, *,
         state = _accrue(state, clock)
         if action == "heartbeat":
             if state["phase"] != "running":
-                raise ValueError("计时已暂停/中断；请先 resume，再恢复心跳")
+                write_json_atomic(timer_path(root, course), state)
+                result = _view(state, clock)
+                result["heartbeat_not_recorded"] = "paused_or_interrupted"
+                return result
         elif action == "resume":
             if state["phase"] not in {"paused", "interrupted"}:
                 raise ValueError("只有暂停/中断的课堂可恢复")
