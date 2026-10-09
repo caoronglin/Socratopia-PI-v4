@@ -5,7 +5,7 @@ description: 处理 Socratopia 的教材、资料编目、PREP、课堂、章节
 
 # Socratopia Learning
 
-先确定 `course`、当前意图与是否在课堂，只读所需 reference。参数解析与切换见 `references/course-binding.md`；已明确时不重复问。
+按 `references/course-binding.md` 绑定课程与意图，按需读取 reference。
 
 ## 路由
 
