@@ -47,7 +47,11 @@ python scripts/web_article.py study --course '课程' --url 'https://example.org
 4. **不承诺后台工作。** 入队到 `runtime/tasks.json` ≠ Cherry 定时任务已创建；调用宿主 `cron/notify/session_*` 时只有实际成功返回才可报告。
 5. **Pi 与 Claude 兼容不是两套教学事实。** 主运行时建议 Pi；Claude Code 可继续用于开发/审计，教学和掌握规则不复制两份。
 
-## 5. 验收场景（需要在真实 Cherry GUI 手动执行）
+## 5. Agent Loop 与停止条件
+
+详见 `SYSTEM/SPEC/AGENT_LOOP.md`（工作目录为本仓库时按需读取）。**同一用户请求**采用 `定位 → 必要动作 → 校验 → 结束/等待`：明确达成目标立即终止当前回答；遇缺失工具/审批拒绝停止，不借 shell 绕过；课堂每次提出一个主要问题后等待，不循环发送提示或自动下课。不要误把 Pi 的底层 agent loop 当成系统提示词可强制限制的执行次数。排查重复工具调用时，在真实 Cherry 会话记录步骤、输入、输出与最终停止原因。
+
+## 6. 验收场景（需要在真实 Cherry GUI 手动执行）
 
 - **入口**：Pi Agent 工作目录能读 `AGENTS.md`，只加载一个相关 Skill。
 - **网页**：对公开博客读取真实正文，能提供文章引用；知乎受限时诚实提示粘贴，不尝试破解。

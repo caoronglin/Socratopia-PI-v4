@@ -15,7 +15,9 @@ description: 用于 Socratopia 的多文件架构优化、迁移、脚本修改�
 2. **Plan**：列出要改的合同与兼容面；避免先写后想。
 3. **Change**：优先单一事实源，其他文件只引用；不复制整段规则。
 4. **Verify**：运行与变更相关的测试、静态检查或 `scripts/pi_arch_doctor.py`。
-5. **Report**：只报告已完成且有证据的内容；未验证项单独说明。
+5. **Report**：有验证结果即停止，简报已改/已验/阻断；不额外循环或重复总结。
+
+Agent Loop 的 DONE/YIELD/BLOCKED 边界仅在需要时参考 `SYSTEM/SPEC/AGENT_LOOP.md`；不要用无限迭代或重复自检代替测试。
 
 ## PI 约束
 

@@ -52,6 +52,10 @@ python scripts/web_article.py study --course '课程名' --url 'https://example.
 
 **静态仓库 CI 不能证明 Cherry Agent 具备网页/Kb/记忆工具权限。** 真实使用须先在 Work 内核对工具是否暴露，并分别验证公开网页、受限知乎降级、课程隔离、断点恢复和拒绝审批后的行为。详细用例见 [WORKFLOWS.md](../integrations/cherry-studio/WORKFLOWS.md)。
 
+## 精简 Agent Prompt 与停止条件
+
+系统提示词只保留宿主身份、Skill 路由、工具权限、文章导入边界与输出约束；单次请求的完整状态机见 [`SYSTEM/SPEC/AGENT_LOOP.md`](../SYSTEM/SPEC/AGENT_LOOP.md)。不通过 System Prompt 注入整套 Kernel，也不把“Agent Loop”误表述为可由文本强制限制的 Pi 内核配置。
+
 ## 权限与 CI/CD
 
 - 不向 Cherry Agent 提示词、日志或 git 提交任何模型密钥或浏览器 Cookie。
