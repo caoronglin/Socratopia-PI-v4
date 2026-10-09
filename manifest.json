@@ -63,6 +63,7 @@
     ".pi/skills/socratopia-tutor/references/self-improving.md",
     ".pi/skills/socratopia-tutor/references/social.md",
     ".pi/skills/socratopia-tutor/references/style.md",
+    ".pi/skills/socratopia-tutor/references/voice-examples.md",
     "AGENTS.md",
     "CHANGELOG.md",
     "LICENSE",
@@ -165,6 +166,7 @@
     "tests/test_skillhub_education.py",
     "tests/test_stellar_export.py",
     "tests/test_tutor_profiles.py",
+    "tests/test_tutor_voice_quality.py",
     "tests/test_web_article_agent.py"
   ]
 }
