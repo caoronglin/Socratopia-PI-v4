@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import hashlib
 import json
 import re
 import sys
@@ -17,7 +18,8 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from scripts.lib.repository import course_dir, textbook_dir, validate_course_name  # noqa: E402
+from scripts.export_stellar import parse_coverage  # noqa: E402
+from scripts.lib.repository import course_dir, safe_child_path, textbook_dir, validate_course_name  # noqa: E402
 
 
 def read_text(path: Path) -> str:
@@ -80,26 +82,21 @@ def build_queue(root: Path, course: str) -> str:
         raise SystemExit(f"课程目录不存在：{cdir}")
     chapters = load_manifest(cdir).get("chapters", [])
     context_dir = course_dir(root, course) / "CONTEXT"
-    coverage_text = strip_md(
-        "\n".join(
-            [
-                read_text(course_dir(root, course) / "PROGRESS.md"),
-                read_text(context_dir / "LESSON_SUMMARIES.md"),
-                read_text(context_dir / "CONTEXT_INDEX.md"),
-                read_text(context_dir / "RETEACH_QUEUE.md"),
-                read_text(cdir / "PREP" / "_reteach_queue.md"),
-            ]
-        )
-    )
+    # A candidate list or PREP is never evidence of a taught, verified item.
+    ledger = parse_coverage(read_text(course_dir(root, course) / "PROGRESS.md"))
+    verified = [row for row in ledger
+                if row.get("status") in {"verified", "intentionally_skipped"}
+                and row.get("evidence", "").strip() not in {"", "-"}]
+    verified_titles = {strip_md(str(row["item"])).strip() for row in verified}
+    coverage_text = strip_md("\n".join(str(row["item"]) + " " + str(row["evidence"]) for row in verified))
     items: list[dict] = []
     all_titles = [str(c.get("title") or f"第{i + 1}章") for i, c in enumerate(chapters)]
     for idx, ch in enumerate(chapters, 1):
         title = str(ch.get("title") or f"第{idx}章")
         txt = chapter_text(cdir, title, all_titles[idx:])
         hs = headings(txt) or [title]
-        local_coverage = strip_md(coverage_text + "\n" + read_text(cdir / "PREP" / f"lesson_{idx:03d}.md"))
         for h in hs:
-            if not covered(h, local_coverage):
+            if strip_md(h).strip() not in verified_titles:
                 items.append({"chapter": title, "type": "标题/小节", "evidence": h, "reason": "教材或备课包中存在该标题/小节，但既有课堂摘要与进度中未发现明确覆盖痕迹。", "priority": "P1", "status": "pending", "check": "用自己的话复述该小节主线，并完成 1 道辨析/迁移题。"})
         if "[图片]" in strip_md(txt) and not any(x in coverage_text for x in ["图表", "图片", "读图"]):
             items.append({"chapter": title, "type": "图表", "evidence": "本章教材含图片/图表资源", "reason": "既有课堂摘要中未发现图表讲解痕迹。", "priority": "P1", "status": "pending", "check": "说明关键图表的结构/变量、读图陷阱与应用。"})
@@ -115,7 +112,9 @@ def build_queue(root: Path, course: str) -> str:
         lines.append("| 暂无 | - | - | - | - | 未发现明显新增/未覆盖候选项 | 仍需正式上课前人工复核 | - |")
     else:
         for n, item in enumerate(items, 1):
-            rid = f"RQ-{dt.datetime.now().strftime('%Y%m%d')}-{n:03d}"
+            rid = "RQ-" + hashlib.sha256(
+                (course + "|" + item["chapter"] + "|" + item["type"] + "|" + item["evidence"]).encode("utf-8")
+            ).hexdigest()[:12]
             row = [rid, item["chapter"], item["type"], item["priority"], item["status"], item["evidence"], item["reason"], item["check"]]
             row = [str(x).replace("|", "/").replace("\n", " ") for x in row]
             lines.append("| " + " | ".join(row) + " |")
@@ -132,8 +131,8 @@ def main() -> int:
     prep_dir = textbook_dir(ROOT, args.course) / "PREP"
     context_dir.mkdir(parents=True, exist_ok=True)
     prep_dir.mkdir(parents=True, exist_ok=True)
-    (context_dir / "RETEACH_QUEUE.md").write_text(content, encoding="utf-8")
-    (prep_dir / "_reteach_queue.md").write_text(content, encoding="utf-8")
+    safe_child_path(course_dir(ROOT, args.course), "CONTEXT", "RETEACH_QUEUE.md").write_text(content, encoding="utf-8")
+    safe_child_path(textbook_dir(ROOT, args.course), "PREP", "_reteach_queue.md").write_text(content, encoding="utf-8")
     print(f"已生成/更新《{args.course}》补讲队列：{context_dir / 'RETEACH_QUEUE.md'}")
     return 0
 
