@@ -26,6 +26,8 @@ _SECRET_PATTERNS = [
 def validate_course_name(course: str) -> str:
     """Return a safe single-segment course name or raise ValueError."""
     normalized = course.strip()
+    if "\x00" in normalized:
+        raise ValueError(f"非法课程名：{course!r}")
     if not normalized or normalized in {".", ".."} or not _COURSE_NAME_RE.fullmatch(normalized):
         raise ValueError(f"非法课程名：{course!r}")
     return normalized
@@ -33,7 +35,12 @@ def validate_course_name(course: str) -> str:
 
 def _safe_dir(root: Path, top: str, course: str) -> Path:
     safe_name = validate_course_name(course)
-    base = (root / top).resolve()
+    container = root / top
+    if container.is_symlink():
+        raise ValueError(f"课程容器不能是符号链接：{container}")
+    base = container.resolve()
+    if (base / safe_name).is_symlink():
+        raise ValueError(f"课程目录不能是符号链接：{course!r}")
     result = (base / safe_name).resolve()
     if base != result and base not in result.parents:
         raise ValueError(f"课程路径越界：{course!r}")
@@ -48,6 +55,22 @@ def course_dir(root: Path, course: str) -> Path:
 def textbook_dir(root: Path, course: str) -> Path:
     """Return the validated course directory under TEXTBOOK/."""
     return _safe_dir(root, "TEXTBOOK", course)
+
+
+def validate_lesson_id(value: str) -> str:
+    """Validate lesson identifiers used as filenames."""
+    if not isinstance(value, str) or not re.fullmatch(r"lesson_[0-9]{3,}", value):
+        raise ValueError(f"Invalid lesson identifier: {value!r}")
+    return value
+
+
+def safe_child_path(base: Path, *parts: str) -> Path:
+    """Check that a resolved target remains under its intended directory."""
+    root = base.resolve()
+    target = root.joinpath(*parts).resolve()
+    if root not in target.parents:
+        raise ValueError(f"Target is outside the allowed directory: {target}")
+    return target
 
 
 def iter_course_paths(root: Path, top: str = "DATA", course: str | None = None) -> list[Path]:
@@ -78,7 +101,10 @@ def read_json_list(path: Path, key: str) -> list[dict[str, Any]]:
     values = payload.get(key, [])
     if not isinstance(values, list):
         raise ValueError(f"{path.name} 的 {key} 必须为列表")
-    return [record for record in values if isinstance(record, dict)]
+    for index, record in enumerate(values):
+        if not isinstance(record, dict):
+            raise ValueError(f"{path.name} 的 {key}[{index}] 必须是 object")
+    return values
 
 
 def write_json_atomic(path: Path, value: Mapping[str, Any]) -> None:

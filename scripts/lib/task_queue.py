@@ -7,12 +7,14 @@ each task carries its own `course`. Queue is a persistent TODO list, not a worke
 from __future__ import annotations
 
 from collections.abc import Mapping
+from contextlib import contextmanager
+import os
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
-from scripts.lib.repository import course_dir, read_json, redact, write_json_atomic
+from scripts.lib.repository import course_dir, read_json, redact, safe_child_path, write_json_atomic
 
 STATUSES = {"pending", "running", "completed", "failed", "blocked", "cancelled"}
 TERMINAL = {"completed", "cancelled"}
@@ -32,6 +34,31 @@ def _now() -> str:
 
 def queue_path(root: Path, course: str) -> Path:
     return course_dir(root, course) / "runtime" / "tasks.json"
+
+
+@contextmanager
+def _queue_lock(root: Path, course: str):
+    """Cross-process lock around read-modify-write (Linux/macOS/Windows)."""
+    path = safe_child_path(course_dir(root, course), "runtime", "tasks.lock")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a+b") as handle:
+        if os.name == "nt":
+            import msvcrt
+            if path.stat().st_size == 0:
+                handle.write(b"0")
+                handle.flush()
+            handle.seek(0)
+            msvcrt.locking(handle.fileno(), msvcrt.LK_LOCK, 1)
+        else:
+            import fcntl
+            fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            if os.name == "nt":
+                msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+            else:
+                fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
 
 
 def _load(root: Path, course: str) -> dict[str, Any]:
@@ -62,6 +89,9 @@ def validate_queue(queue: Mapping[str, Any]) -> list[str]:
         return errors
     seen_ids: set[str] = set()
     for i, task in enumerate(tasks):
+        if not isinstance(task, Mapping):
+            errors.append(f"tasks[{i}] 必须为 object")
+            continue
         for key in ("id", "idempotency_key", "kind", "course", "status", "attempts"):
             if key not in task or task.get(key) in (None, ""):
                 errors.append(f"tasks[{i}] 缺少字段：{key}")
@@ -85,53 +115,55 @@ def enqueue_task(
     payload: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Create or reuse a non-terminal task with matching kind + idempotency_key."""
-    queue = _load(root, course)
-    for task in queue["tasks"]:
-        if (
-            task.get("kind") == kind
-            and task.get("idempotency_key") == idempotency_key
-            and task.get("status") not in TERMINAL
-        ):
-            return task
-    now = _now()
-    task = {
-        "id": str(uuid4()),
-        "idempotency_key": idempotency_key,
-        "kind": kind,
-        "course": course,
-        "lesson_id": lesson_id,
-        "status": "pending",
-        "attempts": 0,
-        "last_error": None,
-        "created_at": now,
-        "updated_at": now,
-        "payload": dict(payload or {}),
-    }
-    queue["tasks"].append(task)
-    _save(root, course, queue)
-    return task
+    with _queue_lock(root, course):
+        queue = _load(root, course)
+        for task in queue["tasks"]:
+            if (
+                task.get("kind") == kind
+                and task.get("idempotency_key") == idempotency_key
+                and task.get("status") not in TERMINAL
+            ):
+                return task
+        now = _now()
+        task = {
+            "id": str(uuid4()),
+            "idempotency_key": idempotency_key,
+            "kind": kind,
+            "course": course,
+            "lesson_id": lesson_id,
+            "status": "pending",
+            "attempts": 0,
+            "last_error": None,
+            "created_at": now,
+            "updated_at": now,
+            "payload": dict(payload or {}),
+        }
+        queue["tasks"].append(task)
+        _save(root, course, queue)
+        return task
 
 
 def transition_task(
     root: Path, course: str, task_id: str, new_status: str, error: str | None = None
 ) -> dict[str, Any]:
     """Apply one legal status transition and persist the queue."""
-    if new_status not in STATUSES:
-        raise ValueError(f"非法目标状态：{new_status}")
-    queue = _load(root, course)
-    task = next((item for item in queue["tasks"] if item.get("id") == task_id), None)
-    if task is None:
-        raise ValueError(f"未找到任务：{task_id}")
-    if new_status not in ALLOWED_TRANSITIONS.get(task.get("status"), set()):
-        raise ValueError(f"非法状态转换：{task.get('status')} -> {new_status}")
-    task["status"] = new_status
-    task["updated_at"] = _now()
-    if new_status == "running":
-        task["attempts"] = int(task.get("attempts", 0)) + 1
-    if error:
-        task["last_error"] = redact(error)
-    _save(root, course, queue)
-    return task
+    with _queue_lock(root, course):
+        if new_status not in STATUSES:
+            raise ValueError(f"非法目标状态：{new_status}")
+        queue = _load(root, course)
+        task = next((item for item in queue["tasks"] if item.get("id") == task_id), None)
+        if task is None:
+            raise ValueError(f"未找到任务：{task_id}")
+        if new_status not in ALLOWED_TRANSITIONS.get(task.get("status"), set()):
+            raise ValueError(f"非法状态转换：{task.get('status')} -> {new_status}")
+        task["status"] = new_status
+        task["updated_at"] = _now()
+        if new_status == "running":
+            task["attempts"] = int(task.get("attempts", 0)) + 1
+        if error:
+            task["last_error"] = redact(error)
+        _save(root, course, queue)
+        return task
 
 
 def queue_summary(root: Path, course: str) -> dict[str, int]:

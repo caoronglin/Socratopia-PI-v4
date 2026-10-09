@@ -56,7 +56,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from scripts.lib.repository import course_dir, redact, textbook_dir, validate_course_name, write_json_atomic  # noqa: E402
+from scripts.lib.repository import course_dir, redact, safe_child_path, textbook_dir, validate_course_name, write_json_atomic  # noqa: E402
 
 ENV_FLAG = "SOCRATOPIA_EXTERNAL"
 TOKEN_ENV = "MINERU_TOKEN"
@@ -105,7 +105,7 @@ def authorized() -> bool:
 
 
 def _parsed_dir(root: Path, course: str) -> Path:
-    return textbook_dir(root, course) / "SOURCES" / "_parsed"
+    return safe_child_path(textbook_dir(root, course), "SOURCES", "_parsed")
 
 
 def _slug(text: str) -> str:
@@ -131,7 +131,7 @@ def _register(root: Path, course: str, source: Path, text: str, pages: int, via:
     parsed.mkdir(parents=True, exist_ok=True)
     digest = hashlib.sha256(source.read_bytes()).hexdigest()
     stem = _slug(source.stem) + name_suffix
-    out = parsed / f"{stem}.md"
+    out = safe_child_path(parsed, f"{stem}.md")
     header = (
         f"# {source.name}\n\n"
         f"> origin: {source}\n> ingested_at: {_now()}\n> via: {via}\n"
@@ -140,7 +140,7 @@ def _register(root: Path, course: str, source: Path, text: str, pages: int, via:
         f"> 未自动改写 book.md：编目需按 SYSTEM/SPEC/CONTENT_MODEL.md 显式执行。\n\n"
     )
     out.write_text(header + text, encoding="utf-8")
-    write_json_atomic(parsed / f"{stem}.meta.json", {
+    write_json_atomic(safe_child_path(parsed, f"{stem}.meta.json"), {
         "origin": str(source),
         "ingested_at": _now(),
         "via": via,

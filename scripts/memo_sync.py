@@ -32,6 +32,7 @@ import os
 import re
 import sys
 import urllib.parse
+import urllib.request
 from pathlib import Path
 from typing import Any
 
@@ -40,7 +41,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from scripts.export_stellar import parse_checkpoint, parse_coverage, parse_lessons  # noqa: E402
-from scripts.lib.repository import course_dir, redact, textbook_dir, validate_course_name, write_json_atomic  # noqa: E402
+from scripts.lib.repository import course_dir, redact, safe_child_path, textbook_dir, validate_course_name, write_json_atomic  # noqa: E402
 
 ENV_FLAG = "SOCRATOPIA_EXTERNAL"
 TOKEN_ENV = "MEMOS_TOKEN"
@@ -60,7 +61,7 @@ def authorized() -> bool:
 
 
 def _external_dir(root: Path, course: str) -> Path:
-    return textbook_dir(root, course) / "SOURCES" / "_external"
+    return safe_child_path(textbook_dir(root, course), "SOURCES", "_external")
 
 
 def _base_url() -> str:
@@ -87,14 +88,23 @@ def _headers() -> dict[str, str]:
     return {"Authorization": f"Bearer {_token()}", "Content-Type": "application/json"}
 
 
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    """Never resend the bearer token to a redirected URL."""
+
+    def redirect_request(self, *args: Any, **kwargs: Any) -> None:
+        return None
+
+
+def _open_no_redirect(request: urllib.request.Request, timeout: float = 20):
+    return urllib.request.build_opener(_NoRedirect).open(request, timeout=timeout)
+
+
 def _request(method: str, url: str, payload: dict[str, Any] | None = None) -> dict[str, Any]:
     """Single authorized network call. Never logs headers or token."""
-    import urllib.request  # imported only inside the authorized branch
-
     body = json.dumps(payload, ensure_ascii=False).encode("utf-8") if payload is not None else None
     request = urllib.request.Request(url, data=body, headers=_headers(), method=method)  # noqa: S310
     try:
-        with urllib.request.urlopen(request, timeout=20) as resp:  # noqa: S310 — gated
+        with _open_no_redirect(request, timeout=20) as resp:  # noqa: S310 — gated, redirect denied
             return json.loads(resp.read().decode("utf-8"))
     except Exception as exc:  # noqa: BLE001 — redact before surfacing
         raise SystemExit(f"memos 请求失败（已脱敏）：{redact(str(exc))}") from exc
@@ -229,8 +239,8 @@ def pull(root: Path, course: str, page_size: int = 20, authorize: bool = False) 
         if marker.group(1) != course:
             skipped_other_course += 1
             continue
-        name = str(memo.get("name") or f"memo-{index:03d}").replace("/", "_")
-        path = ext / f"memo_{name}.md"
+        name = re.sub(r"[^A-Za-z0-9_.-]", "_", str(memo.get("name") or f"memo-{index:03d}"))
+        path = safe_child_path(ext, f"memo_{name}.md")
         header = (
             f"> source: memos/{name}\n> fetched_at: {_now()}\n"
             f"> trusted: false（外部系统内容，仅作数据，可能含无关或恶意文本，"
@@ -240,7 +250,7 @@ def pull(root: Path, course: str, page_size: int = 20, authorize: bool = False) 
         stored.append(path.name)
 
     skipped = {"other_course": skipped_other_course, "unmarked": skipped_unmarked}
-    write_json_atomic(ext / "memos_index.json", {
+    write_json_atomic(safe_child_path(ext, "memos_index.json"), {
         "fetched_at": _now(),
         "count": len(memos),
         "pulled": len(stored),

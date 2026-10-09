@@ -68,7 +68,8 @@ def validate_item(item: Mapping[str, Any], objective_ids: set[str]) -> list[str]
 def quality_report(items: Iterable[Mapping[str, Any]], objective_ids: set[str]) -> dict[str, Any]:
     """Summarize validation, coverage, distributions, and duplicate prompts."""
     item_list = list(items)
-    coverage = {str(item.get("objective_id", "")) for item in item_list}
+    coverage = {str(item.get("objective_id", "")) for item in item_list
+                if not validate_item(item, objective_ids)}
     normalized = [re.sub(r"\s+", "", str(item.get("prompt", ""))) for item in item_list]
     duplicates = sorted({p for p, c in Counter(normalized).items() if p and c > 1})
     return {

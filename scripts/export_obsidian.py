@@ -34,7 +34,7 @@ from scripts.export_stellar import (  # noqa: E402
     parse_lessons,
     strip_stamps,
 )
-from scripts.lib.repository import course_dir, read_json, validate_course_name, write_json_atomic  # noqa: E402
+from scripts.lib.repository import course_dir, read_json, safe_child_path, validate_course_name, write_json_atomic  # noqa: E402
 
 BANNER = "> [!abstract] 只读投影\n> 导出自 `PROGRESS.md`。掌握事实只以 `PROGRESS.md` 为准；请勿在此手改课堂事实。"
 CALLOUT = {"verified": "success", "needs_review": "warning", "unseen": "question", "introduced": "info",
@@ -216,7 +216,7 @@ def main(argv: list[str] | None = None) -> int:
     out.mkdir(parents=True, exist_ok=True)
     written = unchanged = 0
     for item in plan["files"]:
-        target = out / item["path"]
+        target = safe_child_path(out, item["path"])
         if target.is_file() and strip_stamps(target.read_text(encoding="utf-8", errors="replace")) == strip_stamps(item["content"]):
             unchanged += 1
             continue

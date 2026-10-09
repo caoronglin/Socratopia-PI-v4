@@ -460,6 +460,20 @@ def record_retrieval_result(root: Path, course: str, lesson_id: str, item_id: st
         raise ValueError(f"非法结果：{result}")
     state = load_review_state(root, course)
     state["retrieval_log"].append({"lesson_id": lesson_id, "item_id": item_id, "result": result, "note": note, "recorded_at": _now()})
+    # Complete an exit practice only after each real question has a recorded result.
+    # Preparation placeholders are never counted as answered questions.
+    for practice in state.get("exit_practice", []):
+        if practice.get("lesson_id") != lesson_id or practice.get("completed"):
+            continue
+        items = practice.get("items", [])
+        ids = [str(item.get("item_id")) for item in items]
+        if item_id in ids:
+            results = practice.setdefault("item_results", {})
+            results[item_id] = result
+            practice["completed"] = bool(items) and all(
+                not item.get("requires_fill") and str(item.get("item_id")) in results
+                for item in items
+            )
     if result == "failed":
         for confusion in state["confusions"]:
             if confusion.get("confusion_id") == item_id.replace("retr-conf-", ""):

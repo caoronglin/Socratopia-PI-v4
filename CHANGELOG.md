@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased — Audit remediation
+
+### Fixed
+- 课程根路径与课时文件名统一安全校验，限制跨课程符号链接和导出目标逃逸。
+- 补讲候选仅使用已验证课堂证据判定覆盖，并保留稳定 ID 与开放状态。
+- 评估目标字段、有效题目覆盖校验、课后练习完成闭环与并发队列锁。
+- 外部研究限制 HTTPS、跳转与响应大小，按 URL 区分来源；Memos 认证请求禁止自动重定向。
+- Doctor 将缺失的权威 runtime 文件视为错误，补充边界与回归测试。
+- 外部研究、Memos、MinerU 派生文件写入绑定课程目录。
+
+
 ## 0.0.2
 
 ### Added
@@ -107,3 +118,4 @@
 - `AGENT_SYSTEM_PROMPT.md` compatibility prompt.
 - Legacy knowledge/works skills.
 - Hard dependency on Claude subagents and Windows-specific tool rules.
+

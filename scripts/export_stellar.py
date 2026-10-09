@@ -29,7 +29,9 @@ if str(ROOT) not in sys.path:
 from scripts.lib.repository import (  # noqa: E402
     course_dir,
     read_json,
+    safe_child_path,
     validate_course_name,
+    validate_lesson_id,
     write_json_atomic,
 )
 
@@ -144,6 +146,8 @@ def parse_lessons(progress_text: str) -> list[dict[str, str]]:
 
     for match in re.finditer(r"^\s*[-*]\s*lesson_id\s*[:：]\s*(\S+)\s*$", progress_text, re.M):
         lesson_id = match.group(1).lower().replace("-", "_")
+        if lesson_id not in {"<lesson_id>", "-"}:
+            validate_lesson_id(lesson_id)
         if lesson_id and lesson_id not in seen and lesson_id not in {"<lesson_id>", "-"}:
             seen.add(lesson_id)
             lessons.append({"lesson_id": lesson_id, "title": "", "body": ""})
@@ -356,7 +360,7 @@ def main(argv: list[str] | None = None) -> int:
 
     written = unchanged = 0
     for item in plan["files"]:
-        target = out / item["path"]
+        target = safe_child_path(out, item["path"])
         target.parent.mkdir(parents=True, exist_ok=True)
         content = item["content"]
         if target.exists():

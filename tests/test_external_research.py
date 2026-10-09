@@ -72,11 +72,11 @@ class ExternalResearchTests(unittest.TestCase):
             buf = io.BytesIO("抓取到的内容".encode("utf-8"))
 
             class _Resp:
-                def read(self):
-                    return buf.getvalue()
+                def read(self, limit=-1):
+                    return buf.getvalue()[:limit]
             yield _Resp()
 
-        with mock.patch("urllib.request.urlopen", fake_urlopen):
+        with mock.patch.object(er, "_open_https", fake_urlopen):
             res = er.fetch(self.root, self.course, "https://example.com/a", "A", authorize=True)
         self.assertIn("SOURCES/_external", res["registered"])
         self.assertTrue(res["sha256"])
@@ -84,6 +84,23 @@ class ExternalResearchTests(unittest.TestCase):
     def test_course_traversal_rejected(self):
         with self.assertRaises(ValueError):
             er.plan(self.root, "../evil", "x")
+
+
+class ExternalFetchSafetyTests(unittest.TestCase):
+    def test_disallows_local_and_non_https_targets(self):
+        for url in ("file:///etc/passwd", "http://example.com", "https://localhost/x",
+                    "https://127.0.0.1/x", "https://192.168.0.1/x"):
+            with self.subTest(url=url), self.assertRaises(ValueError):
+                er._validate_fetch_url(url)
+
+    def test_same_title_different_source_is_preserved(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            a = er.register(root, "geo", "https://example.com/a", "相同名称")
+            b = er.register(root, "geo", "https://example.com/b", "相同名称")
+            self.assertNotEqual(a["registered"], b["registered"])
+            self.assertTrue(Path(a["registered"]).exists())
+            self.assertTrue(Path(b["registered"]).exists())
 
 
 if __name__ == "__main__":

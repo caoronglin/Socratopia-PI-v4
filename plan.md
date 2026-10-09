@@ -341,7 +341,7 @@ Socratopia-PI-v4/
 
 **仍未完成 / 未验证**：
 - §13 ERROR 项“schema invalid”目前只校验 JSON 可解析，并未用 `SYSTEM/schemas/*.json` 做完整 JSON Schema 校验（各 runtime 文件有代码级校验器，但 schema 文件本身不被执行）。
-- CI 工作流未在 GitHub 真实运行；无 `pdftotext`/`pypdf` 环境下测试是否通过未验证。
+- CI 已在 GitHub Actions 上针对 Python 3.11/3.13 执行；本次审计修复应以最新提交的 CI 结果为准。真实 OCR 与外部服务仍需单独验收。
 - `budget.py` 估算系数未用真实 tokenizer 校准。
 - `docs/SESSION_REPORT.md` 是上一会话的快照（223 测试/15 脚本），未随本轮变更更新。
 - `memo_sync` 真实网络路径、`mineru_ingest remote`（已接线，仅模拟网络测试）、Stellar 真实 `hexo generate`：需用户 token/环境，未在真实服务验证。
