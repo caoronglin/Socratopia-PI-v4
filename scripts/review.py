@@ -13,14 +13,15 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from scripts.lib import review as review_lib  # noqa: E402
-from scripts.lib.repository import course_dir, redact, validate_course_name  # noqa: E402
+from scripts.lib.repository import course_dir, redact, safe_child_path, validate_course_name, validate_lesson_id  # noqa: E402
 
 
 def _write_plan(root: Path, course: str, lesson_id: str, kind: str, items: list) -> Path:
-    d = course_dir(root, course) / "PRACTICE"
+    lesson_id = validate_lesson_id(lesson_id)
+    d = safe_child_path(course_dir(root, course), "PRACTICE")
     d.mkdir(parents=True, exist_ok=True)
-    json_path = d / f"{lesson_id}_{kind}.json"
-    md_path = d / f"{lesson_id}_{kind}.md"
+    json_path = safe_child_path(d, f"{lesson_id}_{kind}.json")
+    md_path = safe_child_path(d, f"{lesson_id}_{kind}.md"
     title = "本节结束练习" if kind == "exit" else "前课检索练习"
     json_path.write_text(
         json.dumps({"lesson_id": lesson_id, "kind": kind, "items": items}, ensure_ascii=False, indent=2) + "\n",
@@ -74,7 +75,7 @@ def cmd_cards(args: argparse.Namespace) -> int:
     if not drafts:
         print(f"课程 {args.course} 第 {args.lesson_id} 课暂无已记录混淆，未生成卡片。")
         return 0
-    pending = course_dir(ROOT, args.course) / "_pending_cards.md"
+    pending = safe_child_path(course_dir(ROOT, args.course), "_pending_cards.md")
     blocks = review_lib.render_pending_cards(args.course, drafts)
     if pending.exists():
         pending.write_text(review_lib.merge_pending_cards(pending.read_text(encoding="utf-8"), blocks), encoding="utf-8")
