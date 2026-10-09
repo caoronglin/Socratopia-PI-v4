@@ -300,5 +300,68 @@ class ReviewTests(unittest.TestCase):
         self.assertEqual(t1["id"], t2["id"])
 
 
+class AuditRegressionTests(unittest.TestCase):
+    def test_lesson_id_and_symlink_boundary(self):
+        for unsafe in ("../PROGRESS", "lesson_01", "lesson_001/other", ""):
+            with self.subTest(value=unsafe), self.assertRaises(ValueError):
+                repository.validate_lesson_id(unsafe)
+        with tempfile.TemporaryDirectory() as temp:
+            base = Path(temp)
+            course, other = base / "course", base / "other"
+            course.mkdir()
+            other.mkdir()
+            try:
+                (course / "PRACTICE").symlink_to(other, target_is_directory=True)
+            except OSError:
+                self.skipTest("no symlink support")
+            with self.assertRaises(ValueError):
+                repository.safe_child_path(course, "PRACTICE", "lesson_001.md")
+
+    def test_concurrent_enqueue_is_idempotent(self):
+        from concurrent.futures import ThreadPoolExecutor
+        with tempfile.TemporaryDirectory() as temp:
+            with ThreadPoolExecutor(max_workers=6) as pool:
+                ids = list(pool.map(lambda _: tq.enqueue_task(
+                    Path(temp), "bio", "review", "same-key")["id"], range(16)))
+            self.assertEqual(len(set(ids)), 1)
+            self.assertEqual(len(tq._load(Path(temp), "bio")["tasks"]), 1)
+
+    def test_exit_practice_marks_complete_only_after_all_results(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            state = review.default_review_state("bio")
+            state["exit_practice"] = [{"lesson_id": "lesson_001", "items": [
+                {"item_id": "a"}, {"item_id": "b"}], "completed": False}]
+            review.save_review_state(root, "bio", state)
+            state = review.record_retrieval_result(root, "bio", "lesson_001", "a", "passed")
+            self.assertFalse(state["exit_practice"][0]["completed"])
+            state = review.record_retrieval_result(root, "bio", "lesson_001", "b", "hint_correct")
+            self.assertTrue(state["exit_practice"][0]["completed"])
+
+    def test_reteach_candidate_not_erased_by_previous_queue(self):
+        from scripts import build_reteach_queue as br
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            book = repository.textbook_dir(root, "bio")
+            book.mkdir(parents=True)
+            (book / "book.md").write_text("# 第1章\n## 细胞结构\n正文\n", encoding="utf-8")
+            (book / "_outline.md").write_text("## 第1章\n", encoding="utf-8")
+            first = br.build_queue(root, "bio")
+            ctx = repository.course_dir(root, "bio") / "CONTEXT"
+            ctx.mkdir(parents=True)
+            (ctx / "RETEACH_QUEUE.md").write_text(first, encoding="utf-8")
+            second = br.build_queue(root, "bio")
+            self.assertIn("细胞结构", first)
+            self.assertIn("细胞结构", second)
+            self.assertEqual(first.count("RQ-"), second.count("RQ-"))
+
+    def test_invalid_assessment_does_not_claim_coverage(self):
+        sample = {"id": "q1", "objective_id": "1", "type": "recall",
+                  "difficulty": "easy", "prompt": "question", "answer": "a",
+                  "rationale": "reason", "source_anchor": ""}
+        result = assessment.quality_report([sample], {"1"})
+        self.assertEqual(result["uncovered_objectives"], ["1"])
+
+
 if __name__ == "__main__":
     unittest.main()
