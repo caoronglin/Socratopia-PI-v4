@@ -28,6 +28,10 @@ python scripts/check.py --strict          # doctor + 全部测试（CI 同款）
 python scripts/pi_arch_doctor.py --budget # 上下文 token 预算报告
 ```
 
+## 首次引导与学习小组
+
+`python scripts/initialize.py wizard` 逐步选择课程与主导师（最后需确认），或使用 `initialize.py plan/apply` 无交互初始化。小组允许 D/E/F 中 2–3 位顺序讨论，入口 `scripts/learning_group.py`；轮次受限、每轮等待用户，不自动改变 PROGRESS 或 45 分钟计时。完整操作见 [引导与小组手册](docs/ONBOARDING_AND_GROUP.md)。
+
 ## 省 token 工具
 
 ```bash
