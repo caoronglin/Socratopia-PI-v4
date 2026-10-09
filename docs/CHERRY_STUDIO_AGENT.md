@@ -18,7 +18,7 @@
 | Cherry 能力（存在时） | Agent 动作 | Socratopia 责任 |
 |---|---|---|
 | `mcp__cherry-tools__web_fetch` / `web_search` | 读取公开链接/补充出处 | 入库前清洗，标记不可信，禁覆盖 `book.md` |
-| `mcp__cherry-tools__kb_list/search/read` | 只查询绑定知识库 | 不把召回片段当掌握证据 |
+| `mcp__cherry-tools__kb_list` / `mcp__cherry-tools__kb_search` / `mcp__cherry-tools__kb_read` | 只查询绑定知识库 | 不把召回片段当掌握证据 |
 | `mcp__cherry-tools__kb_manage` | 经批准添加/重建知识 | 保留 URL、哈希及课程隔离 |
 | `mcp__cherry-tools__to_markdown` | 把可访问 PDF/Office 转 Markdown | 只登记课程来源，不自动覆盖主课本 |
 | `mcp__agent-memory__memory` | 检索稳定偏好和背景 | 不取代课程 `PROGRESS.md` |
