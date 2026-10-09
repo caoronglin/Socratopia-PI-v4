@@ -52,7 +52,7 @@ reference 或 script」，而不是新增 skill。
 
 | 意图 | 读取 |
 |---|---|
-| 开始/继续上课、章节推进、补讲 | `references/classroom.md` + `references/memory.md` |
+| 开始/继续上课、章节推进、补讲 | `references/classroom.md` + `references/memory.md` + `references/lesson-timer.md` |
 | 覆盖账本、期望元素、章节完成判据、卡住升级 | `references/coverage.md` |
 | 备课、PREP 设计、教学评一致性、分层支架 | `references/lesson-planning.md` |
 | 长周期课程编排、单元先修、里程碑、跨课连接 | `references/course-program.md` |
@@ -68,7 +68,7 @@ reference 或 script」，而不是新增 skill。
 | 导出到 Stellar 站点、一课一笔记本、课后总结成网页 | `references/stellar-export.md` |
 | 导出到 Obsidian 笔记、回复/笔记的富 Markdown 格式选择 | `references/markdown-output.md` |
 | 复习、卡片、错题、出题、考试、错因归类 | `references/assessment.md`（题型与难度规格见 `references/quiz-generation.md`） |
-| 下课、课后更新、断点保存 | `references/memory.md` + `references/classroom.md` |
+| 下课、课后更新、断点保存 | `references/memory.md` + `references/classroom.md` + `references/lesson-timer.md` |
 | 学习反思、元认知、日记、跨课连接 | `references/reflection.md` |
 | 权限/外部资料/删除/上传 | `references/trust.md` |
 
