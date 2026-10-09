@@ -47,6 +47,10 @@ python scripts/web_article.py study --course '课程' --url 'https://example.org
 4. **不承诺后台工作。** 入队到 `runtime/tasks.json` ≠ Cherry 定时任务已创建；调用宿主 `cron/notify/session_*` 时只有实际成功返回才可报告。
 5. **Pi 与 Claude 兼容不是两套教学事实。** 主运行时建议 Pi；Claude Code 可继续用于开发/审计，教学和掌握规则不复制两份。
 
+## 正式课堂 45 分钟计时
+
+开课时按 `docs/LESSON_TIMER.md` 校验并启动 `lesson_timer.py start`；每轮真实教学互动调用 heartbeat，关闭/离线不偷算超过5分钟空档；需要休息则 pause/resume。下课时以脚本 `finish` 的结果为准：不足2700秒为未完成，用户仍可随时 interrupt。Cherry Studio 没有由项目自动安装的后台定时服务，不能假装有弹窗或持续运行的倒计时。
+
 ## 章节备课与补充资料
 
 Cherry Pi Agent 收到“备第 N 章”时，先检查课程及主课本，再调用 `prep.py chapter` 只读预览。用户确认写入后加 `--apply`；若章节已有 PREP 只复用并检查状态，不覆盖。网页文章经 Cherry 读取后，可登记为本课 `SOURCES/_external/`，再以 `--source` 加入章级 PREP 并注明引用目的，不把检索结果当已核验。详见 `docs/CHAPTER_PREP.md`；真实章节课堂不因章末就自动下课。
