@@ -19,6 +19,7 @@ def read(path: Path) -> str:
 class AdaptivePedagogyContracts(unittest.TestCase):
     def setUp(self):
         self.pedagogy = read(LEARNING / "pedagogy.md")
+        self.examples = read(LEARNING / "pedagogy-examples.md")
         self.classroom = read(LEARNING / "classroom.md")
         self.persona = read(TUTOR / "persona.md")
         self.style = read(TUTOR / "style.md")
@@ -47,8 +48,8 @@ class AdaptivePedagogyContracts(unittest.TestCase):
 
     def test_three_contrasting_examples(self):
         for example in ("自信但错误", "卡住两轮", "明确直讲"):
-            self.assertIn(example, self.pedagogy)
-        self.assertIn("只示范决策，不是固定台词", self.pedagogy)
+            self.assertIn(example, self.examples)
+        self.assertIn("不是必须复读的导师台词", self.examples)
 
     def test_style_does_not_invent_measurements_or_thoughts(self):
         self.assertNotIn("能省一半时间", self.style)
