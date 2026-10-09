@@ -28,6 +28,8 @@ _BLOCKS = {"p", "div", "section", "h1", "h2", "h3", "h4", "h5", "h6",
            "li", "blockquote", "br", "tr", "pre"}
 _OMIT = {"script", "style", "noscript", "svg", "nav", "header", "footer",
          "aside", "form", "button", "iframe"}
+_VOID = {"area", "base", "br", "col", "embed", "hr", "img", "input",
+         "link", "meta", "param", "source", "track", "wbr"}
 _SECRET_QUERY = {"token", "access_token", "apikey", "api_key", "secret",
                  "password", "auth", "authorization", "signature", "sig", "key"}
 
@@ -69,16 +71,24 @@ class _Reader(HTMLParser):
             self.title_depth += 1
         for region in self.depth:
             if tag == region or self.depth[region]:
-                self.depth[region] += 1
+                if tag not in _VOID:
+                    self.depth[region] += 1
                 if not self.omit and tag in _BLOCKS:
-                    self.parts[region].append("\n")
+                    self.parts[region].append("\n" + ("#" + tag[1] + " " if re.fullmatch(r"h[1-6]", tag) else ""))
         if not self.omit and tag == "br":
             for region in self.depth:
                 if self.depth[region]:
                     self.parts[region].append("\n")
 
+    def handle_startendtag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        self.handle_starttag(tag, attrs)
+        if tag.lower() not in _VOID:
+            self.handle_endtag(tag)
+
     def handle_endtag(self, tag: str) -> None:
         tag = tag.lower()
+        if tag in _VOID:
+            return
         if tag == "title" and self.title_depth:
             self.title_depth -= 1
         for region in self.depth:
@@ -135,6 +145,7 @@ def import_article(root: Path, course: str, url: str, raw: bytes, *,
     url = check_url(url)
     body, detected_title, meta = extract_article(raw, content_type=content_type)
     heading = title or detected_title or urlsplit(url).path.rsplit("/", 1)[-1] or url
+    heading = re.sub(r"[\\r\\n\\t]+", " ", heading).strip()[:180] or "Article"
     saved = ext._register(root, course, url, heading, body.encode("utf-8"), via)
     info = read_json(Path(saved["meta"])) or {}
     info.update({"source_type": "web-article", "extraction": meta["extractor"],
