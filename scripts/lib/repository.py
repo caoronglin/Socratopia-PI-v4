@@ -35,7 +35,12 @@ def validate_course_name(course: str) -> str:
 
 def _safe_dir(root: Path, top: str, course: str) -> Path:
     safe_name = validate_course_name(course)
-    base = (root / top).resolve()
+    container = root / top
+    if container.is_symlink():
+        raise ValueError(f"课程容器不能是符号链接：{container}")
+    base = container.resolve()
+    if (base / safe_name).is_symlink():
+        raise ValueError(f"课程目录不能是符号链接：{course!r}")
     result = (base / safe_name).resolve()
     if base != result and base not in result.parents:
         raise ValueError(f"课程路径越界：{course!r}")
@@ -96,7 +101,10 @@ def read_json_list(path: Path, key: str) -> list[dict[str, Any]]:
     values = payload.get(key, [])
     if not isinstance(values, list):
         raise ValueError(f"{path.name} 的 {key} 必须为列表")
-    return [record for record in values if isinstance(record, dict)]
+    for index, record in enumerate(values):
+        if not isinstance(record, dict):
+            raise ValueError(f"{path.name} 的 {key}[{index}] 必须是 object")
+    return values
 
 
 def write_json_atomic(path: Path, value: Mapping[str, Any]) -> None:
