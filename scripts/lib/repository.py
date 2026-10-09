@@ -26,7 +26,9 @@ _SECRET_PATTERNS = [
 def validate_course_name(course: str) -> str:
     """Return a safe single-segment course name or raise ValueError."""
     normalized = course.strip()
-    if not normalized or normalized in {".", ".."} or "\x00" in normalized or not _COURSE_NAME_RE.fullmatch(normalized):
+    if "\x00" in normalized:
+        raise ValueError(f"非法课程名：{course!r}")
+    if not normalized or normalized in {".", ".."} or not _COURSE_NAME_RE.fullmatch(normalized):
         raise ValueError(f"非法课程名：{course!r}")
     return normalized
 
