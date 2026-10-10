@@ -185,5 +185,9 @@ jobs:
             --title "Socratopia PI $TAG (native Rust CLI bundles)" \
             --notes-file release/NOTES.md \
             "${RELEASE_FLAGS[@]}"
-          gh release view "$TAG" --json url,isPrerelease,isLatest,assets \
-            --jq '{url:.url,prerelease:.isPrerelease,latest:.isLatest,assets:[.assets[].name]}'
+          gh release view "$TAG" --json url,isPrerelease,assets \
+            --jq '{url:.url,prerelease:.isPrerelease,assets:[.assets[].name]}'
+          if [[ "$TAG" != *-* ]]; then
+            test "$(gh release view "$TAG" --json isPrerelease --jq '.isPrerelease')" = "false"
+            test "$(gh release list --limit 10 --json tagName,isLatest --jq ".[] | select(.tagName == \"$TAG\") | .isLatest")" = "true"
+          fi
