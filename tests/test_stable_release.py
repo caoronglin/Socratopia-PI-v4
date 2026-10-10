@@ -43,8 +43,10 @@ class StableReleaseTests(unittest.TestCase):
             self.assertIn(f"platform: {platform}", self.workflow)
             self.assertIn(f"-{platform}.zip", self.notes)
         self.assertIn("sha256sum --check *.sha256", self.workflow)
-        self.assertIn("assert executed.stdout.strip()", self.workflow)
-        self.assertIn('not any("/DATA/" in n or "/TEXTBOOK/" in n for n in names)', self.workflow)
+        smoke = (ROOT / "scripts/smoke_standalone.py").read_text(encoding="utf-8")
+        self.assertIn("completed.stdout.strip()", smoke)
+        self.assertIn("encoding=\"utf-8\"", smoke)
+        self.assertIn('if any(part in ("DATA", "TEXTBOOK")', smoke)
 
     def test_release_describes_python_requirement_and_unverified_ui(self):
         for phrase in ("无需自行安装 Rust 或 Python", "PyInstaller", "Cherry Studio", "尚未宣称通过"):
@@ -52,7 +54,8 @@ class StableReleaseTests(unittest.TestCase):
         self.assertIn("scripts/check.py --strict", self.workflow)
         self.assertIn("socratopia-backend", self.workflow)
         self.assertIn("--require-backend", self.workflow)
-        self.assertIn("SOCRATOPIA_REQUIRE_BUNDLED", self.workflow)
+        smoke = (ROOT / "scripts/smoke_standalone.py").read_text(encoding="utf-8")
+        self.assertIn("SOCRATOPIA_REQUIRE_BUNDLED", smoke)
 
 
 if __name__ == "__main__":

@@ -113,58 +113,8 @@ jobs:
           if [[ "$PLATFORM" == windows-* ]]; then BACKEND="${BACKEND}.exe"; fi
           python scripts/package_release.py --platform "$PLATFORM" --cli-binary "$CLI_BINARY" \
             --backend-binary "$BACKEND" --require-backend --output-dir dist
-          python - <<'PY'
-          import hashlib
-          import os
-          import pathlib
-          import stat
-          import subprocess
-          import zipfile
-
-          platform = os.environ["PLATFORM"]
-          version = pathlib.Path("release/VERSION").read_text(encoding="utf-8").strip()
-          name = f"Socratopia-PI-v4-{version}-{platform}.zip"
-          archive = pathlib.Path("dist") / name
-          expected_hash = (pathlib.Path("dist") / (name + ".sha256")).read_text().split()[0]
-          assert hashlib.sha256(archive.read_bytes()).hexdigest() == expected_hash
-          folder = f"Socratopia-PI-v4-{version}"
-          binary_name = "socratopia.exe" if platform.startswith("windows") else "socratopia"
-          bin_entry = f"{folder}/bin/{binary_name}"
-          backend_name = "socratopia-backend.exe" if platform.startswith("windows") else "socratopia-backend"
-          backend_entry = f"{folder}/bin/{backend_name}"
-          with zipfile.ZipFile(archive) as package:
-              names = package.namelist()
-              assert bin_entry in names, "native Rust executable missing from archive"
-              assert backend_entry in names, "frozen Python backend missing from archive"
-              assert f"{folder}/AGENTS.md" in names
-              assert f"{folder}/scripts/initialize.py" in names
-              assert not any("/DATA/" in n or "/TEXTBOOK/" in n for n in names)
-              assert package.getinfo(bin_entry).external_attr >> 16 & 0o111
-              assert package.getinfo(backend_entry).external_attr >> 16 & 0o111
-              package.extractall("smoke")
-          binary = pathlib.Path("smoke") / bin_entry
-          backend = pathlib.Path("smoke") / backend_entry
-          if os.name != "nt":
-              binary.chmod(binary.stat().st_mode | stat.S_IXUSR)
-              backend.chmod(backend.stat().st_mode | stat.S_IXUSR)
-          env = os.environ.copy()
-          env["SOCRATOPIA_REQUIRE_BUNDLED"] = "1"
-          env.pop("SOCRATOPIA_PYTHON", None)
-          for arguments in (
-              ["--version"], ["status", "--course", "遗传学"],
-              ["preflight"], ["init", "plan", "--course", "遗传学"],
-              ["group", "status", "--course", "遗传学"],
-              ["timer", "status", "--course", "遗传学"],
-          ):
-              executed = subprocess.run([str(binary.resolve()), *arguments],
-                                        cwd=binary.parent.parent, env=env,
-                                        check=True, capture_output=True, text=True)
-              if arguments == ["--version"]:
-                  assert executed.stdout.strip() == f"socratopia {version.removeprefix('v')}", (
-                      "the packaged binary version does not match the release tag"
-                  )
-          print(f"Verified Rust + frozen Python binaries: {archive} / SHA-256 {expected_hash}")
-          PY
+          PYTHONIOENCODING=utf-8 python scripts/smoke_standalone.py \
+            --platform "$PLATFORM" --output-dir dist
       - name: Upload platform bundle (ZIP + SHA-256)
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:

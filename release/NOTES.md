@@ -1,4 +1,4 @@
-# Socratopia PI v4.3.0 · 正式版
+# Socratopia PI v4.3.1 · 正式版
 
 本次正式版包含截至 `claude-code` 发布提交的教学核心、Pi Agent 约束、Cherry Studio 适配和 **四平台预编译 Rust CLI 与冻结 Python 后端**。这是一套本地优先、单课程隔离的教学工具；**Socratopia 作为 Cherry Studio Work 中的 Pi Agent 使用，不是 MCP Server**。
 
@@ -19,10 +19,10 @@
 
 | 平台 | ZIP |
 |---|---|
-| Linux x86_64 | `Socratopia-PI-v4-v4.3.0-linux-x86_64.zip` |
-| Windows x86_64 | `Socratopia-PI-v4-v4.3.0-windows-x86_64.zip` |
-| macOS Intel | `Socratopia-PI-v4-v4.3.0-macos-x86_64.zip` |
-| macOS Apple Silicon | `Socratopia-PI-v4-v4.3.0-macos-arm64.zip` |
+| Linux x86_64 | `Socratopia-PI-v4-v4.3.1-linux-x86_64.zip` |
+| Windows x86_64 | `Socratopia-PI-v4-v4.3.1-windows-x86_64.zip` |
+| macOS Intel | `Socratopia-PI-v4-v4.3.1-macos-x86_64.zip` |
+| macOS Apple Silicon | `Socratopia-PI-v4-v4.3.1-macos-arm64.zip` |
 
 四个 ZIP 各附一个 `.zip.sha256` 校验文件，发布构建会在**对应操作系统**完成 Rust 编译、ZIP 解压和 CLI 冒烟测试，并在正式发布前验证所有 SHA-256。
 
