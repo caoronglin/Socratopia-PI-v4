@@ -118,6 +118,10 @@ class PackageReleaseTests(unittest.TestCase):
         self.assertEqual(
             make_zip(self.root, self.root / "out", "v4.2.0-rc.1",
                      platform="macos-x86_64", cli_binary=path)["files"], 6)
+        arm = make_zip(self.root, self.root / "out", "v4.2.0-rc.1",
+                       platform="macos-arm64", cli_binary=path)
+        self.assertEqual(arm["files"], 6)
+        self.assertTrue(arm["archive"].endswith("-macos-arm64.zip"))
 
     def test_binary_symlink_or_external_source_rejected(self):
         outside = self.root.parent / (self.root.name + "-external.bin")
