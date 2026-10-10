@@ -71,6 +71,75 @@ class PackageReleaseTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             make_zip(self.root, self.root / "out", "v4.1.0-rc.1")
 
+    def test_linux_bundle_contains_real_executable_path_and_checksum(self):
+        binary = self.root / "rust/target/release/socratopia"
+        binary.parent.mkdir(parents=True)
+        binary.write_bytes(b"\x7fELF" + b"FAKE-NATIVE-LINUX-CLI")
+        result = make_zip(self.root, self.root / "out", "v4.2.0-rc.1",
+                          platform="linux-x86_64",
+                          cli_binary=Path("rust/target/release/socratopia"))
+        self.assertTrue(result["archive"].endswith("-linux-x86_64.zip"))
+        self.assertEqual(result["files"], 6)
+        with zipfile.ZipFile(result["archive"]) as stream:
+            entry = "Socratopia-PI-v4-v4.2.0-rc.1/bin/socratopia"
+            self.assertEqual(stream.read(entry), binary.read_bytes())
+            self.assertEqual(stream.getinfo(entry).external_attr >> 16 & 0o111, 0o111)
+        repeated = make_zip(self.root, self.root / "again", "v4.2.0-rc.1",
+                            platform="linux-x86_64",
+                            cli_binary=binary)
+        self.assertEqual(result["sha256"], repeated["sha256"])
+
+    def test_platform_and_binary_must_match(self):
+        path = self.root / "rust/target/release/socratopia.exe"
+        path.parent.mkdir(parents=True)
+        path.write_bytes(b"MZ" + b"TEST-WINDOWS-CLI")
+        with self.assertRaises(ValueError):
+            make_zip(self.root, self.root / "out", "v4.2.0-rc.1",
+                     platform="windows-x86_64")
+        with self.assertRaises(ValueError):
+            make_zip(self.root, self.root / "out", "v4.2.0-rc.1",
+                     cli_binary=path)
+        with self.assertRaises(ValueError):
+            make_zip(self.root, self.root / "out", "v4.2.0-rc.1",
+                     platform="linux-x86_64", cli_binary=path)
+        result = make_zip(self.root, self.root / "out", "v4.2.0-rc.1",
+                          platform="windows-x86_64", cli_binary=path)
+        with zipfile.ZipFile(result["archive"]) as stream:
+            self.assertIn("Socratopia-PI-v4-v4.2.0-rc.1/bin/socratopia.exe", stream.namelist())
+
+    def test_macos_binary_header_validation(self):
+        path = self.root / "rust/target/release/socratopia"
+        path.parent.mkdir(parents=True)
+        path.write_bytes(b"BAD-NON-MACHO")
+        with self.assertRaises(ValueError):
+            make_zip(self.root, self.root / "out", "v4.2.0-rc.1",
+                     platform="macos-x86_64", cli_binary=path)
+        path.write_bytes(b"\xcf\xfa\xed\xfe" + b"FAKE-MACHO-CLI")
+        self.assertEqual(
+            make_zip(self.root, self.root / "out", "v4.2.0-rc.1",
+                     platform="macos-x86_64", cli_binary=path)["files"], 6)
+        arm = make_zip(self.root, self.root / "out", "v4.2.0-rc.1",
+                       platform="macos-arm64", cli_binary=path)
+        self.assertEqual(arm["files"], 6)
+        self.assertTrue(arm["archive"].endswith("-macos-arm64.zip"))
+
+    def test_binary_symlink_or_external_source_rejected(self):
+        outside = self.root.parent / (self.root.name + "-external.bin")
+        outside.write_bytes(b"\x7fELF" + b"EXTERNAL")
+        with self.assertRaises(ValueError):
+            make_zip(self.root, self.root / "out", "v4.2.0-rc.1",
+                     platform="linux-x86_64", cli_binary=outside)
+        outside.unlink()
+        external = self.root / "rust/target/release/socratopia"
+        external.parent.mkdir(parents=True)
+        try:
+            external.symlink_to(self.root / "AGENTS.md")
+        except OSError:
+            self.skipTest("symlinks unavailable")
+        with self.assertRaises(ValueError):
+            make_zip(self.root, self.root / "out", "v4.2.0-rc.1",
+                     platform="linux-x86_64", cli_binary=external)
+
     def test_invalid_version_rejected(self):
         with self.assertRaises(ValueError):
             make_zip(self.root, self.root / "out", "../not-a-version")

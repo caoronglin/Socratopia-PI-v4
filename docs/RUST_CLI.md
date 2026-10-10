@@ -2,6 +2,12 @@
 
 Rust CLI 是**可选的轻量前端**，不是第二套课程引擎。状态写入继续由经过回归测试的 Python 实现负责。无需外部 Rust crates，单二进制仅依赖标准库；运行 Python 业务命令仍要求 Python 3.11+ 和项目脚本存在。
 
+## 直接使用已发布的二进制
+
+[v4.2.0-rc.1 GitHub Release](https://github.com/caoronglin/Socratopia-PI-v4/releases/tag/v4.2.0-rc.1) 提供四种完整项目 ZIP（Linux x86_64、Windows x86_64、macOS Intel、macOS arm64），CLI 在解压后的 `bin/` 目录，**无需安装 Rust**。例如 Linux/macOS：`./bin/socratopia --version`；Windows：`bin\\socratopia.exe --version`。
+
+CLI 本身不依赖 Rust 工具链；**调用业务子命令仍必须有 Python 3.11+**，若解释器路径特殊用 `SOCRATOPIA_PYTHON` 指定。不要覆盖原项目中的 `DATA/` 或 `TEXTBOOK/`；每个安装包附 `.sha256` 文件。下文的 Cargo 步骤仅用于希望自行编译的开发者。
+
 ## 构建
 
 ```bash
