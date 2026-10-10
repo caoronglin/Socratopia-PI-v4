@@ -1,4 +1,4 @@
-# Socratopia PI v4.3.1 · 正式版
+# Socratopia PI v4.3.2 · 正式版
 
 本次正式版包含截至 `claude-code` 发布提交的教学核心、Pi Agent 约束、Cherry Studio 适配和 **四平台预编译 Rust CLI 与冻结 Python 后端**。这是一套本地优先、单课程隔离的教学工具；**Socratopia 作为 Cherry Studio Work 中的 Pi Agent 使用，不是 MCP Server**。
 
@@ -10,7 +10,7 @@
 - **引导初始化**：可以交互选择课程、主导师与可选学习小组；重复初始化不覆盖已有记录。
 - **多导师学习小组**：三月七、丹恒、姬子（D/E/F）任选 2–3 位，有限轮次、轮流发言、每轮等待用户；**一个 Pi Agent 依次呈现导师角色，不是多个独立模型实例**。
 - **来源信任与课程隔离**：课程 runtime、PREP、PROGRESS 与补充资料分别核验，不自动更改教材或掌握状态；网页和外部文本不作为系统指令。
-- **真正的独立执行包**：Rust 1.99.0 前端配套冻结的 CPython 后端；日常命令不依赖本机 Python。构建工具升级到 pytest 9.1.1 / PyInstaller 6.22.3。
+- **真正的独立执行包**：Rust 1.99.0 前端配套冻结的 CPython 后端；日常命令不依赖本机 Python。使用 Rust 1.99.0 / pytest 9.1.1 / PyInstaller 6.22.3；依赖工具已核验为当前稳定版。GitHub Actions 升级到 Checkout v7、setup-python v7、upload-artifact v7、download-artifact v8（均固定提交 SHA），并添加每周依赖更新 PR。
 - **Rust CLI**：统一入口 `socratopia`，负责命令调度和只读状态检查；业务功能继续调用成熟的 Python 实现。
 
 ## 下载
@@ -19,10 +19,10 @@
 
 | 平台 | ZIP |
 |---|---|
-| Linux x86_64 | `Socratopia-PI-v4-v4.3.1-linux-x86_64.zip` |
-| Windows x86_64 | `Socratopia-PI-v4-v4.3.1-windows-x86_64.zip` |
-| macOS Intel | `Socratopia-PI-v4-v4.3.1-macos-x86_64.zip` |
-| macOS Apple Silicon | `Socratopia-PI-v4-v4.3.1-macos-arm64.zip` |
+| Linux x86_64 | `Socratopia-PI-v4-v4.3.2-linux-x86_64.zip` |
+| Windows x86_64 | `Socratopia-PI-v4-v4.3.2-windows-x86_64.zip` |
+| macOS Intel | `Socratopia-PI-v4-v4.3.2-macos-x86_64.zip` |
+| macOS Apple Silicon | `Socratopia-PI-v4-v4.3.2-macos-arm64.zip` |
 
 四个 ZIP 各附一个 `.zip.sha256` 校验文件，发布构建会在**对应操作系统**完成 Rust 编译、ZIP 解压和 CLI 冒烟测试，并在正式发布前验证所有 SHA-256。
 
@@ -34,6 +34,12 @@
 4. 用 `./bin/socratopia preflight` 查看 Cherry Agent 项目预检；按需执行 `./bin/socratopia init plan --course "课程名"`。
 
 **运行前置条件**：正式安装包已经内置 Rust 可执行前端与 PyInstaller 冻结的 CPython 后端，用户**无需自行安装 Rust 或 Python**。初始化、备课、计时、学习小组和预检优先调用随包后端；仅开发者 `doctor`、`package` 或源码编译需要系统 Python。设置 `SOCRATOPIA_PYTHON` 可主动使用自有解释器。项目不会在安装时自动配置 Cherry Studio 的工作目录或工具权限。
+
+## v4.3.2 稳定性改进
+
+- CLI 的 `--root` 能正确切换冻结后端实际执行的课程工作区，避免意外读取安装包原目录。
+- 如已安装的 `bin/socratopia` 缺少同目录的冻结后端，则明确失败，不悄悄使用系统 Python 掩盖损坏。
+- 四系统 CI 的真实 ZIP 冒烟新增跨工作区与缺失后端的负向验证；仍保留课程隔离与私有 DATA/TEXTBOOK 不入包。
 
 ## 正式版验证范围
 
