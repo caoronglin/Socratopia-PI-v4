@@ -124,8 +124,13 @@ jobs:
           if os.name != "nt":
               binary.chmod(binary.stat().st_mode | stat.S_IXUSR)
           for arguments in (["--version"], ["status", "--course", "遗传学"], ["preflight"]):
-              subprocess.run([str(binary.resolve()), *arguments],
-                             cwd=binary.parent.parent, check=True)
+              executed = subprocess.run([str(binary.resolve()), *arguments],
+                                        cwd=binary.parent.parent, check=True,
+                                        capture_output=True, text=True)
+              if arguments == ["--version"]:
+                  assert executed.stdout.strip() == f"socratopia {version.removeprefix('v')}", (
+                      "the packaged binary version does not match the release tag"
+                  )
           print(f"Verified native CLI: {archive} / SHA-256 {expected_hash}")
           PY
       - name: Upload platform bundle (ZIP + SHA-256)
@@ -189,5 +194,7 @@ jobs:
             --jq '{url:.url,prerelease:.isPrerelease,assets:[.assets[].name]}'
           if [[ "$TAG" != *-* ]]; then
             test "$(gh release view "$TAG" --json isPrerelease --jq '.isPrerelease')" = "false"
-            test "$(gh release list --limit 10 --json tagName,isLatest --jq ".[] | select(.tagName == \"$TAG\") | .isLatest")" = "true"
+            LATEST="$(gh release list --limit 20 --json tagName,isLatest \
+              --jq '.[] | select(.isLatest) | .tagName')"
+            test "$LATEST" = "$TAG"
           fi
