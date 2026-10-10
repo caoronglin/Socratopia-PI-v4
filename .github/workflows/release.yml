@@ -2,7 +2,7 @@ name: Release Standalone Executables (Rust + frozen CPython)
 
 on:
   push:
-    branches: [claude-code]
+    branches: [main]
     paths: ["release/VERSION"]
   workflow_dispatch:
 
@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   verify:
-    if: github.ref == 'refs/heads/claude-code'
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
