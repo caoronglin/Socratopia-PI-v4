@@ -158,6 +158,7 @@
     "scripts/prepare_after_upload.py",
     "scripts/review.py",
     "scripts/scaffold_course.py",
+    "scripts/smoke_standalone.py",
     "scripts/task_queue.py",
     "scripts/vector_index.py",
     "scripts/web_article.py",
