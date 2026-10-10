@@ -88,12 +88,11 @@ class PiAgentConstraintsTests(unittest.TestCase):
         self.assertIn("获批", self.cherry)
 
     def test_acceptance_covers_failure_cases_not_only_happy_path(self):
-        for phrase in ("权限绕过", "跨课写入", "登录墙", "UTF",
+        for phrase in ("权限绕过", "跨课写入", "登录墙",
                        "重复", "未满 45 分钟", "DONE/YIELD/BLOCKED"):
-            self.assertIn(phrase.replace("UTF", "") if phrase == "UTF" else phrase,
-                          self.acceptance)
+            self.assertIn(phrase, self.acceptance)
         self.assertIn("CI 只验证文本与脚本契约", self.acceptance)
-        self.assertIn("实际 Cherry Studio Pi Agent", self.acceptance)
+        self.assertIn("真实 Cherry Studio Pi Agent", self.acceptance)
 
 
 if __name__ == "__main__":
