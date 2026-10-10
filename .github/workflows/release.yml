@@ -50,8 +50,11 @@ jobs:
           - runner: windows-2022
             platform: windows-x86_64
             binary: rust/target/release/socratopia.exe
-          - runner: macos-14
+          - runner: macos-15-intel
             platform: macos-x86_64
+            binary: rust/target/release/socratopia
+          - runner: macos-15
+            platform: macos-arm64
             binary: rust/target/release/socratopia
     runs-on: ${{ matrix.runner }}
     steps:
@@ -132,12 +135,12 @@ jobs:
           pattern: bundle-*
           merge-multiple: true
           path: dist
-      - name: Verify all six immutable release assets
+      - name: Verify all eight immutable release assets
         shell: bash
         run: |
           set -euo pipefail
-          test "$(find dist -maxdepth 1 -type f -name '*.zip' | wc -l)" -eq 3
-          test "$(find dist -maxdepth 1 -type f -name '*.sha256' | wc -l)" -eq 3
+          test "$(find dist -maxdepth 1 -type f -name '*.zip' | wc -l)" -eq 4
+          test "$(find dist -maxdepth 1 -type f -name '*.sha256' | wc -l)" -eq 4
           cd dist
           sha256sum --check *.sha256
       - name: Publish verified CLI bundles
