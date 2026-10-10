@@ -42,7 +42,6 @@ class RustLauncherContracts(unittest.TestCase):
                             "create_course_state(", "elapsed_seconds += "):
             self.assertNotIn(false_claim, self.rust)
         self.assertIn("ready_to_teach: unverified", self.rust)
-        self.assertIn("no", self.doc.lower()) if False else None
         self.assertIn("不是第二套课程引擎", self.doc)
         self.assertIn("SOCRATOPIA_PYTHON", self.doc)
 
@@ -63,7 +62,7 @@ class RustLauncherContracts(unittest.TestCase):
                        "trusted:false", "45 分钟", "verified", "等待回答",
                        "SYSTEM/SPEC/AGENT_LOOP.md"):
             self.assertIn(phrase, self.prompt)
-        self.assertNotIn("Rust 已安装", self.prompt)
+        self.assertIn("不凭空声称 Rust 已安装", self.prompt)
 
     def test_context_budget_for_new_entrypoints(self):
         costs = scenario_costs(ROOT)
