@@ -10,6 +10,7 @@ import argparse
 import hashlib
 import os
 import pathlib
+import shutil
 import stat
 import subprocess
 import tempfile
@@ -79,6 +80,41 @@ def verify(archive: pathlib.Path, platform: str, version: str) -> None:
             if args == ["--version"] and completed.stdout.strip() != (
                     f"socratopia {version.removeprefix('v')}"):
                 raise ValueError("随包 Rust CLI 版本与标签不一致")
+        # A ZIP-installed binary must work with a separate --root workspace,
+        # using the sibling frozen backend rather than a local Python runtime.
+        external = base / "alternate-workspace"
+        external.mkdir()
+        project = cli.parent.parent
+        for label in ("AGENTS.md", "manifest.json"):
+            shutil.copy2(project / label, external / label)
+        shutil.copytree(project / "scripts", external / "scripts")
+        alternate = subprocess.run(
+            [str(cli.resolve()), "--root", str(external.resolve()),
+             "init", "plan", "--course", "遗传学"],
+            cwd=project, env=env, capture_output=True,
+            encoding="utf-8", errors="replace", check=False,
+        )
+        if alternate.returncode != 0 or "遗传学" not in alternate.stdout:
+            raise RuntimeError(
+                f"冻结后端未正确绑定外部工作区: {alternate.returncode}\n"
+                f"{alternate.stdout[:500]}\n{alternate.stderr[:500]}"
+            )
+        # Installed CLI must fail closed rather than silently find system Python
+        # if the frozen runtime is absent. The recovery move is inside TempDir.
+        hidden_backend = backend.with_name(backend.name + ".missing")
+        backend.rename(hidden_backend)
+        try:
+            no_runtime = subprocess.run(
+                [str(cli.resolve()), "init", "plan", "--course", "遗传学"],
+                cwd=project, env={k: v for k, v in env.items()
+                                  if k != "SOCRATOPIA_REQUIRE_BUNDLED"},
+                capture_output=True, encoding="utf-8", errors="replace",
+                check=False,
+            )
+            if no_runtime.returncode == 0 or "安装包不完整" not in no_runtime.stderr:
+                raise RuntimeError("缺少冻结后端时没有拒绝系统 Python 回退")
+        finally:
+            hidden_backend.rename(backend)
     print(f"PASS standalone {platform}: {archive.name}, SHA-256 {actual}")
 
 
