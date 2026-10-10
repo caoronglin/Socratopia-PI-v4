@@ -37,6 +37,11 @@ class RustLauncherContracts(unittest.TestCase):
         self.assertNotIn("shell=True", self.rust)
         self.assertNotIn("std::process::Stdio::null()", self.rust)
 
+    def test_windows_unicode_python_subprocesses_are_utf8(self):
+        # Windows/Git Bash can default to CP1252; keep Chinese JSON outputs usable.
+        self.assertIn('process.env("PYTHONIOENCODING", "utf-8");', self.rust)
+        self.assertIn('process.args(args)', self.rust)
+
     def test_no_duplicate_business_core_or_claimed_readiness(self):
         for false_claim in ("ready_to_teach: true", "mastery = verified",
                             "create_course_state(", "elapsed_seconds += "):
