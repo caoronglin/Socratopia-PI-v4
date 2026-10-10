@@ -1,0 +1,63 @@
+name: One-time archive of unmerged branch
+
+on:
+  push:
+    branches: [main]
+    paths: [".github/workflows/archive-single-skills-once.yml"]
+
+permissions:
+  contents: write
+
+jobs:
+  archive-and-remove:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Preserve unique commit as tag, then delete old branch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          EXPECTED_MAIN: ${{ github.sha }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          from urllib.error import HTTPError
+          from urllib.parse import quote
+          from urllib.request import Request, urlopen
+
+          root = "https://api.github.com/repos/" + os.environ["GH_REPO"]
+          expected = "5c77fde5e5b255eb337082ab3670ab316a8ba518"
+          name = "single-skills"
+          tag = "archive/single-skills-20261010"
+          headers = {
+              "Accept": "application/vnd.github+json",
+              "Authorization": "Bearer " + os.environ["GH_TOKEN"],
+              "X-GitHub-Api-Version": "2022-11-28",
+              "User-Agent": "socratopia-safe-archive",
+          }
+
+          def api(path, method="GET", payload=None):
+              data = json.dumps(payload).encode() if payload is not None else None
+              req = Request(root + path, data=data, headers=headers, method=method)
+              with urlopen(req, timeout=30) as response:
+                  return None if method == "DELETE" else json.load(response)
+
+          repo = api("")
+          assert repo["default_branch"] == "main", "Default branch changed"
+          assert api("/branches/main")["commit"]["sha"] == os.environ["EXPECTED_MAIN"], "main moved"
+          branch = api("/branches/" + name)
+          assert branch["commit"]["sha"] == expected and not branch["protected"], "Branch moved/protected"
+          assert not api("/pulls?state=open&per_page=100"), "Open PRs exist: recheck first"
+
+          # Unique work is preserved by a durable Git tag, not discarded.
+          archive_ref = "refs/tags/" + tag
+          api("/git/refs", method="POST", payload={"ref": archive_ref, "sha": expected})
+          verified = api("/git/ref/tags/" + quote(tag, safe="/"))
+          assert verified["object"]["sha"] == expected, "Archive tag verification failed"
+          assert api("/branches/" + name)["commit"]["sha"] == expected, "Branch moved after tagging"
+          api("/git/refs/heads/" + name, method="DELETE")
+          print("Archived unique commit as:", archive_ref, expected)
+          print("Deleted branch:", name)
+          PY
