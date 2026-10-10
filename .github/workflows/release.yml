@@ -31,6 +31,23 @@ jobs:
         run: python -m pip install -r requirements-ci.txt
       - name: Strict doctor and full Python test suite
         run: python scripts/check.py --strict
+      - name: Verify release version, Cargo manifest and lockfile match
+        shell: bash
+        run: |
+          python - <<'PY'
+          import pathlib
+          import re
+          import tomllib
+          tag = pathlib.Path("release/VERSION").read_text(encoding="utf-8").strip()
+          assert re.fullmatch(r"v[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?", tag), "invalid release tag"
+          crate = tomllib.loads(pathlib.Path("rust/Cargo.toml").read_text(encoding="utf-8"))
+          lock = tomllib.loads(pathlib.Path("rust/Cargo.lock").read_text(encoding="utf-8"))
+          version = crate["package"]["version"]
+          assert tag == "v" + version, f"mismatched tag {tag} and crate {version}"
+          assert any(p["name"] == crate["package"]["name"] and p["version"] == version
+                     for p in lock["package"]), "Cargo.lock version differs"
+          print("Release version verified:", tag)
+          PY
       - name: Rust unit tests before platform packaging
         run: |
           rustup toolchain install 1.85.1 --profile minimal
@@ -107,8 +124,13 @@ jobs:
           if os.name != "nt":
               binary.chmod(binary.stat().st_mode | stat.S_IXUSR)
           for arguments in (["--version"], ["status", "--course", "遗传学"], ["preflight"]):
-              subprocess.run([str(binary.resolve()), *arguments],
-                             cwd=binary.parent.parent, check=True)
+              executed = subprocess.run([str(binary.resolve()), *arguments],
+                                        cwd=binary.parent.parent, check=True,
+                                        capture_output=True, text=True)
+              if arguments == ["--version"]:
+                  assert executed.stdout.strip() == f"socratopia {version.removeprefix('v')}", (
+                      "the packaged binary version does not match the release tag"
+                  )
           print(f"Verified native CLI: {archive} / SHA-256 {expected_hash}")
           PY
       - name: Upload platform bundle (ZIP + SHA-256)
@@ -156,9 +178,23 @@ jobs:
             echo "::error::Release $TAG exists; refusing to overwrite immutable assets"
             exit 1
           fi
+          RELEASE_FLAGS=()
+          if [[ "$TAG" == *-* ]]; then
+            RELEASE_FLAGS+=(--prerelease)
+          else
+            # Stable releases must be marked as stable and eligible to be latest.
+            RELEASE_FLAGS+=(--latest)
+          fi
           gh release create "$TAG" dist/*.zip dist/*.sha256 \
             --target "$GITHUB_SHA" \
             --title "Socratopia PI $TAG (native Rust CLI bundles)" \
             --notes-file release/NOTES.md \
-            --prerelease
-          gh release view "$TAG" --json url,assets --jq '{url:.url, assets:[.assets[].name]}'
+            "${RELEASE_FLAGS[@]}"
+          gh release view "$TAG" --json url,isPrerelease,assets \
+            --jq '{url:.url,prerelease:.isPrerelease,assets:[.assets[].name]}'
+          if [[ "$TAG" != *-* ]]; then
+            test "$(gh release view "$TAG" --json isPrerelease --jq '.isPrerelease')" = "false"
+            LATEST="$(gh release list --limit 20 --json tagName,isLatest \
+              --jq '.[] | select(.isLatest) | .tagName')"
+            test "$LATEST" = "$TAG"
+          fi
