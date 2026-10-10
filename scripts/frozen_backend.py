@@ -25,6 +25,12 @@ def main(argv: list[str] | None = None) -> int:
         print("ERROR: 非法或未支持的后端命令", file=sys.stderr)
         return 2
 
+    if getattr(sys, "frozen", False) and sys.platform == "win32":
+        # Redirected Windows handles often default to CP1252. Our JSON, Chinese
+        # course names and CLI diagnostics must be emitted as UTF-8.
+        for stream in (sys.stdout, sys.stderr):
+            if hasattr(stream, "reconfigure"):
+                stream.reconfigure(encoding="utf-8", errors="backslashreplace")
     name, rest = args[0], args[1:]
     # In a PyInstaller onefile bundle sys.executable is the *backend binary*,
     # not a Python interpreter. Its sibling Rust CLI shares bin/.
