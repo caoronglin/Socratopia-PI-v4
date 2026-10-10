@@ -47,9 +47,12 @@ class StableReleaseTests(unittest.TestCase):
         self.assertIn('not any("/DATA/" in n or "/TEXTBOOK/" in n for n in names)', self.workflow)
 
     def test_release_describes_python_requirement_and_unverified_ui(self):
-        for phrase in ("Python 3.11+", "无需安装 Rust", "Cherry Studio", "尚未宣称通过"):
+        for phrase in ("无需自行安装 Rust 或 Python", "PyInstaller", "Cherry Studio", "尚未宣称通过"):
             self.assertIn(phrase, self.notes)
         self.assertIn("scripts/check.py --strict", self.workflow)
+        self.assertIn("socratopia-backend", self.workflow)
+        self.assertIn("--require-backend", self.workflow)
+        self.assertIn("SOCRATOPIA_REQUIRE_BUNDLED", self.workflow)
 
 
 if __name__ == "__main__":
