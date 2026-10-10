@@ -54,7 +54,8 @@ class StableReleaseTests(unittest.TestCase):
         self.assertIn("scripts/check.py --strict", self.workflow)
         self.assertIn("socratopia-backend", self.workflow)
         self.assertIn("--require-backend", self.workflow)
-        self.assertIn("SOCRATOPIA_REQUIRE_BUNDLED", self.workflow)
+        smoke = (ROOT / "scripts/smoke_standalone.py").read_text(encoding="utf-8")
+        self.assertIn("SOCRATOPIA_REQUIRE_BUNDLED", smoke)
 
 
 if __name__ == "__main__":
