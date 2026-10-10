@@ -28,9 +28,11 @@ python scripts/check.py --strict          # doctor + 全部测试（CI 同款）
 python scripts/pi_arch_doctor.py --budget # 上下文 token 预算报告
 ```
 
+**v4.3.2：** 四平台完整安装包已内置 Rust CLI 与冻结 Python 运行时；业务命令无需安装 Python。CLI 的 `--root` 可正确切换工作区，后端丢失会直接报错。CI/CD 使用更新的 SHA 固定 GitHub Actions，依赖更新由 Dependabot 提交审查 PR。
+
 ## 已编译 CLI 安装包（无需安装 Rust）
 
-前往 [v4.3.1 Release](https://github.com/caoronglin/Socratopia-PI-v4/releases/tag/v4.3.1)，选择 Linux x86_64、Windows x86_64、macOS Intel 或 Apple Silicon 的对应 ZIP。每个完整安装包都内置 `bin/socratopia` 和 `bin/socratopia-backend`（Windows 均为 `.exe`），包含 Pi Skills/脚本，不需要从源码编译 Rust。
+前往 [v4.3.2 Release](https://github.com/caoronglin/Socratopia-PI-v4/releases/tag/v4.3.2)，选择 Linux x86_64、Windows x86_64、macOS Intel 或 Apple Silicon 的对应 ZIP。每个完整安装包都内置 `bin/socratopia` 和 `bin/socratopia-backend`（Windows 均为 `.exe`），包含 Pi Skills/脚本，不需要从源码编译 Rust。
 
 解压后在根目录运行 `./bin/socratopia --version`，并按需运行 `./bin/socratopia init plan --course '遗传学'`。**正式安装包已包含可执行的 Python 后端，日常业务命令无需安装 Python**；个人 `DATA/`、`TEXTBOOK/` 不包含在 ZIP 中，更新前请备份，勿删除已有课程数据。每个 ZIP 附 SHA-256 校验文件。具体见 [release/NOTES.md](release/NOTES.md)。
 

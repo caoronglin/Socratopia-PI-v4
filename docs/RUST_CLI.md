@@ -4,7 +4,7 @@ Rust CLI 是**可选的轻量前端**，不是第二套课程引擎。状态写�
 
 ## 直接使用已发布的二进制
 
-[v4.3.1 GitHub Release](https://github.com/caoronglin/Socratopia-PI-v4/releases/tag/v4.3.1) 提供四种完整项目 ZIP（Linux x86_64、Windows x86_64、macOS Intel、macOS arm64），CLI 和 `socratopia-backend` 在解压后的 `bin/` 目录，**无需安装 Rust 或 Python**。例如 Linux/macOS：`./bin/socratopia --version`；Windows：`bin\\socratopia.exe --version`。
+[v4.3.2 GitHub Release](https://github.com/caoronglin/Socratopia-PI-v4/releases/tag/v4.3.2) 提供四种完整项目 ZIP（Linux x86_64、Windows x86_64、macOS Intel、macOS arm64），CLI 和 `socratopia-backend` 在解压后的 `bin/` 目录，**无需安装 Rust 或 Python**。例如 Linux/macOS：`./bin/socratopia --version`；Windows：`bin\\socratopia.exe --version`。
 
 正式包内的冻结后端包含 Python 运行时；日常命令不需要系统 Python。仅开发者使用的 `doctor`、`package` 或自行从源码编译需要 Python；设置 `SOCRATOPIA_PYTHON` 可主动改用系统解释器。不要覆盖原项目中的 `DATA/` 或 `TEXTBOOK/`；每个安装包附 `.sha256` 文件。下文的 Cargo 步骤仅用于希望自行编译的开发者。
 
@@ -69,3 +69,9 @@ python scripts/check.py --strict
 CI 双线验证 Python 3.11/3.13 及 Rust CLI，避免其中一个环境正常而另一个失效。Rust CLI 自身的单元测试不能替代 Cherry Studio 中的真实教学/工具审批测试。
 
 官方参考：[Rust Cargo Book](https://doc.rust-lang.org/cargo/)、[Rust Clippy](https://doc.rust-lang.org/clippy/)、[Pi Skills/Prompt Templates](https://pi.dev/docs/latest/skills)。
+
+## CLI 运行时完整性（v4.3.2）
+
+安装包的 `bin/socratopia` 会优先使用同目录的 `socratopia-backend` 冻结后端；如果后端缺失，则返回错误，**不会默默依赖电脑上的 Python**。`--root` 参数允许指定另一份已核验的 Socratopia 项目工作区，冻结后端会遵守该目录。源码开发仍可显式设置 `SOCRATOPIA_PYTHON`，保留开发者工具链。
+
+CI 对四个目标平台分别构建、解压和实际运行，并检验跨工作区调用及缺失后端的失败路径。更新策略见 `.github/dependabot.yml`。

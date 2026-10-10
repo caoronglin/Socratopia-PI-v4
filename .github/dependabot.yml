@@ -1,0 +1,24 @@
+version: 2
+updates:
+  # Keep SHA-pinned workflow actions current via reviewed pull requests.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+  # Both requirements-ci.txt and requirements-build.txt are explicitly pinned.
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      python-toolchain:
+        patterns:
+          - "*"

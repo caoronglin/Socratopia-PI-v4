@@ -170,22 +170,33 @@ fn forward(root: &Path, command: &str, args: &[OsString]) -> Result<i32, String>
     // The release includes a PyInstaller-frozen CPython backend alongside
     // this Rust binary. Explicit SOCRATOPIA_PYTHON overrides it for developers.
     // Doctor and packaging are developer-only and use the system interpreter.
-    let bundled = root.join("bin").join(if cfg!(windows) {
+    let backend_name = if cfg!(windows) {
         "socratopia-backend.exe"
     } else {
         "socratopia-backend"
-    });
-    not_symlink(&root.join("bin"))?;
-    let use_bundle = command != "doctor"
-        && command != "package"
-        && env::var_os("SOCRATOPIA_PYTHON").is_none()
-        && bundled.is_file();
+    };
+    // A distributed CLI runs from bin/. The frozen backend is a sibling of
+    // this executable, even when --root selects a different course workspace.
+    let installed_bin = env::current_exe()
+        .ok()
+        .and_then(|path| path.canonicalize().ok())
+        .and_then(|path| path.parent().map(Path::to_path_buf))
+        .filter(|path| path.file_name() == Some(OsStr::new("bin")));
+    let backend_dir = installed_bin.clone().unwrap_or_else(|| root.join("bin"));
+    not_symlink(&backend_dir)?;
+    let bundled = backend_dir.join(backend_name);
+    let prefer_bundle =
+        command != "doctor" && command != "package" && env::var_os("SOCRATOPIA_PYTHON").is_none();
+    let use_bundle = prefer_bundle && bundled.is_file();
     if env::var_os("SOCRATOPIA_REQUIRE_BUNDLED").as_deref() == Some(OsStr::new("1"))
         && command != "doctor"
         && command != "package"
         && !use_bundle
     {
         return Err("该命令要求随包冻结后端；未找到 bin/socratopia-backend".into());
+    }
+    if prefer_bundle && installed_bin.is_some() && !use_bundle {
+        return Err("安装包不完整：缺少 bin/socratopia-backend；未回退到系统 Python".into());
     }
     let mut process = if use_bundle {
         not_symlink(&bundled)?;
@@ -194,6 +205,9 @@ fn forward(root: &Path, command: &str, args: &[OsString]) -> Result<i32, String>
         Command::new(python_interpreter())
     };
     if use_bundle {
+        // Frozen Python must use the workspace selected by the Rust CLI, not
+        // the sibling binary's extraction directory.
+        process.env("SOCRATOPIA_WORKSPACE_ROOT", root);
         process.arg(filename);
     } else {
         process.arg(&script);
