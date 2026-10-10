@@ -1,22 +1,39 @@
-# Socratopia Pi v4.1.0-rc.1 · 45 分钟课堂计时
+# Socratopia PI v4.2.0-rc.1 · Rust CLI 原生安装包
 
-## 功能
-- **正式课堂时长至少 45 分钟（2700 秒）**；不足时 `finish` 拒绝完成，不生成虚假完成状态。
-- `start/status/heartbeat/pause/resume/finish/interrupt` 七种明确操作。
-- 持久化于单课程 `DATA/<course>/runtime/lesson_timer.json`；多课程隔离，跨 Cherry/Pi 对话可恢复。
-- 每轮教学交互由 Agent 显式发送一次心跳；超 5 分钟无心跳后自动暂停，防止离线/闲置时间凑时长。
-- 提前退出始终允许，只记录 **interrupted**，不将短课冒充完整课。
-- 启动前校验正式课堂 runtime 与 ready PREP；不自动修改 `PROGRESS.md` 的掌握事实。
-- 发布 ZIP 按仓库清单构建，**不包括 DATA/、TEXTBOOK/、密钥与个人课堂文件**，同时附 SHA-256 校验文件。
+## 主要更新
 
-## 安装
-下载 ZIP，解压到 Socratopia 项目目录（建议先备份旧版），阅读 `README.md`、`docs/LESSON_TIMER.md`。初次使用：
+- **原生 Rust CLI**：统一入口 `socratopia`；已打包编译产物，用户不需要安装 Rust 或执行 Cargo 编译。
+- **四个平台**：Linux x86_64、Windows x86_64、macOS Intel (x86_64)、macOS Apple Silicon (arm64)。
+- **引导初始化**：`socratopia init wizard`，或 `init plan/apply`；幂等、不会覆盖课程事实。
+- **多导师学习小组**：`socratopia group ...` 配置 2–3 位 D/E/F 导师，按顺序讨论并等待学生参与。
+- **45 分钟有效课堂计时**：`socratopia timer ...`，支持心跳、暂停/恢复、未达时长拒绝标记完成。
+- **按章节备课**：`socratopia prep chapter ...`，支持课程 SOURCES 的补充资料。
+- **Cherry Studio Pi 适配**：精简入口提示词、按需加载 Skill，不把多导师模拟误报为真实并行 Agent。
+- 四平台各自经过 ZIP SHA-256 核验、解压后本机 CLI 命令冒烟测试；完整 Python 回归和 Rust 单元测试作为发布门禁。
+
+## 下载与使用
+
+按操作系统选 **一个完整项目安装包**，每个 ZIP 都包含源码、Skills、提示词、脚本和 `bin/socratopia`（Windows 为 `bin/socratopia.exe`）：
+
+| 平台 | ZIP 文件名 |
+|---|---|
+| Linux x86_64 | `Socratopia-PI-v4-v4.2.0-rc.1-linux-x86_64.zip` |
+| Windows x86_64 | `Socratopia-PI-v4-v4.2.0-rc.1-windows-x86_64.zip` |
+| macOS Intel | `Socratopia-PI-v4-v4.2.0-rc.1-macos-x86_64.zip` |
+| macOS Apple Silicon | `Socratopia-PI-v4-v4.2.0-rc.1-macos-arm64.zip` |
+
+解压并进入目录；Linux/macOS 执行 `./bin/socratopia --version`，Windows 执行 `bin\socratopia.exe --version`。之后运行：
+
 ```bash
-python scripts/check.py --strict
-python scripts/lesson_timer.py start --course "课程名" --lesson-id lesson_001
-python scripts/lesson_timer.py heartbeat --course "课程名"
-python scripts/lesson_timer.py status --course "课程名"
+./bin/socratopia init plan --course "遗传学"
+./bin/socratopia preflight
+./bin/socratopia timer status --course "遗传学"
 ```
-结束时调用 `finish`，时长不足会返回非零退出码。暂停时使用 `pause`，继续使用 `resume`；需要提前离开可用 `interrupt`，此时课堂不能标成完成。
 
-> 这是正式发布前的预发行版。CI 能测试确定性的时间/状态门禁，真实 Cherry Studio Pi 自动心跳及连续 45 分钟体验仍需在客户端完成端到端验收。运行时没有后台计时服务，工具调用频率决定计时精度。
+**重要：Rust CLI 是现有 Python 后端的入口，并非纯 Rust 独立应用。** 使用初始化、计时、备课、小组等功能仍需要系统安装 **Python 3.11 或更新版本**，能运行 `python3`（Windows 为 `python`），必要时通过 `SOCRATOPIA_PYTHON` 选定解释器。仅运行 `--version` / `status` 不调用 Python。CLI 不需要 Rust 运行时。
+
+使用前备份已有项目，**不得删除原有 DATA/ 与 TEXTBOOK/**；发布包不包含这些私人课程文件。macOS/Linux 解压工具如果丢失可执行位，可对解压后的 `bin/socratopia` 执行 `chmod +x`。每个包对应 `.zip.sha256` 校验文件。
+
+## 验证边界
+
+此版本为预发行版，CI 仅保证打包的代码与 CLI 运行链可验证。Cherry Studio 内实际工具权限、连续 45 分钟课堂和多导师教学质量仍需客户端实测；不声称发布包提供后台服务或已自动安装 Cherry Agent。
