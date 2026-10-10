@@ -172,6 +172,9 @@ fn forward(root: &Path, command: &str, args: &[OsString]) -> Result<i32, String>
         // One canonical strict verification path.
         process.arg("--strict");
     }
+    // Windows CI and users may default to CP1252/other legacy console encodings.
+    // Preserve all native-language JSON and error messages from Python CLIs.
+    process.env("PYTHONIOENCODING", "utf-8");
     process.args(args).current_dir(root);
     let result = process
         .status()
