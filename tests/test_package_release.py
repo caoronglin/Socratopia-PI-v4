@@ -79,7 +79,7 @@ class PackageReleaseTests(unittest.TestCase):
                           platform="linux-x86_64",
                           cli_binary=Path("rust/target/release/socratopia"))
         self.assertTrue(result["archive"].endswith("-linux-x86_64.zip"))
-        self.assertEqual(result["files"], 5)
+        self.assertEqual(result["files"], 6)
         with zipfile.ZipFile(result["archive"]) as stream:
             entry = "Socratopia-PI-v4-v4.2.0-rc.1/bin/socratopia"
             self.assertEqual(stream.read(entry), binary.read_bytes())
@@ -117,7 +117,7 @@ class PackageReleaseTests(unittest.TestCase):
         path.write_bytes(b"\xcf\xfa\xed\xfe" + b"FAKE-MACHO-CLI")
         self.assertEqual(
             make_zip(self.root, self.root / "out", "v4.2.0-rc.1",
-                     platform="macos-x86_64", cli_binary=path)["files"], 5)
+                     platform="macos-x86_64", cli_binary=path)["files"], 6)
 
     def test_binary_symlink_or_external_source_rejected(self):
         outside = self.root.parent / (self.root.name + "-external.bin")
