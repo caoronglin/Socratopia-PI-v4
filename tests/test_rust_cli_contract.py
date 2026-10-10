@@ -49,11 +49,14 @@ class RustLauncherContracts(unittest.TestCase):
         self.assertIn("ready_to_teach: unverified", self.rust)
         self.assertIn("不是第二套课程引擎", self.doc)
         self.assertIn("SOCRATOPIA_PYTHON", self.doc)
+        self.assertIn("socratopia-backend", self.rust)
+        self.assertIn("SOCRATOPIA_REQUIRE_BUNDLED", self.rust)
+        self.assertIn("无需安装 Rust 或 Python", self.doc)
 
     def test_rust_ci_and_manifest_are_connected(self):
         ci = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
-        for term in ("rust-cli:", "cargo +1.85.1 fmt", "cargo +1.85.1 clippy",
-                     "cargo +1.85.1 test", "cargo +1.85.1 build"):
+        for term in ("rust-cli:", "cargo +1.99.0 fmt", "cargo +1.99.0 clippy",
+                     "cargo +1.99.0 test", "cargo +1.99.0 build"):
             self.assertIn(term, ci)
         files = set(json.loads((ROOT / "manifest.json").read_text(encoding="utf-8"))["files"])
         for path in ("rust/Cargo.toml", "rust/Cargo.lock", "rust/src/main.rs",

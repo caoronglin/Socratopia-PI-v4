@@ -5,3 +5,6 @@ __pycache__/
 DATA/
 TEXTBOOK/
 dist/
+
+# PyInstaller / standalone build intermediates
+build/

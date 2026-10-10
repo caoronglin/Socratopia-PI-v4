@@ -140,6 +140,36 @@ class PackageReleaseTests(unittest.TestCase):
             make_zip(self.root, self.root / "out", "v4.2.0-rc.1",
                      platform="linux-x86_64", cli_binary=external)
 
+    def test_bundle_requires_two_real_binaries_and_rejects_wrong_format(self):
+        cli = self.root / "rust/target/release/socratopia"
+        backend = self.root / "build/standalone/socratopia-backend"
+        cli.parent.mkdir(parents=True)
+        backend.parent.mkdir(parents=True)
+        cli.write_bytes(b"\x7fELF" + b"rust-binary")
+        backend.write_bytes(b"bad binary")
+        kwargs = dict(platform="linux-x86_64", cli_binary=cli,
+                      backend_binary=backend, require_backend=True)
+        with self.assertRaises(ValueError):
+            make_zip(self.root, self.root / "out", "v4.3.0", **kwargs)
+        backend.write_bytes(b"\x7fELF" + b"frozen-CPython")
+        result = make_zip(self.root, self.root / "out", "v4.3.0", **kwargs)
+        self.assertEqual(result["files"], 7)
+        with zipfile.ZipFile(result["archive"]) as package:
+            self.assertIn("Socratopia-PI-v4-v4.3.0/bin/socratopia", package.namelist())
+            self.assertEqual(package.read(
+                "Socratopia-PI-v4-v4.3.0/bin/socratopia-backend"), backend.read_bytes())
+        repeat = make_zip(self.root, self.root / "out2", "v4.3.0", **kwargs)
+        self.assertEqual(result["sha256"], repeat["sha256"])
+
+    def test_require_backend_never_publishes_partial_bundle(self):
+        cli = self.root / "rust/target/release/socratopia"
+        cli.parent.mkdir(parents=True)
+        cli.write_bytes(b"\x7fELFbinary")
+        with self.assertRaises(ValueError):
+            make_zip(self.root, self.root / "out", "v4.3.0",
+                     platform="linux-x86_64", cli_binary=cli,
+                     require_backend=True)
+
     def test_invalid_version_rejected(self):
         with self.assertRaises(ValueError):
             make_zip(self.root, self.root / "out", "../not-a-version")

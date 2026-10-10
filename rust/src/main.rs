@@ -25,7 +25,8 @@ Usage:
   socratopia [--root PATH] help
 
 Run from the project directory or supply --root. No shell is used.
-This launcher does not replace Python course/runtime validators.
+Release bundles carry a native Python backend: no system Python for lesson commands.
+Doctor and packaging are developer commands requiring Python.
 ";
 
 fn script_for(command: &str) -> Option<&'static str> {
@@ -166,10 +167,39 @@ fn forward(root: &Path, command: &str, args: &[OsString]) -> Result<i32, String>
     if !script.is_file() {
         return Err(format!("所需脚本不存在: {}", script.display()));
     }
-    let mut process = Command::new(python_interpreter());
-    process.arg(&script);
+    // The release includes a PyInstaller-frozen CPython backend alongside
+    // this Rust binary. Explicit SOCRATOPIA_PYTHON overrides it for developers.
+    // Doctor and packaging are developer-only and use the system interpreter.
+    let bundled = root.join("bin").join(if cfg!(windows) {
+        "socratopia-backend.exe"
+    } else {
+        "socratopia-backend"
+    });
+    not_symlink(&root.join("bin"))?;
+    let use_bundle = command != "doctor"
+        && command != "package"
+        && env::var_os("SOCRATOPIA_PYTHON").is_none()
+        && bundled.is_file();
+    if env::var_os("SOCRATOPIA_REQUIRE_BUNDLED").as_deref() == Some(OsStr::new("1"))
+        && command != "doctor"
+        && command != "package"
+        && !use_bundle
+    {
+        return Err("该命令要求随包冻结后端；未找到 bin/socratopia-backend".into());
+    }
+    let mut process = if use_bundle {
+        not_symlink(&bundled)?;
+        Command::new(bundled)
+    } else {
+        Command::new(python_interpreter())
+    };
+    if use_bundle {
+        process.arg(filename);
+    } else {
+        process.arg(&script);
+    }
     if command == "doctor" {
-        // One canonical strict verification path.
+        // One canonical strict verification path (developer / CI tooling).
         process.arg("--strict");
     }
     // Windows CI and users may default to CP1252/other legacy console encodings.
