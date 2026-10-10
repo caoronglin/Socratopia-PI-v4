@@ -57,7 +57,9 @@ fn has_project_files(root: &Path) -> bool {
 
 fn find_root(from: &Path, explicit: Option<&Path>) -> Result<PathBuf, String> {
     if let Some(root) = explicit {
-        let path = root.canonicalize().map_err(|e| format!("项目根目录不可访问: {e}"))?;
+        let path = root
+            .canonicalize()
+            .map_err(|e| format!("项目根目录不可访问: {e}"))?;
         if has_project_files(&path) {
             return Ok(path);
         }
@@ -112,9 +114,18 @@ fn snapshot(root: &Path, course: &str) -> Result<Vec<(&'static str, bool)>, Stri
         ("textbook_directory_exists", book.is_dir()),
         ("book_exists", book.join("book.md").is_file()),
         ("progress_exists", data.join("PROGRESS.md").is_file()),
-        ("runtime_exists", data.join("runtime/course_state.json").is_file()),
-        ("timer_exists", data.join("runtime/lesson_timer.json").is_file()),
-        ("learning_group_exists", data.join("runtime/learning_group.json").is_file()),
+        (
+            "runtime_exists",
+            data.join("runtime/course_state.json").is_file(),
+        ),
+        (
+            "timer_exists",
+            data.join("runtime/lesson_timer.json").is_file(),
+        ),
+        (
+            "learning_group_exists",
+            data.join("runtime/learning_group.json").is_file(),
+        ),
     ])
 }
 
@@ -122,9 +133,7 @@ fn status_command(root: &Path, args: &[OsString]) -> Result<(), String> {
     if args.len() != 2 || args[0] != OsStr::new("--course") {
         return Err("用法: socratopia status --course NAME".into());
     }
-    let course = args[1]
-        .to_str()
-        .ok_or("课程名称必须是有效 UTF-8 文本")?;
+    let course = args[1].to_str().ok_or("课程名称必须是有效 UTF-8 文本")?;
     let facts = snapshot(root, course)?;
     println!("course: {}", course.trim());
     for (key, present) in facts {
@@ -132,7 +141,9 @@ fn status_command(root: &Path, args: &[OsString]) -> Result<(), String> {
     }
     println!("ready_to_teach: unverified");
     println!("cherry_tool_access: unverified");
-    println!("note: file presence is not runtime/PREP validation; run preflight and the Python gates");
+    println!(
+        "note: file presence is not runtime/PREP validation; run preflight and the Python gates"
+    );
     Ok(())
 }
 
@@ -162,7 +173,9 @@ fn forward(root: &Path, command: &str, args: &[OsString]) -> Result<i32, String>
         process.arg("--strict");
     }
     process.args(args).current_dir(root);
-    let result = process.status().map_err(|e| format!("启动 Python CLI 失败: {e}"))?;
+    let result = process
+        .status()
+        .map_err(|e| format!("启动 Python CLI 失败: {e}"))?;
     Ok(result.code().unwrap_or(1))
 }
 
@@ -227,7 +240,8 @@ mod tests {
 
     fn temp_project() -> PathBuf {
         let id = NEXT.fetch_add(1, Ordering::Relaxed);
-        let root = env::temp_dir().join(format!("socratopia-rust-test-{}-{id}", std::process::id()));
+        let root =
+            env::temp_dir().join(format!("socratopia-rust-test-{}-{id}", std::process::id()));
         fs::create_dir_all(root.join("scripts")).expect("create scripts");
         fs::write(root.join("AGENTS.md"), "test").expect("write AGENTS");
         fs::write(root.join("manifest.json"), "{}").expect("write manifest");
@@ -274,10 +288,10 @@ mod tests {
     #[test]
     fn status_is_read_only_and_does_not_invent_readiness() {
         let root = temp_project();
-        let before: Vec<_> = fs::read_dir(&root).expect("list").count().to_string().chars().collect();
+        let before = fs::read_dir(&root).expect("list").count();
         let values = snapshot(&root, "遗传学").expect("snapshot");
         assert!(values.iter().all(|(_, present)| !present));
-        let after: Vec<_> = fs::read_dir(&root).expect("list").count().to_string().chars().collect();
+        let after = fs::read_dir(&root).expect("list").count();
         assert_eq!(before, after);
         assert!(!root.join("DATA").exists());
         fs::remove_dir_all(root).expect("cleanup");
