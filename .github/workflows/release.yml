@@ -31,6 +31,23 @@ jobs:
         run: python -m pip install -r requirements-ci.txt
       - name: Strict doctor and full Python test suite
         run: python scripts/check.py --strict
+      - name: Verify release version, Cargo manifest and lockfile match
+        shell: bash
+        run: |
+          python - <<'PY'
+          import pathlib
+          import re
+          import tomllib
+          tag = pathlib.Path("release/VERSION").read_text(encoding="utf-8").strip()
+          assert re.fullmatch(r"v[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?", tag), "invalid release tag"
+          crate = tomllib.loads(pathlib.Path("rust/Cargo.toml").read_text(encoding="utf-8"))
+          lock = tomllib.loads(pathlib.Path("rust/Cargo.lock").read_text(encoding="utf-8"))
+          version = crate["package"]["version"]
+          assert tag == "v" + version, f"mismatched tag {tag} and crate {version}"
+          assert any(p["name"] == crate["package"]["name"] and p["version"] == version
+                     for p in lock["package"]), "Cargo.lock version differs"
+          print("Release version verified:", tag)
+          PY
       - name: Rust unit tests before platform packaging
         run: |
           rustup toolchain install 1.85.1 --profile minimal
@@ -156,9 +173,17 @@ jobs:
             echo "::error::Release $TAG exists; refusing to overwrite immutable assets"
             exit 1
           fi
+          RELEASE_FLAGS=()
+          if [[ "$TAG" == *-* ]]; then
+            RELEASE_FLAGS+=(--prerelease)
+          else
+            # Stable releases must be marked as stable and eligible to be latest.
+            RELEASE_FLAGS+=(--latest)
+          fi
           gh release create "$TAG" dist/*.zip dist/*.sha256 \
             --target "$GITHUB_SHA" \
             --title "Socratopia PI $TAG (native Rust CLI bundles)" \
             --notes-file release/NOTES.md \
-            --prerelease
-          gh release view "$TAG" --json url,assets --jq '{url:.url, assets:[.assets[].name]}'
+            "${RELEASE_FLAGS[@]}"
+          gh release view "$TAG" --json url,isPrerelease,isLatest,assets \
+            --jq '{url:.url,prerelease:.isPrerelease,latest:.isLatest,assets:[.assets[].name]}'
