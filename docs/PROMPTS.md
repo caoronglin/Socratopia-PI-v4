@@ -11,6 +11,8 @@
 | **Reference** | `.pi/skills/*/references/*.md` | 由 Skill 路由指派 | 需要具体规则时 |
 
 **反重复原则**：同一条规则只有一个权威位置，其他地方只写「见 X」。
+
+Pi/Cherry 实际对话的停止、授权与教学场景验收见 [Pi Agent 手动验收矩阵](PI_AGENT_ACCEPTANCE.md)；CI 不等于模型实测。
 详见 `SYSTEM/SPEC/ARCHITECTURE.md` 的「设计约束」。
 
 ---
