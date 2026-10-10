@@ -1,39 +1,43 @@
-# Socratopia PI v4.2.0-rc.2 · Rust CLI 原生安装包
+# Socratopia PI v4.2.0 · 正式版
 
-## 主要更新
+本次正式版包含截至 `claude-code` 发布提交的教学核心、Pi Agent 约束、Cherry Studio 适配和 **四平台预编译 Rust CLI**。这是一套本地优先、单课程隔离的教学工具；**Socratopia 作为 Cherry Studio Work 中的 Pi Agent 使用，不是 MCP Server**。
 
-- **原生 Rust CLI**：统一入口 `socratopia`；已打包编译产物，用户不需要安装 Rust 或执行 Cargo 编译。
-- **四个平台**：Linux x86_64、Windows x86_64、macOS Intel (x86_64)、macOS Apple Silicon (arm64)。
-- **引导初始化**：`socratopia init wizard`，或 `init plan/apply`；幂等、不会覆盖课程事实。
-- **多导师学习小组**：`socratopia group ...` 配置 2–3 位 D/E/F 导师，按顺序讨论并等待学生参与。
-- **45 分钟有效课堂计时**：`socratopia timer ...`，支持心跳、暂停/恢复、未达时长拒绝标记完成。
-- **按章节备课**：`socratopia prep chapter ...`，支持课程 SOURCES 的补充资料。
-- **Cherry Studio Pi 适配**：精简入口提示词、按需加载 Skill，不把多导师模拟误报为真实并行 Agent。
-- 四平台各自经过 ZIP SHA-256 核验、解压后本机 CLI 命令冒烟测试；完整 Python 回归和 Rust 单元测试作为发布门禁。
+## 主要功能
 
-## 下载与使用
+- **Pi Agent 精简提示词**：始终以 `AGENTS.md` 为常驻边界，Skills 按需加载；完成即停，不绕过工具审批、不伪造测试、引用或掌握结果。
+- **按章备课**：一章一份逻辑 PREP，可跨会话完成；逐节覆盖、教学目标和可观察证据、章末综合与迁移；补充资料受 `SOURCES/` 和校验哈希限制。
+- **课堂时长**：正式课至少 45 分钟有效教学心跳，暂停/恢复可持久保存；未达时长可提前退出但不得标为完成。
+- **引导初始化**：可以交互选择课程、主导师与可选学习小组；重复初始化不覆盖已有记录。
+- **多导师学习小组**：三月七、丹恒、姬子（D/E/F）任选 2–3 位，有限轮次、轮流发言、每轮等待用户；**一个 Pi Agent 依次呈现导师角色，不是多个独立模型实例**。
+- **来源信任与课程隔离**：课程 runtime、PREP、PROGRESS 与补充资料分别核验，不自动更改教材或掌握状态；网页和外部文本不作为系统指令。
+- **Rust CLI**：统一入口 `socratopia`，负责命令调度和只读状态检查；业务功能继续调用成熟的 Python 实现。
 
-按操作系统选 **一个完整项目安装包**，每个 ZIP 都包含源码、Skills、提示词、脚本和 `bin/socratopia`（Windows 为 `bin/socratopia.exe`）：
+## 下载
 
-| 平台 | ZIP 文件名 |
+按操作系统选择**一个完整安装包**。每包包含源码、Pi Skills、Cherry 提示词、Python 脚本，以及 `bin/socratopia`（Windows 为 `bin/socratopia.exe`）。
+
+| 平台 | ZIP |
 |---|---|
-| Linux x86_64 | `Socratopia-PI-v4-v4.2.0-rc.2-linux-x86_64.zip` |
-| Windows x86_64 | `Socratopia-PI-v4-v4.2.0-rc.2-windows-x86_64.zip` |
-| macOS Intel | `Socratopia-PI-v4-v4.2.0-rc.2-macos-x86_64.zip` |
-| macOS Apple Silicon | `Socratopia-PI-v4-v4.2.0-rc.2-macos-arm64.zip` |
+| Linux x86_64 | `Socratopia-PI-v4-v4.2.0-linux-x86_64.zip` |
+| Windows x86_64 | `Socratopia-PI-v4-v4.2.0-windows-x86_64.zip` |
+| macOS Intel | `Socratopia-PI-v4-v4.2.0-macos-x86_64.zip` |
+| macOS Apple Silicon | `Socratopia-PI-v4-v4.2.0-macos-arm64.zip` |
 
-解压并进入目录；Linux/macOS 执行 `./bin/socratopia --version`，Windows 执行 `bin\socratopia.exe --version`。之后运行：
+四个 ZIP 各附一个 `.zip.sha256` 校验文件，发布构建会在**对应操作系统**完成 Rust 编译、ZIP 解压和 CLI 冒烟测试，并在正式发布前验证所有 SHA-256。
 
-```bash
-./bin/socratopia init plan --course "遗传学"
-./bin/socratopia preflight
-./bin/socratopia timer status --course "遗传学"
-```
+## 安装与升级
 
-**重要：Rust CLI 是现有 Python 后端的入口，并非纯 Rust 独立应用。** 使用初始化、计时、备课、小组等功能仍需要系统安装 **Python 3.11 或更新版本**，能运行 `python3`（Windows 为 `python`），必要时通过 `SOCRATOPIA_PYTHON` 选定解释器。仅运行 `--version` / `status` 不调用 Python。CLI 不需要 Rust 运行时。
+1. 备份原有项目；**保留现有 `DATA/`、`TEXTBOOK/`，不要先删除它们**。发布 ZIP 不含用户的教材、课堂记录或密钥。
+2. 解压适合操作系统的 ZIP，进入其项目根目录。
+3. Linux/macOS 运行 `./bin/socratopia --version`；Windows 运行 `bin\\socratopia.exe --version`。
+4. 用 `./bin/socratopia preflight` 查看 Cherry Agent 项目预检；按需执行 `./bin/socratopia init plan --course "课程名"`。
 
-使用前备份已有项目，**不得删除原有 DATA/ 与 TEXTBOOK/**；发布包不包含这些私人课程文件。macOS/Linux 解压工具如果丢失可执行位，可对解压后的 `bin/socratopia` 执行 `chmod +x`。每个包对应 `.zip.sha256` 校验文件。
+**运行前置条件**：二进制已编译，用户无需安装 Rust/Cargo；但初始化、备课、课堂计时、学习小组和预检等 Python 业务命令仍要求 **Python 3.11+**。默认 Unix 使用 `python3`，Windows 使用 `python`，也可用 `SOCRATOPIA_PYTHON` 指定解释器。项目不会在安装时自动配置 Cherry Studio 的工作目录或工具权限。
 
-## 验证边界
+## 正式版验证范围
 
-此版本为预发行版，CI 仅保证打包的代码与 CLI 运行链可验证。Cherry Studio 内实际工具权限、连续 45 分钟课堂和多导师教学质量仍需客户端实测；不声称发布包提供后台服务或已自动安装 Cherry Agent。
+发布门禁：Python 3.11/3.13 全量 CI、Rust fmt/Clippy/unit tests、发布流程严格 Doctor、四系统原生 CLI 编译和解压冒烟、8 个发布资产（4 ZIP + 4 SHA-256）核验。
+
+**尚未宣称通过的验收**：真实 Cherry Studio GUI 中的工具授权、完整 45 分钟课堂、跨会话教学效果、多导师实际语言质量，仍需按 `docs/PI_AGENT_ACCEPTANCE.md` 和 `integrations/cherry-studio/WORKFLOWS.md` 在客户端验收。CLI 打包验证不等于教学质量实测。
+
+文档入口：`README.md` · `docs/RUST_CLI.md` · `docs/PI_AGENT_ACCEPTANCE.md` · `integrations/cherry-studio/AGENT_PROMPT.md`。
