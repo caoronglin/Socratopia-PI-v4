@@ -6,6 +6,7 @@ runtime and bundled imported dependencies. No eval, shell, network, or writes.
 """
 from __future__ import annotations
 
+import os
 import runpy
 import sys
 from pathlib import Path
@@ -34,8 +35,16 @@ def main(argv: list[str] | None = None) -> int:
     name, rest = args[0], args[1:]
     # In a PyInstaller onefile bundle sys.executable is the *backend binary*,
     # not a Python interpreter. Its sibling Rust CLI shares bin/.
-    base = (Path(sys.executable).resolve().parent.parent
-            if getattr(sys, "frozen", False) else Path(__file__).resolve().parents[1])
+    override = os.environ.get("SOCRATOPIA_WORKSPACE_ROOT")
+    if getattr(sys, "frozen", False):
+        # Rust supplied this canonicalized, verified project root; the runtime
+        # executable may live in a different folder from the active workspace.
+        base = Path(override).resolve() if override else Path(sys.executable).resolve().parent.parent
+    else:
+        base = Path(__file__).resolve().parents[1]
+    if not (base / "AGENTS.md").is_file() or not (base / "manifest.json").is_file():
+        print("ERROR: 工作目录不是有效的 Socratopia 项目", file=sys.stderr)
+        return 2
     scripts = base / "scripts"
     target = scripts / name
     if (scripts.is_symlink() or target.is_symlink() or not target.is_file()
