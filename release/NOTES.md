@@ -1,4 +1,4 @@
-# Socratopia PI v4.2.0-rc.1 · Rust CLI 原生安装包
+# Socratopia PI v4.2.0-rc.2 · Rust CLI 原生安装包
 
 ## 主要更新
 
@@ -17,10 +17,10 @@
 
 | 平台 | ZIP 文件名 |
 |---|---|
-| Linux x86_64 | `Socratopia-PI-v4-v4.2.0-rc.1-linux-x86_64.zip` |
-| Windows x86_64 | `Socratopia-PI-v4-v4.2.0-rc.1-windows-x86_64.zip` |
-| macOS Intel | `Socratopia-PI-v4-v4.2.0-rc.1-macos-x86_64.zip` |
-| macOS Apple Silicon | `Socratopia-PI-v4-v4.2.0-rc.1-macos-arm64.zip` |
+| Linux x86_64 | `Socratopia-PI-v4-v4.2.0-rc.2-linux-x86_64.zip` |
+| Windows x86_64 | `Socratopia-PI-v4-v4.2.0-rc.2-windows-x86_64.zip` |
+| macOS Intel | `Socratopia-PI-v4-v4.2.0-rc.2-macos-x86_64.zip` |
+| macOS Apple Silicon | `Socratopia-PI-v4-v4.2.0-rc.2-macos-arm64.zip` |
 
 解压并进入目录；Linux/macOS 执行 `./bin/socratopia --version`，Windows 执行 `bin\socratopia.exe --version`。之后运行：
 
