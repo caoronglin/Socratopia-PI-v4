@@ -48,7 +48,7 @@ def _validated_cli(root: Path, platform: str | None, cli_binary: Path | None) ->
     if platform is None:
         return None  # Backward-compatible source-only packaging for developer tests.
     formats = {
-        "linux-x86_64": ("socratopia", b"\\x7fELF"),
+        "linux-x86_64": ("socratopia", b"\x7fELF"),
         "windows-x86_64": ("socratopia.exe", b"MZ"),
         "macos-x86_64": ("socratopia", None),
     }
@@ -72,8 +72,8 @@ def _validated_cli(root: Path, platform: str | None, cli_binary: Path | None) ->
     if magic and candidate.open("rb").read(len(magic)) != magic:
         raise ValueError("CLI 文件头与目标平台不匹配")
     if platform == "macos-x86_64" and candidate.open("rb").read(4) not in (
-            b"\\xcf\\xfa\\xed\\xfe", b"\\xfe\\xed\\xfa\\xcf",
-            b"\\xca\\xfe\\xba\\xbe", b"\\xbe\\xba\\xfe\\xca"):
+            b"\xcf\xfa\xed\xfe", b"\xfe\xed\xfa\xcf",
+            b"\xca\xfe\xba\xbe", b"\xbe\xba\xfe\xca"):
         raise ValueError("目标 macOS CLI 不是 Mach-O 二进制")
     return candidate, expected
 
