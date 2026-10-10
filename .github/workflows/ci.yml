@@ -45,3 +45,29 @@ jobs:
         run: python scripts/cherry_preflight.py
       - name: Doctor and complete regression suite
         run: python scripts/check.py --strict
+
+  rust-cli:
+    name: Rust CLI / fmt, clippy, tests, and smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Install minimal pinned Rust toolchain
+        run: rustup toolchain install 1.85.1 --profile minimal --component rustfmt,clippy
+      - name: Check Rust formatting
+        run: cargo +1.85.1 fmt --manifest-path rust/Cargo.toml --all -- --check
+      - name: Check Rust Clippy warnings
+        run: cargo +1.85.1 clippy --manifest-path rust/Cargo.toml --all-targets --locked -- -D warnings
+      - name: Run Rust unit tests
+        run: cargo +1.85.1 test --manifest-path rust/Cargo.toml --locked
+      - name: Compile CLI binary
+        run: cargo +1.85.1 build --manifest-path rust/Cargo.toml --release --locked
+      - name: Validate read-only CLI entrypoint
+        run: |
+          rust/target/release/socratopia --version
+          rust/target/release/socratopia status --course "遗传学"
+          rust/target/release/socratopia preflight
+          rust/target/release/socratopia init plan --course "遗传学"
