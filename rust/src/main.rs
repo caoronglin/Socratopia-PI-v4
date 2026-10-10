@@ -185,9 +185,8 @@ fn forward(root: &Path, command: &str, args: &[OsString]) -> Result<i32, String>
     let backend_dir = installed_bin.clone().unwrap_or_else(|| root.join("bin"));
     not_symlink(&backend_dir)?;
     let bundled = backend_dir.join(backend_name);
-    let prefer_bundle = command != "doctor"
-        && command != "package"
-        && env::var_os("SOCRATOPIA_PYTHON").is_none();
+    let prefer_bundle =
+        command != "doctor" && command != "package" && env::var_os("SOCRATOPIA_PYTHON").is_none();
     let use_bundle = prefer_bundle && bundled.is_file();
     if env::var_os("SOCRATOPIA_REQUIRE_BUNDLED").as_deref() == Some(OsStr::new("1"))
         && command != "doctor"
