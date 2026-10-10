@@ -51,6 +51,7 @@ def _validated_cli(root: Path, platform: str | None, cli_binary: Path | None) ->
         "linux-x86_64": ("socratopia", b"\x7fELF"),
         "windows-x86_64": ("socratopia.exe", b"MZ"),
         "macos-x86_64": ("socratopia", None),
+        "macos-arm64": ("socratopia", None),
     }
     if platform not in formats:
         raise ValueError(f"不支持的 CLI 目标平台：{platform}")
@@ -71,7 +72,7 @@ def _validated_cli(root: Path, platform: str | None, cli_binary: Path | None) ->
         raise ValueError("CLI 必须使用仓库 rust/target/release 的产物")
     if magic and candidate.open("rb").read(len(magic)) != magic:
         raise ValueError("CLI 文件头与目标平台不匹配")
-    if platform == "macos-x86_64" and candidate.open("rb").read(4) not in (
+    if platform.startswith("macos-") and candidate.open("rb").read(4) not in (
             b"\xcf\xfa\xed\xfe", b"\xfe\xed\xfa\xcf",
             b"\xca\xfe\xba\xbe", b"\xbe\xba\xfe\xca"):
         raise ValueError("目标 macOS CLI 不是 Mach-O 二进制")
@@ -124,7 +125,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--root", type=Path, default=ROOT)
     parser.add_argument("--output-dir", type=Path, default=ROOT / "dist")
     parser.add_argument("--version-file", type=Path, default=ROOT / "release/VERSION")
-    parser.add_argument("--platform", choices=("linux-x86_64", "windows-x86_64", "macos-x86_64"),
+    parser.add_argument("--platform", choices=("linux-x86_64", "windows-x86_64", "macos-x86_64", "macos-arm64"),
                         help="平台标识，须与 --cli-binary 一起指定")
     parser.add_argument("--cli-binary", type=Path, help="本仓库 rust/target/release 的已编译文件")
     args = parser.parse_args(argv)
