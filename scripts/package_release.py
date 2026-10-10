@@ -79,13 +79,46 @@ def _validated_cli(root: Path, platform: str | None, cli_binary: Path | None) ->
     return candidate, expected
 
 
+def _validated_backend(root: Path, platform: str | None,
+                       backend_binary: Path | None) -> tuple[Path, str] | None:
+    if backend_binary is None:
+        return None
+    if platform is None:
+        raise ValueError("冻结的后端仅适用于带平台的 ZIP")
+    expected = "socratopia-backend.exe" if platform.startswith("windows") else "socratopia-backend"
+    path = backend_binary if backend_binary.is_absolute() else root / backend_binary
+    path = path.absolute()
+    if (path.name != expected or path.parent != root / "build" / "standalone"
+            or not path.is_file() or path.is_symlink()):
+        raise ValueError("冻结后端必须来自仓库 build/standalone 的有效可执行文件")
+    for parent in path.parents:
+        if parent == root:
+            break
+        if parent.is_symlink():
+            raise ValueError("冻结后端路径不能使用符号链接")
+    signature = path.open("rb").read(4)
+    if platform.startswith("linux") and not signature.startswith(b"\x7fELF"):
+        raise ValueError("Linux 冻结后端必须是 ELF")
+    if platform.startswith("windows") and not signature.startswith(b"MZ"):
+        raise ValueError("Windows 冻结后端必须是 PE")
+    if platform.startswith("macos") and signature not in (
+            b"\xcf\xfa\xed\xfe", b"\xfe\xed\xfa\xcf",
+            b"\xca\xfe\xba\xbe", b"\xbe\xba\xfe\xca"):
+        raise ValueError("macOS 冻结后端必须是 Mach-O")
+    return path, expected
+
+
 def make_zip(root: Path, output_dir: Path, version: str, *,
-             platform: str | None = None, cli_binary: Path | None = None) -> dict[str, str | int]:
+             platform: str | None = None, cli_binary: Path | None = None,
+             backend_binary: Path | None = None, require_backend: bool = False) -> dict[str, str | int]:
     if not VERSION_PATTERN.fullmatch(version):
         raise ValueError("版本号必须遵守 vMAJOR.MINOR.PATCH[-PRERELEASE]")
     root = root.resolve()
     files = _paths(root)
     cli = _validated_cli(root, platform, cli_binary)
+    backend = _validated_backend(root, platform, backend_binary)
+    if require_backend and (not cli or not backend):
+        raise ValueError("独立安装包必须同时包含 Rust CLI 和冻结的 Python 后端")
     folder = f"Socratopia-PI-v4-{version}"
     suffix = f"-{platform}" if platform else ""
     archive = output_dir / f"{folder}{suffix}.zip"
@@ -103,20 +136,29 @@ def make_zip(root: Path, output_dir: Path, version: str, *,
             entry.compress_type = zipfile.ZIP_DEFLATED
             entry.external_attr = (0o100755 << 16)
             stream.writestr(entry, binary.read_bytes(), compress_type=zipfile.ZIP_DEFLATED, compresslevel=9)
+        if backend:
+            binary, filename = backend
+            entry = zipfile.ZipInfo(f"{folder}/bin/{filename}", ZIP_TIME)
+            entry.compress_type = zipfile.ZIP_DEFLATED
+            entry.external_attr = (0o100755 << 16)
+            stream.writestr(entry, binary.read_bytes(), compress_type=zipfile.ZIP_DEFLATED, compresslevel=9)
     digest = hashlib.sha256(archive.read_bytes()).hexdigest()
     checksum = archive.with_suffix(".zip.sha256")
     checksum.write_text(f"{digest}  {archive.name}\n", encoding="utf-8")
     with zipfile.ZipFile(archive) as stream:
         expected = sorted([f"{folder}/{p}" for p in files] +
-                          ([f"{folder}/bin/{cli[1]}"] if cli else []))
+                          ([f"{folder}/bin/{cli[1]}"] if cli else []) +
+                          ([f"{folder}/bin/{backend[1]}"] if backend else []))
         if sorted(stream.namelist()) != expected:
             raise ValueError("ZIP 内容与发布清单不一致")
         for name in stream.namelist():
-            source = cli[0] if cli and name == f"{folder}/bin/{cli[1]}" else root / name.removeprefix(folder + "/")
+            source = (cli[0] if cli and name == f"{folder}/bin/{cli[1]}"
+                      else backend[0] if backend and name == f"{folder}/bin/{backend[1]}"
+                      else root / name.removeprefix(folder + "/"))
             if stream.getinfo(name).file_size != source.stat().st_size:
                 raise ValueError("ZIP 内容大小核验失败")
     return {"archive": str(archive), "checksum": str(checksum),
-            "sha256": digest, "files": len(files) + int(cli is not None),
+            "sha256": digest, "files": len(files) + int(cli is not None) + int(backend is not None),
             "bytes": archive.stat().st_size}
 
 
@@ -128,10 +170,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--platform", choices=("linux-x86_64", "windows-x86_64", "macos-x86_64", "macos-arm64"),
                         help="平台标识，须与 --cli-binary 一起指定")
     parser.add_argument("--cli-binary", type=Path, help="本仓库 rust/target/release 的已编译文件")
+    parser.add_argument("--backend-binary", type=Path, help="build/standalone 的独立 Python 后端")
+    parser.add_argument("--require-backend", action="store_true", help="发布时强制要求完整免 Python ZIP")
     args = parser.parse_args(argv)
     version = args.version_file.read_text(encoding="utf-8").strip()
     print(json.dumps(make_zip(args.root, args.output_dir, version,
-                              platform=args.platform, cli_binary=args.cli_binary),
+                              platform=args.platform, cli_binary=args.cli_binary,
+                              backend_binary=args.backend_binary,
+                              require_backend=args.require_backend),
                      ensure_ascii=False, indent=2))
     return 0
 
