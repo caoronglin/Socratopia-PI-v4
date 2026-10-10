@@ -54,6 +54,15 @@ SCENARIOS: dict[str, tuple[str, ...]] = {
         ".pi/skills/socratopia-tutor/references/style.md",
         "profile:max",
     ),
+    "onboarding": (
+        ".pi/skills/socratopia-learning/SKILL.md",
+        ".pi/skills/socratopia-learning/references/onboarding.md",
+    ),
+    "study-group": (
+        ".pi/skills/socratopia-tutor/SKILL.md",
+        ".pi/skills/socratopia-tutor/references/study-group.md",
+        "profile:max",
+    ),
 }
 
 
