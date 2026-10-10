@@ -196,6 +196,7 @@
     "tests/test_runtime_core.py",
     "tests/test_rust_cli_contract.py",
     "tests/test_skillhub_education.py",
+    "tests/test_stable_release.py",
     "tests/test_stellar_export.py",
     "tests/test_tutor_profiles.py",
     "tests/test_tutor_voice_quality.py",
