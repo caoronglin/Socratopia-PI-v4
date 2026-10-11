@@ -16,10 +16,13 @@ type Timer = {
   phase: string; elapsed_seconds?: number; remaining_seconds: number;
   minimum_seconds: number; completed: boolean; is_active?: boolean;
 };
-type Turn = { speaker: string; text: string };
+type Citation = { source_id: string; section: string; quote: string };
+type Turn = { speaker: string; text: string; grounding?: string; citations?: Citation[]; fact_verified?: boolean };
+type Evidence = { course: string; source: string; sha256: string; excerpts: { id: string; section: string; text: string }[]; ready: boolean };
+type Overview = { course: string; book_available: boolean; grounded_chat_ready: boolean; formal_lesson_ready: boolean; blockers: string[]; timer_phase: string; group_phase: string };
 type Group = {
   configured?: boolean; members?: string[]; next_speaker?: string | null;
-  requires_user_turn?: boolean;
+  requires_user_turn?: boolean; grounding?: string; last_turn_evidence?: Citation[];
   session?: { topic: string; phase: string; round: number; max_rounds: number; turns: Turn[] } | null;
 };
 type WorkspaceProps = { dark: boolean; onDarkChange: (value: boolean) => void };
@@ -35,6 +38,9 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
   const [state, setState] = useState<CourseState | null>(null);
   const [timer, setTimer] = useState<Timer | null>(null);
   const [group, setGroup] = useState<Group | null>(null);
+  const [overview, setOverview] = useState<Overview | null>(null);
+  const [evidence, setEvidence] = useState<Evidence | null>(null);
+  const [evidenceQuery, setEvidenceQuery] = useState('');
   const [lessonId, setLessonId] = useState('lesson_001');
   const [newCourse, setNewCourse] = useState('');
   const [newTutor, setNewTutor] = useState('F');
@@ -72,14 +78,24 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
   const reload = useCallback(async () => {
     if (!course || !token) return;
     const path = '/courses/' + encodeURIComponent(course);
-    const [s, t, g] = await Promise.all([
+    const [s, t, g, o] = await Promise.all([
       request<CourseState>(path + '/state'),
       request<Timer>(path + '/timer'),
       request<Group>(path + '/group'),
+      request<Overview>(path + '/overview'),
     ]);
-    setState(s); setTimer(t); setGroup(g);
+    setState(s); setTimer(t); setGroup(g); setOverview(o);
     if (s.lesson_id) setLessonId(s.lesson_id);
   }, [course, token, request]);
+
+  useEffect(() => {
+    setTurns([]);
+    setEvidence(null);
+    setOverview(null);
+    setState(null);
+    setGroup(null);
+    setTimer(null);
+  }, [course]);
 
   useEffect(() => {
     if (!course) return;
@@ -104,6 +120,15 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
       setCourses(result.courses);
       setCourse(newCourse.trim());
       setNewCourse('');
+    });
+  };
+  const searchEvidence = async () => {
+    if (!evidenceQuery.trim() || !course) return;
+    await run(async () => {
+      const result = await request<Evidence>(
+        '/courses/' + encodeURIComponent(course) + '/evidence?q=' + encodeURIComponent(evidenceQuery.trim())
+      );
+      setEvidence(result);
     });
   };
   const chat = async () => {
@@ -150,6 +175,7 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
             { key: 'class', label: '课堂与对话' },
             { key: 'group', label: '导师学习小组' },
             { key: 'course', label: '课程状态' },
+            { key: 'evidence', label: '教材证据' },
           ]} />
       </Sider>
       <Layout>
@@ -162,7 +188,7 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
         </Header>
         <Content className="content">
           <div className="page-heading">
-            <Title level={3}>{tab === 'class' ? '课堂与对话' : tab === 'group' ? '学习小组' : '课程概览'}</Title>
+            <Title level={3}>{tab === 'class' ? '课堂与对话' : tab === 'group' ? '学习小组' : tab === 'evidence' ? '教材证据' : '课程概览'}</Title>
             <Paragraph type="secondary">真实运行状态由 Python 服务管理，导师输出不会自动记为知识掌握。</Paragraph>
           </div>
           <Card size="small" className="control-card">
@@ -189,17 +215,34 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
           </Card> : (
             <>
               {tab === 'class' && <>
+                {!overview?.book_available && <Alert className="feedback" type="warning" showIcon
+                  message="当前课程没有可用主教材"
+                  description="请先在该课程 TEXTBOOK 目录准备 book.md；无教材时禁止 AI 凭记忆生成课程证据。" />}
+                {overview?.book_available && <Alert className="feedback" type="info" showIcon
+                  message="引用核验已启用"
+                  description="模型必须提供来自本课程教材的逐字引文；引用通过不代表科学事实已被自动核实。" />}
+
                 <Row gutter={[16, 16]}>
                   <Col xs={24} lg={16}>
                     <Card title="教学对话" className="chat-card">
                       <List dataSource={turns} locale={{ emptyText: '输入一个问题，开始与 Pi 导师交互' }}
                         renderItem={(turn, index) => <List.Item key={index}>
-                          <div className="chat-turn"><Text strong>{tutorNames[turn.speaker] || turn.speaker}</Text>
-                            <Paragraph className="message-text">{turn.text}</Paragraph></div>
+                          <div className="chat-turn">
+                            <Flex align="center" gap="small" wrap="wrap">
+                              <Text strong>{tutorNames[turn.speaker] || turn.speaker}</Text>
+                              {turn.grounding === 'citation_checked' && <Tag color="blue">已核对引文</Tag>}
+                              {turn.grounding === 'insufficient_evidence' && <Tag>证据不足</Tag>}
+                            </Flex>
+                            <Paragraph className="message-text">{turn.text}</Paragraph>
+                            {turn.citations?.map((citation, idx) =>
+                              <Paragraph type="secondary" key={idx} className="quote">
+                                <Text code>{citation.source_id}</Text> {citation.section}：{citation.quote}
+                              </Paragraph>)}
+                            </div>
                         </List.Item>} />
                       <Divider />
                       <Input.TextArea value={message} onChange={e => setMessage(e.target.value)}
-                        placeholder="对课程提问，或解释你的解题思路…" rows={3} maxLength={8000} showCount />
+                        placeholder="对课程提问，或解释你的解题思路…" rows={3} maxLength={2000} showCount />
                       <Flex justify="end" className="send-row">
                         <Button type="primary" loading={busy} disabled={!message.trim()} onClick={() => void chat()}>发送给 Pi</Button>
                       </Flex>
@@ -262,11 +305,53 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
                         我已阅读，继续下一轮
                       </Button>
                     </Space>
-                    <Paragraph type="secondary" className="section-note">导师独立生成回应；严格按顺序推进，不能跳过学生等待点。</Paragraph>
+                    {group?.last_turn_evidence?.map((source, index) =>
+                      <Paragraph key={index} type="secondary" className="quote">
+                        <Text code>{source.source_id}</Text> {source.section}：{source.quote}
+                      </Paragraph>)}
+                    <Paragraph type="secondary" className="section-note">导师独立生成回应并核对教材引文；讨论轮次由后端控制，回答不构成学生掌握证据。</Paragraph>
                   </Card>
                 </Col>
               </Row>}
+              {tab === 'evidence' && <Card title="检索主教材证据" extra={<Tag>只读</Tag>}>
+                <Paragraph type="secondary">从当前课程 book.md 检索相关章节。所有引用显示原文及文件摘要，未验证来源的内容不会自动作为课堂事实。</Paragraph>
+                <Flex gap="small" wrap="wrap">
+                  <Input value={evidenceQuery} maxLength={2000} onChange={e => setEvidenceQuery(e.target.value)}
+                    placeholder="输入要查证的概念或章节" style={{ maxWidth: 420 }} />
+                  <Button disabled={!evidenceQuery.trim()} loading={busy}
+                    onClick={() => void searchEvidence()}>检索证据</Button>
+                </Flex>
+                {evidence && <>
+                  <Divider />
+                  <Text type="secondary">来源：{evidence.source}</Text>
+                  <Paragraph type="secondary" copyable={{text:evidence.sha256}}>SHA-256：{evidence.sha256.slice(0, 16)}…</Paragraph>
+                  <List dataSource={evidence.excerpts}
+                    locale={{emptyText:"当前问题未检索到匹配的教材段落"}}
+                    renderItem={item => <List.Item>
+                      <div className="chat-turn"><Text strong>{item.id} · {item.section}</Text>
+                        <Paragraph className="message-text quote">{item.text}</Paragraph></div>
+                    </List.Item>} />
+                </>}
+              </Card>}
               {tab === 'course' && <>
+                <Card className="control-card" title="模块联动就绪情况">
+                  <Flex gap="small" wrap="wrap">
+                    <Tag color={overview?.book_available ? 'success' : 'warning'}>
+                      教材：{overview?.book_available ? '可用' : '缺失'}
+                    </Tag>
+                    <Tag color={overview?.grounded_chat_ready ? 'success' : 'warning'}>
+                      引文问答：{overview?.grounded_chat_ready ? '可尝试' : '阻断'}
+                    </Tag>
+                    <Tag color={overview?.formal_lesson_ready ? 'success' : 'warning'}>
+                      正式课堂：{overview?.formal_lesson_ready ? '初步就绪' : '受阻'}
+                    </Tag>
+                    <Tag>计时：{overview?.timer_phase || '未知'}</Tag>
+                    <Tag>学习小组：{overview?.group_phase || '未知'}</Tag>
+                  </Flex>
+                  <Paragraph className="section-note" type="secondary">
+                    引文问答最终还需要问题相关段落；正式课堂须经 PREP 与课程计时器最终核验。
+                  </Paragraph>
+                </Card>
                 <Card title="创建课程（仅补齐缺失骨架，不自动生成教材）" className="control-card">
                   <Flex wrap="wrap" gap="small">
                     <Input placeholder="新课程名称" value={newCourse}
