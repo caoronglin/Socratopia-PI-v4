@@ -107,6 +107,7 @@
     "docs/SESSION_REPORT.md",
     "docs/SKILL_TRIAGE.md",
     "docs/SOURCE_MAPPING.md",
+    "docs/WEB_V5.md",
     "integrations/cherry-studio/AGENT_PROMPT.md",
     "integrations/cherry-studio/WORKFLOWS.md",
     "manifest.json",

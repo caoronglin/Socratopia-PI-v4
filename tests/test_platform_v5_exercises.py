@@ -178,3 +178,56 @@ def test_database_symlink_rejected(client: TestClient, tmp_path: Path) -> None:
     db.symlink_to(target)
     assert client.get("/api/courses/遗传学/exercises", headers=AUTH).status_code == 409
     assert target.read_bytes() == b"not a database"
+
+
+
+def test_web_textbook_onboarding_and_catalog(client: TestClient) -> None:
+    path = create_course(client)
+    missing = client.get("/api/courses/遗传学/book", headers=AUTH)
+    assert missing.status_code == 200 and missing.json()["can_import"] is True
+
+    # This is the same path a browser paste/file-selection import exercises.
+    content = "# 遗传学\n## 第一节 减数分裂\n减数分裂将染色体数目减半，形成单倍体细胞。\n"
+    first = client.post("/api/courses/遗传学/book", headers=AUTH, json={"content": content})
+    assert first.status_code == 200, first.text
+    assert first.json()["ready_for_formal_lesson"] is False
+    assert path.read_text(encoding="utf-8") == content
+    catalog = client.get("/api/courses/遗传学/book", headers=AUTH).json()
+    assert catalog["available"] is True and catalog["can_import"] is False
+    assert [part["title"] for part in catalog["chapters"]] == ["遗传学", "第一节 减数分裂"]
+    assert len(catalog["sha256"]) == 64
+    qid = create_exercise(client)
+    assert submit(client, qid, [0]).json()["is_correct"] is True
+
+    previous = path.read_bytes()
+    again = client.post("/api/courses/遗传学/book", headers=AUTH,
+                        json={"content": "# 伪造新教材\n" + QUOTE + "\n"})
+    assert again.status_code == 409
+    assert path.read_bytes() == previous
+
+
+def test_book_upload_course_isolation_and_bad_inputs(client: TestClient) -> None:
+    a = create_course(client)
+    b = create_course(client, "独立课程")
+    book = "# 第一章\n" + QUOTE + "\n"
+    assert client.post("/api/courses/遗传学/book", headers=AUTH,
+                       json={"content": book}).status_code == 200
+    assert client.get("/api/courses/独立课程/book", headers=AUTH).json()["available"] is False
+    assert not b.exists()
+    assert client.post("/api/courses/独立课程/book", json={"content": book}).status_code == 401
+    assert client.post("/api/courses/独立课程/book", headers=AUTH,
+                       json={"content": "x" * 2000001}).status_code == 422
+    assert client.post("/api/courses/独立课程/book", headers=AUTH,
+                       json={"content": "# 小册子\n" + "x" * 35 + "\x00"}).status_code == 409
+    assert a.read_text(encoding="utf-8") == book
+
+
+def test_textbook_symlink_never_overwritten(client: TestClient, tmp_path: Path) -> None:
+    book = create_course(client)
+    outside = tmp_path / "outside.md"
+    outside.write_text("# 外部教材\n" + QUOTE + "\n", encoding="utf-8")
+    book.symlink_to(outside)
+    result = client.post("/api/courses/遗传学/book", headers=AUTH,
+                         json={"content": "# 教材\n" + QUOTE + "\n"})
+    assert result.status_code == 409
+    assert outside.read_text(encoding="utf-8").startswith("# 外部教材")
