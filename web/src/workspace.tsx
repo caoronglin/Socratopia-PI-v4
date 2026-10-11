@@ -176,7 +176,17 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
             </Flex>
           </Card>
           {error && <Alert className="feedback" type="error" showIcon message={error} closable onClose={() => setError('')} />}
-          {!course ? <Card><Empty description="连接本地 API 并选择已初始化课程；新课程可使用原有 CLI 初始化" /></Card> : (
+          {!course ? <Card title="开始新的课程">
+            <Empty description="选择已初始化课程，或直接在这里新建课程骨架" />
+            <Flex gap="small" justify="center" wrap="wrap" className="send-row">
+              <Input placeholder="课程名称" value={newCourse}
+                onChange={e => setNewCourse(e.target.value)} style={{ width: 240 }} />
+              <Select value={newTutor} onChange={setNewTutor} style={{ minWidth: 120 }}
+                options={['D','E','F'].map(value => ({value,label:tutorNames[value]}))} />
+              <Button type="primary" disabled={!token || !newCourse.trim()} loading={busy}
+                onClick={() => void createCourse()}>创建课程</Button>
+            </Flex>
+          </Card> : (
             <>
               {tab === 'class' && <>
                 <Row gutter={[16, 16]}>

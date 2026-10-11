@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import os
+from urllib.parse import urlsplit
 from typing import Any
 
 import httpx
@@ -17,8 +18,21 @@ async def ask_pi(course: str, prompt: str) -> str:
         raise PiUnavailable("SOCRATOPIA_API_TOKEN is not configured")
     # Fixed loopback target; neither the URL nor cwd is controlled by the learner.
     url = os.getenv("SOCRATOPIA_PI_URL", "http://127.0.0.1:8787")
-    if not url.startswith("http://127.0.0.1:") and not url.startswith("http://localhost:"):
-        raise PiUnavailable("Pi gateway URL must be loopback HTTP")
+    parsed = urlsplit(url)
+    try:
+        port = parsed.port
+    except ValueError as exc:
+        raise PiUnavailable("Invalid Pi gateway port") from exc
+    if (
+        parsed.scheme != "http"
+        or parsed.hostname not in {"127.0.0.1", "localhost"}
+        or parsed.username is not None
+        or parsed.password is not None
+        or port is None
+        or parsed.path not in {"", "/"}
+        or parsed.query or parsed.fragment
+    ):
+        raise PiUnavailable("Pi gateway URL must be an exact loopback HTTP origin")
     try:
         async with httpx.AsyncClient(timeout=httpx.Timeout(120, connect=5)) as client:
             response = await client.post(

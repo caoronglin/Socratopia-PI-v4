@@ -15,6 +15,7 @@ pytest.importorskip("httpx")
 
 from fastapi.testclient import TestClient
 from platform_api.app import api
+from platform_api.pi_gateway import PiUnavailable, ask_pi
 
 
 @pytest.fixture
@@ -90,3 +91,13 @@ def test_real_group_state_machine_with_stubbed_llm(client: TestClient, monkeypat
     assert blocked.status_code == 409
     continued = client.post("/api/courses/学习小组课程/group/continue", headers=auth(), json={})
     assert continued.json()["next_speaker"] == "D"
+
+
+def test_gateway_rejects_non_loopback_origin(monkeypatch: pytest.MonkeyPatch) -> None:
+    import asyncio
+
+    monkeypatch.setenv("SOCRATOPIA_API_TOKEN", "test-only-secret-token-00001")
+    for url in ["http://127.0.0.1:8787@evil.example", "https://127.0.0.1:8787", "http://localhost:8787/move"]:
+        monkeypatch.setenv("SOCRATOPIA_PI_URL", url)
+        with pytest.raises(PiUnavailable):
+            asyncio.run(ask_pi("课程", "你好"))

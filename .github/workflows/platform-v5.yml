@@ -48,6 +48,7 @@ jobs:
         run: |
           npm install --ignore-scripts --no-audit --no-fund
           npm run check
+          node -e "import('@earendil-works/pi-coding-agent').then(m => { if (!m.createAgentSession || !m.SessionManager) process.exit(1) })"
       - name: Install React/Ant Design and build UI
         working-directory: web
         run: |
