@@ -158,7 +158,10 @@ def start(root: Path, course: str, topic: str, rounds: int = 2) -> dict[str, Any
         return _emit(state, root)
 
 
-def record(root: Path, course: str, speaker: str, statement: str) -> dict[str, Any]:
+def record(root: Path, course: str, speaker: str, statement: str, *,
+           expected_session_id: str | None = None,
+           expected_turns: int | None = None,
+           expected_topic: str | None = None) -> dict[str, Any]:
     course = validate_course_name(course)
     speaker = speaker.upper().strip()
     statement = statement.strip()
@@ -169,6 +172,12 @@ def record(root: Path, course: str, speaker: str, statement: str) -> dict[str, A
         if not state or not state["session"] or state["session"]["phase"] != "speaking":
             raise ValueError("当前没有等待导师发言的讨论")
         session = state["session"]
+        if expected_session_id is not None and session["id"] != expected_session_id:
+            raise ValueError("讨论会话已变化，拒绝过期模型输出")
+        if expected_turns is not None and len(session["turns"]) != expected_turns:
+            raise ValueError("导师轮次已变化，拒绝重复发言")
+        if expected_topic is not None and session["topic"] != expected_topic:
+            raise ValueError("讨论主题已变化，拒绝过期模型输出")
         expected = state["members"][session["index"]]
         if speaker != expected:
             raise ValueError(f"发言顺序错误，当前应为导师 {expected}")

@@ -15,6 +15,8 @@ from scripts.lib.course_state import load_state, validate_state
 from scripts.lib.repository import course_dir, iter_course_paths, validate_course_name
 
 from platform_api.agentscope_tutors import TutorUnavailable, generate_tutor_turn
+from platform_api.evidence import EvidenceError, retrieve, is_current
+from platform_api.grounding import GroundingError, check_response, grounded_prompt
 from platform_api.pi_gateway import PiUnavailable, ask_pi
 
 api = FastAPI(title="Socratopia API", version="5.0.0-alpha.1", docs_url=None, redoc_url=None)
@@ -52,7 +54,7 @@ class CourseCreate(BaseModel):
 
 
 class ChatRequest(BaseModel):
-    message: str = Field(min_length=1, max_length=8000)
+    message: str = Field(min_length=1, max_length=2000)
 
 
 class TimerStart(BaseModel):
@@ -112,6 +114,48 @@ def course_state(course: str, _: Authenticated) -> dict:
     return state
 
 
+
+@api.get("/api/courses/{course}/evidence")
+def course_evidence(course: str, q: str, _: Authenticated) -> dict:
+    name = existing_course(course)
+    if not 1 <= len(q.strip()) <= 2000:
+        raise HTTPException(422, "Query must have 1–2000 characters")
+    try:
+        return retrieve(root_dir(), name, q).for_client()
+    except EvidenceError as exc:
+        raise HTTPException(409, str(exc)) from exc
+
+
+@api.get("/api/courses/{course}/overview")
+def overview(course: str, _: Authenticated) -> dict:
+    name = existing_course(course)
+    state = load_state(root_dir(), name)
+    errors = validate_state(state)
+    timer = lesson_timer.status(root_dir(), name)
+    group = learning_group.status(root_dir(), name)
+    book_present = False
+    try:
+        # The source must be readable, not merely present on disk.
+        from platform_api.evidence import _read_book
+        _, _ = _read_book(root_dir(), name)
+        book_present = True
+    except EvidenceError:
+        pass
+    return {
+        "course": name, "state_valid": not errors, "course_phase": state.get("phase"),
+        "readiness": state.get("readiness"), "blockers": list(state.get("blockers", [])) + errors,
+        "book_available": book_present, "grounded_chat_ready": book_present,
+        "formal_lesson_ready": bool(
+            not errors and not state.get("blockers")
+            and all(state.get("readiness", {}).get(k) == "ok" for k in ("catalog", "prep", "runtime"))
+            and state.get("readiness", {}).get("reteach") == "clear"
+            and state.get("phase") in {"ready", "in_lesson"}
+        ),
+        "timer_phase": timer["phase"],
+        "group_phase": (group.get("session") or {}).get("phase", "not_started"),
+        "mastery_automatically_updated": False,
+    }
+
 @api.get("/api/courses/{course}/timer")
 def timer_status(course: str, _: Authenticated) -> dict:
     return lesson_timer.status(root_dir(), existing_course(course))
@@ -138,15 +182,26 @@ def timer_transition(course: str, payload: TimerTransition, _: Authenticated) ->
 @api.post("/api/courses/{course}/chat")
 async def chat(course: str, payload: ChatRequest, _: Authenticated) -> dict:
     name = existing_course(course)
-    # A normal chat never marks a lesson complete or updates mastery.
+    # Grounded mode is the only course-chat mode. Missing sources are NOT
+    # replaced with model world knowledge, and cannot tick the lesson clock.
     try:
-        text = await ask_pi(name, payload.message)
+        snapshot = retrieve(root_dir(), name, payload.message)
+        prompt = grounded_prompt(payload.message, snapshot)
+    except (EvidenceError, GroundingError) as exc:
+        raise HTTPException(409, str(exc)) from exc
+    try:
+        raw = await ask_pi(name, prompt)
     except PiUnavailable as exc:
         raise HTTPException(503, str(exc)) from exc
-    # Only an actual learner interaction can heartbeat an existing active lesson.
-    if lesson_timer.status(root_dir(), name).get("is_active"):
+    if not is_current(root_dir(), snapshot):
+        raise HTTPException(409, "Textbook changed during generation; retry against current sources")
+    try:
+        outcome = check_response(raw, snapshot)
+    except GroundingError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    if outcome["grounding"] == "citation_checked" and lesson_timer.status(root_dir(), name).get("is_active"):
         lesson_timer.transition(root_dir(), name, "heartbeat")
-    return {"course": name, "speaker": "pi", "text": text, "mastery_updated": False}
+    return {"course": name, "speaker": "pi", "source_sha256": snapshot.sha256, **outcome}
 
 
 @api.get("/api/courses/{course}/group")
@@ -190,12 +245,35 @@ async def group_next(course: str, _: Authenticated) -> dict:
     if not speaker or not session:
         raise HTTPException(409, "No tutor turn available; wait for the learner")
     try:
-        text = await generate_tutor_turn(speaker, session["topic"], session["turns"])
-        return learning_group.record(root_dir(), name, speaker, text)
+        snapshot = retrieve(root_dir(), name, session["topic"])
+        prompt = grounded_prompt(session["topic"], snapshot)
+    except (EvidenceError, GroundingError) as exc:
+        raise HTTPException(409, str(exc)) from exc
+    try:
+        raw = await generate_tutor_turn(speaker, prompt, session["turns"])
     except TutorUnavailable as exc:
         raise HTTPException(503, str(exc)) from exc
+    if not is_current(root_dir(), snapshot):
+        raise HTTPException(409, "Textbook changed during tutor generation")
+    try:
+        outcome = check_response(raw, snapshot)
+    except GroundingError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    if outcome["grounding"] != "citation_checked":
+        raise HTTPException(409, "Tutor abstained; discussion did not advance")
+    try:
+        result = learning_group.record(
+            root_dir(), name, speaker, outcome["text"],
+            expected_session_id=session["id"],
+            expected_turns=len(session["turns"]),
+            expected_topic=session["topic"],
+        )
     except ValueError as exc:
         raise HTTPException(409, str(exc)) from exc
+    return {**result, "source_sha256": snapshot.sha256,
+            "last_turn_evidence": outcome["citations"],
+            "grounding": outcome["grounding"], "fact_verified": False,
+            "single_agent_simulation": False, "execution_backend": "agentscope"}
 
 
 app = api
