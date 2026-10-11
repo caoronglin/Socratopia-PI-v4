@@ -23,3 +23,39 @@ body { margin: 0; }
   .content { padding: 16px; }
   .topbar { padding: 0 16px; }
 }
+
+
+/* Ant Design desktop; Ant Design Mobile navigation/answers at narrow widths. */
+.classroom-practice-section { margin-top: 20px; }
+.class-practice { display: grid; gap: 16px; }
+.practice-question .ant-card-head-title { white-space: normal; }
+.practice-question .ant-checkbox-wrapper,
+.practice-question .ant-radio-wrapper { white-space: normal; line-height: 1.7; }
+.answer-actions, .answer-explanation { margin-top: 18px; }
+.answer-explanation p { margin-top: 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.practice-insights .ant-statistic { min-width: 95px; }
+.practice-chart { height: 210px; width: 100%; margin-top: 12px; }
+.practice-editor { margin-bottom: 20px; }
+.mobile-tabbar, .mobile-practice-options, .mobile-submit { display: none !important; }
+.quote { overflow-wrap: anywhere; }
+@media (max-width: 768px) {
+  .desktop-sidebar { display: none !important; }
+  .shell { width: 100%; overflow: hidden; }
+  .content { padding: 14px 12px calc(116px + env(safe-area-inset-bottom)); }
+  .topbar { height: 56px; padding: 0 12px; gap: 10px; }
+  .topbar .ant-space { min-width: 0; }
+  .page-heading h3 { font-size: 22px !important; }
+  .desktop-practice-options, .desktop-submit { display: none !important; }
+  .mobile-practice-options, .mobile-submit { display: block !important; }
+  .mobile-choices { display: flex; flex-direction: column; gap: 15px; margin: 12px 0; }
+  .mobile-choices .adm-radio, .mobile-choices .adm-checkbox { min-height: 36px; }
+  .mobile-tabbar {
+    display: block !important; position: fixed; inset: auto 0 0;
+    background: var(--ant-color-bg-container); border-top: 1px solid var(--ant-color-border-secondary);
+    z-index: 40; box-shadow: 0 -5px 18px rgba(0, 0, 0, .04);
+  }
+  .practice-chart { height: 190px; }
+  .control-card .ant-flex { align-items: stretch; }
+  .chat-card .ant-list { max-height: 50vh; }
+  .ant-card-body { overflow-wrap: anywhere; }
+}

@@ -1,4 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
+import { TabBar } from 'antd-mobile';
+import { AppOutline, MessageOutline, UnorderedListOutline, UserOutline } from 'antd-mobile-icons';
+import PracticePanel from './practice';
 import {
   Alert, Button, Card, Col, Divider, Empty, Flex, Input, Layout, List,
   Menu, Progress, Row, Select, Space, Statistic, Switch, Tag, Typography
@@ -167,7 +170,7 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
 
   return (
     <Layout className="shell">
-      <Sider breakpoint="lg" collapsedWidth="0" width={232} theme={dark ? 'dark' : 'light'} className="sidebar">
+      <Sider breakpoint="lg" collapsedWidth="0" width={232} theme={dark ? 'dark' : 'light'} className="sidebar desktop-sidebar">
         <div className="brand">Socratopia <span>v5</span></div>
         <Text type="secondary" className="brand-note">你的课程学习空间</Text>
         <Menu selectedKeys={[tab]} onClick={({ key }) => setTab(key)} mode="inline"
@@ -267,6 +270,11 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
                     </Card>
                   </Col>
                 </Row>
+                <section aria-label="课堂互动题与练习表现" className="classroom-practice-section">
+                  <PracticePanel key={course} course={course} request={request}
+                    onAnswered={() => { void reload().catch(err =>
+                      setError(err instanceof Error ? err.message : '课程状态刷新失败')); }} />
+                </section>
               </>}
               {tab === 'group' && <Row gutter={[16, 16]}>
                 <Col xs={24} lg={9}>
@@ -388,6 +396,14 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
             </>
           )}
         </Content>
+        <nav className="mobile-tabbar" aria-label="移动端模块导航">
+          <TabBar activeKey={tab} onChange={setTab} safeArea>
+            <TabBar.Item key="class" icon={<MessageOutline />} title="课堂" />
+            <TabBar.Item key="group" icon={<UserOutline />} title="导师" />
+            <TabBar.Item key="evidence" icon={<UnorderedListOutline />} title="教材" />
+            <TabBar.Item key="course" icon={<AppOutline />} title="课程" />
+          </TabBar>
+        </nav>
       </Layout>
     </Layout>
   );

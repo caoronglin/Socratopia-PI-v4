@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import { App, ConfigProvider, theme } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
 import Workspace from './workspace';
+import 'antd-mobile/es/global';
 import './styles.css';
 
 function Root() {

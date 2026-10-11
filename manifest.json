@@ -224,6 +224,8 @@
     "web/index.html",
     "web/package.json",
     "web/src/main.tsx",
+    "web/src/practice.tsx",
+    "web/src/practice_chart.tsx",
     "web/src/styles.css",
     "web/src/workspace.tsx",
     "web/tsconfig.json",
