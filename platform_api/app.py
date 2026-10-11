@@ -18,8 +18,7 @@ from platform_api.agentscope_tutors import TutorUnavailable, generate_tutor_turn
 from platform_api.evidence import EvidenceError, retrieve, is_current
 from platform_api.grounding import GroundingError, check_response, grounded_prompt
 from platform_api.pi_gateway import PiUnavailable, ask_pi
-from platform_api import exercises
-from scripts.lib.repository import validate_lesson_id
+from platform_api import exercises, books
 
 api = FastAPI(title="Socratopia API", version="5.0.0-alpha.1", docs_url=None, redoc_url=None)
 
@@ -58,6 +57,10 @@ class CourseCreate(BaseModel):
 class ChatRequest(BaseModel):
     message: str = Field(min_length=1, max_length=2000)
 
+
+
+class BookImport(BaseModel):
+    content: str = Field(min_length=32, max_length=2000000)
 
 
 class ExerciseCreate(BaseModel):
@@ -173,6 +176,25 @@ def overview(course: str, _: Authenticated) -> dict:
         "group_phase": (group.get("session") or {}).get("phase", "not_started"),
         "mastery_automatically_updated": False,
     }
+
+
+
+@api.get("/api/courses/{course}/book")
+def book_info(course: str, _: Authenticated) -> dict:
+    name = existing_course(course)
+    try:
+        return books.info(root_dir(), name)
+    except (books.BookError, ValueError) as exc:
+        raise HTTPException(409, str(exc)) from exc
+
+
+@api.post("/api/courses/{course}/book")
+def import_course_book(course: str, payload: BookImport, _: Authenticated) -> dict:
+    name = existing_course(course)
+    try:
+        return books.import_markdown(root_dir(), name, payload.content)
+    except (books.BookError, ValueError) as exc:
+        raise HTTPException(409, str(exc)) from exc
 
 
 @api.get("/api/courses/{course}/exercises")
