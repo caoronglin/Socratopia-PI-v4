@@ -219,7 +219,7 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
               <Button onClick={() => void run(reload)} disabled={!course} loading={busy}>刷新状态</Button>
             </Flex>
           </Card>
-          {error && <Alert className="feedback" type="error" showIcon message={error} closable onClose={() => setError('')} />}
+          {error && <Alert className="feedback" type="error" showIcon title={error} closable={{ onClose: () => setError('') }} />}
           {!course ? <Card title="开始新的课程">
             <Empty description="选择已初始化课程，或直接在这里新建课程骨架" />
             <Flex gap="small" justify="center" wrap="wrap" className="send-row">
@@ -234,10 +234,10 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
             <>
               {tab === 'class' && <>
                 {!overview?.book_available && <Alert className="feedback" type="warning" showIcon
-                  message="当前课程没有可用主教材"
+                  title="当前课程没有可用主教材"
                   description="请先在该课程 TEXTBOOK 目录准备 book.md；无教材时禁止 AI 凭记忆生成课程证据。" />}
                 {overview?.book_available && <Alert className="feedback" type="info" showIcon
-                  message="引用核验已启用"
+                  title="引用核验已启用"
                   description="模型必须提供来自本课程教材的逐字引文；引用通过不代表科学事实已被自动核实。" />}
 
                 <Row gutter={[16, 16]}>
@@ -273,7 +273,7 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
                       <Progress percent={percent} />
                       <Text type="secondary">达到 2700 秒并满足课程门禁后，才能正式完成课堂。</Text>
                       <Divider />
-                      <Space direction="vertical" style={{ width: '100%' }}>
+                      <Space orientation="vertical" style={{ width: '100%' }}>
                         <Input value={lessonId} onChange={e => setLessonId(e.target.value)} placeholder="lesson_001" />
                         <Space wrap>
                           <Button disabled={busy} onClick={() => void timerAction('start')}>开始</Button>
@@ -296,7 +296,7 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
                {tab === 'group' && <Row gutter={[16, 16]}>
                 <Col xs={24} lg={9}>
                   <Card title="导师配置">
-                    <Space direction="vertical" style={{ width: '100%' }}>
+                    <Space orientation="vertical" style={{ width: '100%' }}>
                       <Text>选择 2–3 位导师</Text>
                       <Select mode="multiple" value={members} onChange={setMembers}
                         options={Object.entries(tutorNames).filter(([id]) => ['D','E','F'].includes(id))
@@ -411,8 +411,8 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
                 </Card></Col>
                 <Col xs={24} lg={12}><Card title="检查与限制">
                   {state?.blockers?.length ? <Alert type="warning" showIcon
-                    message="存在课堂阻断条件" description={state.blockers.join('、')} /> :
-                    <Alert type="success" showIcon message="未记录课程阻断条件" />}
+                    title="存在课堂阻断条件" description={state.blockers.join('、')} /> :
+                    <Alert type="success" showIcon title="未记录课程阻断条件" />}
                   <Paragraph className="section-note" type="secondary">正式开课仍会由后端核对 PREP、教材版本和计时条件。</Paragraph>
                 </Card></Col>
                 </Row></>}

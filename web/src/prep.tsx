@@ -72,9 +72,9 @@ export default function PrepPanel({ course, request }: { course: string; request
   const step = !book?.available ? 0 : !draft ? 1 : draft.exists || draft.dry_run === false ? 3 : 2;
 
   return <div className="prep-workspace">
-    <Alert type="info" showIcon className="feedback" message="章节备课与正式课堂分离"
+    <Alert type="info" showIcon className="feedback" title="章节备课与正式课堂分离"
       description="按真实教材章节生成草稿，先预览再保存；保存草稿不会解锁 PREP ready、45 分钟计时或已验证掌握度。" />
-    {error && <Alert className="feedback" type="error" showIcon message={error} />}
+    {error && <Alert className="feedback" type="error" showIcon title={error} />}
     <Card title="章节备课" extra={<Tag>PREP 状态机</Tag>}>
       <Steps size="small" current={step} responsive
         items={[{ title: '导入教材' }, { title: '选择章节' }, { title: '审核草稿' }, { title: '人工备课' }]} />
@@ -83,7 +83,7 @@ export default function PrepPanel({ course, request }: { course: string; request
       </Paragraph>
       {!book?.available ? <Empty description="请先在「教材」页导入主教材" /> : <>
         <Space wrap className="prep-actions">
-          <Select aria-label="选择备课章节" showSearch optionFilterProp="label"
+          <Select aria-label="选择备课章节" showSearch={{ optionFilterProp: "label" }}
             placeholder="选择教材章节" style={{ minWidth: 240, maxWidth: '100%' }}
             value={chapter || undefined} options={chapterOptions}
             onChange={value => { setChapter(value); setDraft(null); setCheck(null); }} />
@@ -117,13 +117,13 @@ export default function PrepPanel({ course, request }: { course: string; request
           {check ? <>
             <Text strong>教案 {selectedLesson} · {check.status}</Text>
             <Paragraph type="secondary">检查只读；不会自动将 draft 改为 ready。</Paragraph>
-            {!check.ready_for_class ? <Alert type="warning" showIcon message="尚未通过 ready 门禁"
+            {!check.ready_for_class ? <Alert type="warning" showIcon title="尚未通过 ready 门禁"
               description={check.errors.length ? <ul>{check.errors.map((v, i) => <li key={i}>{v}</li>)}</ul> :
                 "结构校验可以通过，但当前仍是 draft；须经人工审核并在权威 PREP 状态机标记 ready 后才可正式开课。"} /> :
-              <Alert type="success" showIcon message="PREP 已通过结构及版本检查"
+              <Alert type="success" showIcon title="PREP 已通过结构及版本检查"
                 description="开课仍由后端复核全课程 readiness、教材与计时条件。" />}
             {check.warnings.length > 0 && <Alert type="warning" showIcon className="feedback"
-              message="待复核的提示" description={check.warnings.join('；')} />}
+              title="待复核的提示" description={check.warnings.join('；')} />}
           </> : <Empty description="选择左侧教案进行状态检查" />}
         </Col>
       </Row>

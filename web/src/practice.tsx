@@ -75,14 +75,14 @@ function AnswerCard({ item, request, course, onAnswered }: {
       {multi
         ? <Checkbox.Group disabled={Boolean(result) || !item.source_current} value={selected}
             onChange={values => choose(values.map(Number))}>
-            <Space direction="vertical">
+            <Space orientation="vertical">
               {item.options.map((option, index) =>
                 <Checkbox key={index} value={index}>{option}</Checkbox>)}
             </Space>
           </Checkbox.Group>
         : <Radio.Group disabled={Boolean(result) || !item.source_current}
             value={selected[0]} onChange={event => choose([Number(event.target.value)])}>
-            <Space direction="vertical">
+            <Space orientation="vertical">
               {item.options.map((option, index) =>
                 <Radio key={index} value={index}>{option}</Radio>)}
             </Space>
@@ -107,10 +107,10 @@ function AnswerCard({ item, request, course, onAnswered }: {
             </div>
           </MobileRadio.Group>}
     </div>
-    {error && <Alert type="error" className="feedback" showIcon message={error} />}
+    {error && <Alert type="error" className="feedback" showIcon title={error} />}
     {result ? <div className="answer-explanation">
       <Alert showIcon type={result.is_correct ? 'success' : 'warning'}
-        message={result.is_correct ? '回答正确' : '这次回答还不正确'}
+        title={result.is_correct ? '回答正确' : '这次回答还不正确'}
         description={'正确选项：' + result.correct_indices.map(i => item.options[i]).join('、')} />
       <Paragraph>{result.explanation}</Paragraph>
       <Paragraph type="secondary"><Text strong>教材原文：</Text>{result.source_quote}</Paragraph>
@@ -188,8 +188,8 @@ export default function PracticePanel({ course, request, onAnswered }: Props) {
         练习直接在课堂内完成，答后展示标准答案与教材原文。题目由课程使用者审核并录入，
         不能将 AI 自行生成的答案当作标准答案。
       </Paragraph>
-      {error && <Alert type="error" message={error} showIcon className="feedback" />}
-      <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+      {error && <Alert type="error" title={error} showIcon className="feedback" />}
+      <Space orientation="vertical" size="middle" style={{ width: '100%' }}>
         {items.length ? items.map(item => <AnswerCard key={item.id} item={item}
           request={request} course={course} onAnswered={() => {
             void reload().then(() => onAnswered?.()).catch(err =>
@@ -213,7 +213,7 @@ export default function PracticePanel({ course, request, onAnswered }: Props) {
       label: '录入已核对的课堂题目',
       children: <Form layout="vertical" onFinish={() => void createQuestion()}>
         <Alert type="info" showIcon className="feedback"
-          message="题目需要人工确认正确答案及解释"
+          title="题目需要人工确认正确答案及解释"
           description="引用必须逐字出现在当前课程 book.md 中；教材更新后旧题自动暂停作答。" />
         <Form.Item label="题型">
           <Select value={kind} onChange={value => { setKind(value); setKeys(value === 'single_select' ? [0] : [0, 1]); }}

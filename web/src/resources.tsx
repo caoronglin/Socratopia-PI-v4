@@ -35,7 +35,7 @@ export default function ResourcesPanel({ course, request, onImported, onExplore 
     } finally { setLoading(false); }
   };
   return <Card className="control-card" title="教材与章节" extra={<Tag>本课程独立存储</Tag>}>
-    {error && <Alert type="error" showIcon className="feedback" message={error} />}
+    {error && <Alert type="error" showIcon className="feedback" title={error} />}
     {!book ? <Text type="secondary">读取教材状态中…</Text> :
       book.available ? <>
         <Space wrap><Tag color="success">主教材已载入</Tag><Text type="secondary">{book.source}</Text></Space>
@@ -53,7 +53,7 @@ export default function ResourcesPanel({ course, request, onImported, onExplore 
             <Text type="secondary">第 {chapter.line} 行</Text>
           </List.Item>} />
       </> : <>
-        <Alert type="warning" showIcon message="尚无主教材"
+        <Alert type="warning" showIcon title="尚无主教材"
           description="可导入 Markdown/TXT 教材或粘贴正文；原有教材一律不可覆盖，导入不会自动解除正式开课 PREP 门禁。" />
         <div className="import-form">
           <Upload accept=".md,.markdown,.txt,text/plain,text/markdown"
