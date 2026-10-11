@@ -1,6 +1,8 @@
 """Local API integration smoke gates for v5; legacy tests run separately."""
 from __future__ import annotations
 
+import json
+import os
 import shutil
 import sys
 from pathlib import Path
@@ -16,6 +18,7 @@ pytest.importorskip("httpx")
 from fastapi.testclient import TestClient
 from platform_api.app import api
 from platform_api.pi_gateway import PiUnavailable, ask_pi
+from platform_api.evidence import retrieve
 
 
 @pytest.fixture
@@ -25,6 +28,19 @@ def client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestClient:
     monkeypatch.setenv("SOCRATOPIA_ROOT", str(tmp_path))
     monkeypatch.setenv("SOCRATOPIA_API_TOKEN", "test-only-secret-token-00001")
     return TestClient(api)
+
+
+def add_book(course: str, text: str) -> Path:
+    path = Path(os.environ["SOCRATOPIA_ROOT"]) / "TEXTBOOK" / course / "book.md"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text, encoding="utf-8")
+    return path
+
+
+def draft(statement: str, quote: str, source_id: str = "S1") -> str:
+    return json.dumps({"status": "answer", "claims": [
+        {"text": statement, "source_id": source_id, "quote": quote}
+    ]}, ensure_ascii=False)
 
 
 def auth() -> dict:
@@ -57,20 +73,29 @@ def test_create_and_read_course_without_mastery(client: TestClient) -> None:
 def test_chat_preserves_progress(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
     client.post("/api/courses", json={"name": "生物信息学"}, headers=auth())
 
+    quote = "RNA-seq通过测序分析样本的RNA表达情况。"
+    add_book("生物信息学", "# RNA-seq\n" + quote + "\n")
+
     async def fake_pi(course: str, message: str) -> str:
         assert course == "生物信息学"
-        return "这是对 " + message + " 的教学解释"
+        assert "<untrusted_course_evidence>" in message
+        return draft("RNA-seq用于研究表达。", quote)
 
     monkeypatch.setattr("platform_api.app.ask_pi", fake_pi)
     reply = client.post("/api/courses/生物信息学/chat", headers=auth(), json={"message": "什么是 RNA-seq?"})
     assert reply.status_code == 200, reply.text
     assert reply.json()["mastery_updated"] is False
+    assert reply.json()["grounding"] == "citation_checked"
+    assert reply.json()["fact_verified"] is False
+    assert reply.json()["citations"][0]["quote"] == quote
     timer = client.get("/api/courses/生物信息学/timer", headers=auth()).json()
     assert timer["phase"] == "not_started"
 
 
 def test_real_group_state_machine_with_stubbed_llm(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
     client.post("/api/courses", json={"name": "学习小组课程"}, headers=auth())
+    quote = "基因表达是遗传信息转化为功能产物的过程。"
+    add_book("学习小组课程", "# 基因表达\n" + quote + "\n")
     config = client.post("/api/courses/学习小组课程/group/configure",
                          headers=auth(), json={"members": ["D", "E"], "lead": "D"})
     assert config.status_code == 200, config.text
@@ -79,8 +104,8 @@ def test_real_group_state_machine_with_stubbed_llm(client: TestClient, monkeypat
     assert started.json()["next_speaker"] == "D"
 
     async def fake_tutor(speaker: str, topic: str, prior: list[dict]) -> str:
-        assert topic == "基因表达"
-        return "导师 " + speaker + " 的解释"
+        assert "基因表达" in topic and "<source id=" in topic
+        return draft("导师 " + speaker + " 的解释", quote)
 
     monkeypatch.setattr("platform_api.app.generate_tutor_turn", fake_tutor)
     first = client.post("/api/courses/学习小组课程/group/next", headers=auth())
@@ -101,3 +126,112 @@ def test_gateway_rejects_non_loopback_origin(monkeypatch: pytest.MonkeyPatch) ->
         monkeypatch.setenv("SOCRATOPIA_PI_URL", url)
         with pytest.raises(PiUnavailable):
             asyncio.run(ask_pi("课程", "你好"))
+
+
+def test_missing_and_irrelevant_books_fail_closed(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    client.post("/api/courses", json={"name": "无教材"}, headers=auth())
+
+    async def forbidden(*args):
+        raise AssertionError("No model calls without relevant sources")
+
+    monkeypatch.setattr("platform_api.app.ask_pi", forbidden)
+    assert client.post("/api/courses/无教材/chat", headers=auth(), json={"message": "基因表达"}).status_code == 409
+    overview = client.get("/api/courses/无教材/overview", headers=auth()).json()
+    assert overview["grounded_chat_ready"] is False and overview["formal_lesson_ready"] is False
+    add_book("无教材", "# 植物\n光合作用是植物将光能转化为化学能的过程。\n")
+    assert client.post("/api/courses/无教材/chat", headers=auth(), json={"message": "RNA-seq"}).status_code == 409
+    assert client.get("/api/courses/无教材/evidence?q=光合作用", headers=auth()).json()["excerpts"]
+
+
+def test_sources_are_course_isolated(client: TestClient) -> None:
+    for name in ["课程甲", "课程乙"]:
+        client.post("/api/courses", json={"name": name}, headers=auth())
+    add_book("课程甲", "# 细胞分裂\n细胞分裂会产生子细胞。\n")
+    add_book("课程乙", "# 细胞分裂\n不同课程的证据不可交叉使用。\n")
+    root = Path(os.environ["SOCRATOPIA_ROOT"])
+    a, b = retrieve(root, "课程甲", "细胞分裂"), retrieve(root, "课程乙", "细胞分裂")
+    assert a.sha256 != b.sha256
+    assert "不可交叉" not in str(a.sources) and "产生子细胞" not in str(b.sources)
+
+
+@pytest.mark.parametrize("malicious", [
+    '{"status":"answer","claims":[{"text":"错误","source_id":"S404","quote":"细胞分裂会产生子细胞。"}]}',
+    '{"status":"answer","claims":[{"text":"错误","source_id":"S1","quote":"一段伪造的原始教材证据。"}]}',
+    '{"status":"answer","claims":[]}',
+    "根据教材我知道这是真的。",
+])
+def test_model_invented_citations_rejected(client: TestClient, monkeypatch: pytest.MonkeyPatch, malicious: str) -> None:
+    client.post("/api/courses", json={"name": "细胞学"}, headers=auth())
+    add_book("细胞学", "# 细胞分裂\n细胞分裂会产生子细胞。\n")
+    progress = Path(os.environ["SOCRATOPIA_ROOT"]) / "DATA" / "细胞学" / "PROGRESS.md"
+    before = progress.read_bytes()
+
+    async def forged(*args):
+        return malicious
+
+    monkeypatch.setattr("platform_api.app.ask_pi", forged)
+    response = client.post("/api/courses/细胞学/chat", headers=auth(), json={"message": "细胞分裂"})
+    assert response.status_code == 422, response.text
+    assert progress.read_bytes() == before
+
+
+def test_abstention_remains_unverified(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    client.post("/api/courses", json={"name": "知识测试"}, headers=auth())
+    add_book("知识测试", "# 基因表达\n基因表达是遗传信息形成产物的过程。\n")
+    async def abstain(*args):
+        return '{"status":"abstain","reason":"找不到答案"}'
+    monkeypatch.setattr("platform_api.app.ask_pi", abstain)
+    result = client.post("/api/courses/知识测试/chat", headers=auth(), json={"message": "基因表达"})
+    assert result.status_code == 200
+    data = result.json()
+    assert data["grounding"] == "insufficient_evidence"
+    assert data["citations"] == [] and data["mastery_updated"] is False
+
+
+def test_changed_textbook_blocks_response(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    client.post("/api/courses", json={"name": "分子生物学"}, headers=auth())
+    book = add_book("分子生物学", "# DNA复制\nDNA复制需要模板链和DNA聚合酶。\n")
+    async def changed(*args):
+        book.write_text("# DNA复制\nDNA复制有新的内容。\n", encoding="utf-8")
+        return draft("DNA复制有模板。", "DNA复制需要模板链和DNA聚合酶。")
+    monkeypatch.setattr("platform_api.app.ask_pi", changed)
+    result = client.post("/api/courses/分子生物学/chat", headers=auth(), json={"message": "DNA复制"})
+    assert result.status_code == 409
+
+
+def test_group_abstention_does_not_advance(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    client.post("/api/courses", json={"name": "讨论课"}, headers=auth())
+    add_book("讨论课", "# 基因表达\n基因表达是细胞利用遗传信息的过程。\n")
+    client.post("/api/courses/讨论课/group/configure", headers=auth(), json={"members": ["D", "E"], "lead": "D"})
+    client.post("/api/courses/讨论课/group/start", headers=auth(), json={"topic": "基因表达"})
+    async def abstain(*args):
+        return '{"status":"abstain","reason":"不确定"}'
+    monkeypatch.setattr("platform_api.app.generate_tutor_turn", abstain)
+    assert client.post("/api/courses/讨论课/group/next", headers=auth()).status_code == 409
+    state = client.get("/api/courses/讨论课/group", headers=auth()).json()
+    assert state["next_speaker"] == "D" and state["session"]["turns"] == []
+
+
+def test_restarted_group_rejects_outdated_reply(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    from scripts.lib import learning_group
+    root = Path(os.environ["SOCRATOPIA_ROOT"])
+    client.post("/api/courses", json={"name": "轮次竞态"}, headers=auth())
+    add_book("轮次竞态", "# 基因表达\n基因表达是细胞利用遗传信息的过程。\n")
+    client.post("/api/courses/轮次竞态/group/configure", headers=auth(), json={"members": ["D", "E"], "lead": "D"})
+    client.post("/api/courses/轮次竞态/group/start", headers=auth(), json={"topic": "基因表达"})
+    async def contested(*args):
+        learning_group.stop(root, "轮次竞态")
+        learning_group.start(root, "轮次竞态", "基因表达")
+        return draft("基因表达属于细胞过程。", "基因表达是细胞利用遗传信息的过程。")
+    monkeypatch.setattr("platform_api.app.generate_tutor_turn", contested)
+    assert client.post("/api/courses/轮次竞态/group/next", headers=auth()).status_code == 409
+    state = client.get("/api/courses/轮次竞态/group", headers=auth()).json()
+    assert state["next_speaker"] == "D" and state["session"]["turns"] == []
+
+
+def test_symlink_book_refused(client: TestClient, tmp_path: Path) -> None:
+    client.post("/api/courses", json={"name": "安全课程"}, headers=auth())
+    outside = tmp_path / "outside.md"
+    outside.write_text("# RNA-seq\nRNA-seq is a transcriptome profiling assay.\n")
+    (tmp_path / "TEXTBOOK" / "安全课程" / "book.md").symlink_to(outside)
+    assert client.get("/api/courses/安全课程/evidence?q=RNA-seq", headers=auth()).status_code == 409
