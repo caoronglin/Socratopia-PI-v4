@@ -1,0 +1,135 @@
+name: v5 Web Standalone Executables
+on:
+  push:
+    branches: [feat/v5-platform-foundation]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: web-v5-bundle-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  build:
+    name: Frozen Web ${{ matrix.platform }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 55
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            platform: linux-x86_64
+          - runner: windows-2022
+            platform: windows-x86_64
+          - runner: macos-15-intel
+            platform: macos-x86_64
+          - runner: macos-15
+            platform: macos-arm64
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.15'
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Install Python 3.15 API and standalone freezer
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install -e '.[dev]'
+          python -m pip install -r requirements-build.txt
+          python -m pip check
+      - name: Build Web UI
+        shell: bash
+        working-directory: web
+        run: |
+          set -euo pipefail
+          npm install --ignore-scripts --no-audit --no-fund
+          npm run build
+      - name: Install Pi SDK production runtime
+        shell: bash
+        working-directory: runtimes/pi
+        run: |
+          set -euo pipefail
+          npm install --omit=dev --ignore-scripts --no-audit --no-fund
+          node -e "import('@earendil-works/pi-coding-agent').then(m=>{if(!m.createAgentSession)process.exit(1)})"
+      - name: Freeze native Web executable
+        shell: bash
+        run: python scripts/freeze_web_v5.py
+      - name: Package native Web application
+        shell: bash
+        env:
+          PLATFORM: ${{ matrix.platform }}
+        run: |
+          set -euo pipefail
+          NODE_BINARY="$(node -p 'process.execPath')"
+          python scripts/package_web_v5.py --platform "$PLATFORM" --node "$NODE_BINARY" --output-dir dist
+      - name: Smoke test extracted executable and localhost Web
+        shell: bash
+        env:
+          PLATFORM: ${{ matrix.platform }}
+        run: |
+          set -euo pipefail
+          python scripts/smoke_web_v5.py --archive "dist/Socratopia-v5-Web-alpha-$PLATFORM.zip" --platform "$PLATFORM"
+      - name: Upload checked ZIP and SHA-256
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: web-v5-${{ matrix.platform }}
+          path: |
+            dist/*.zip
+            dist/*.sha256
+          if-no-files-found: error
+          retention-days: 14
+  verify-artifacts:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          pattern: web-v5-*
+          path: artifacts
+          merge-multiple: true
+      - name: Verify all four archives and digests
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(find artifacts -maxdepth 1 -name '*.zip' | wc -l)" -eq 4
+          test "$(find artifacts -maxdepth 1 -name '*.sha256' | wc -l)" -eq 4
+          cd artifacts
+          sha256sum --check *.sha256
+  publish-alpha:
+    needs: verify-artifacts
+    if: github.ref == 'refs/heads/feat/v5-platform-foundation' && github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          pattern: web-v5-*
+          path: dist
+          merge-multiple: true
+      - name: Publish prerelease only
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          (cd dist && sha256sum --check *.sha256)
+          TAG="v5.0.0-alpha.web.${{ github.run_number }}"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "::error::Cannot overwrite immutable release"; exit 1
+          fi
+          gh release create "$TAG" dist/*.zip dist/*.sha256 \
+            --target "$GITHUB_SHA" --prerelease \
+            --title "Socratopia v5 Web Alpha (native executables)" \
+            --notes "Preview only. Frozen Python 3.15, Ant Design 6 UI, bundled Node/Pi. ZIP includes runtime, no user data. Four-platform extracted binary checks passed."
