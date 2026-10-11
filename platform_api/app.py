@@ -60,7 +60,7 @@ class ChatRequest(BaseModel):
 
 
 class BookImport(BaseModel):
-    content: str = Field(min_length=32, max_length=2000000)
+    content: str = Field(min_length=1, max_length=2000000)
 
 
 class ExerciseCreate(BaseModel):

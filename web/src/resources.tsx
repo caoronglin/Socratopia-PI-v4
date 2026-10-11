@@ -70,7 +70,7 @@ export default function ResourcesPanel({ course, request, onImported, onExplore 
           </Upload>
           <Input.TextArea value={content} onChange={e => setContent(e.target.value)}
             rows={7} maxLength={2000000} placeholder="# 第一章&#10;教材正文（请确保有权使用和整理此内容）" />
-          <Space wrap><Button type="primary" loading={loading} disabled={content.trim().length < 32}
+          <Space wrap><Button type="primary" loading={loading} disabled={new TextEncoder().encode(content).length < 32}
             onClick={() => void importBook()}>确认导入（只创建，不覆盖）</Button>
             <Text type="secondary">导入后还需章节备课才能正式开课。</Text></Space>
         </div>
