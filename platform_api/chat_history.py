@@ -29,7 +29,7 @@ def _location(root: Path, course: str) -> Path:
         raise HistoryError("Chat history database must not be a symlink")
     # Defend against a swapped or malformed workspace location; the database
     # must remain inside this course, and never follow a file/dir symlink.
-    if runtime.resolve() != runtime.absolute().resolve() or not target.resolve().is_relative_to(directory.resolve()):
+    if not target.resolve().is_relative_to(directory.resolve()):
         raise HistoryError("Chat history database escaped course workspace")
     return target
 
