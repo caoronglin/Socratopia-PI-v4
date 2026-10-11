@@ -18,6 +18,8 @@ from platform_api.agentscope_tutors import TutorUnavailable, generate_tutor_turn
 from platform_api.evidence import EvidenceError, retrieve, is_current
 from platform_api.grounding import GroundingError, check_response, grounded_prompt
 from platform_api.pi_gateway import PiUnavailable, ask_pi
+from platform_api import exercises
+from scripts.lib.repository import validate_lesson_id
 
 api = FastAPI(title="Socratopia API", version="5.0.0-alpha.1", docs_url=None, redoc_url=None)
 
@@ -55,6 +57,22 @@ class CourseCreate(BaseModel):
 
 class ChatRequest(BaseModel):
     message: str = Field(min_length=1, max_length=2000)
+
+
+
+class ExerciseCreate(BaseModel):
+    kind: Literal["single_select", "multi_select"]
+    stem: str = Field(min_length=1, max_length=500)
+    options: list[str] = Field(min_length=2, max_length=4)
+    correct_indices: list[int] = Field(min_length=1, max_length=3)
+    explanation: str = Field(min_length=1, max_length=1000)
+    source_quote: str = Field(min_length=8, max_length=500)
+    lesson_id: str | None = None
+
+
+class ExerciseSubmission(BaseModel):
+    request_id: str = Field(min_length=32, max_length=32)
+    selected_indices: list[int] = Field(min_length=1, max_length=4)
 
 
 class TimerStart(BaseModel):
@@ -155,6 +173,54 @@ def overview(course: str, _: Authenticated) -> dict:
         "group_phase": (group.get("session") or {}).get("phase", "not_started"),
         "mastery_automatically_updated": False,
     }
+
+
+@api.get("/api/courses/{course}/exercises")
+def exercise_list(course: str, _: Authenticated) -> dict:
+    name = existing_course(course)
+    try:
+        return exercises.list_questions(root_dir(), name)
+    except (exercises.ExerciseError, ValueError) as exc:
+        raise HTTPException(409, str(exc)) from exc
+
+
+@api.post("/api/courses/{course}/exercises")
+def exercise_create(course: str, payload: ExerciseCreate, _: Authenticated) -> dict:
+    name = existing_course(course)
+    try:
+        return exercises.create(root_dir(), name, payload.model_dump())
+    except (exercises.ExerciseError, ValueError) as exc:
+        raise HTTPException(409, str(exc)) from exc
+
+
+@api.post("/api/courses/{course}/exercises/{exercise_id}/submit")
+def exercise_submit(course: str, exercise_id: str,
+                    payload: ExerciseSubmission, _: Authenticated) -> dict:
+    name = existing_course(course)
+    try:
+        result, inserted = exercises.submit(
+            root_dir(), name, exercise_id, payload.request_id, payload.selected_indices
+        )
+    except (exercises.ExerciseError, ValueError) as exc:
+        raise HTTPException(409, str(exc)) from exc
+    # Existing 45min timer remains authoritative. Count only *new* learner
+    # attempts, never a repeated idempotent network retry.
+    if inserted and lesson_timer.status(root_dir(), name).get("is_active"):
+        try:
+            lesson_timer.transition(root_dir(), name, "heartbeat")
+        except ValueError:
+            pass  # A quiz attempt does not grant or reset formal lesson time.
+    return {**result, "replayed": not inserted}
+
+
+@api.get("/api/courses/{course}/exercise-summary")
+def exercise_summary(course: str, _: Authenticated) -> dict:
+    name = existing_course(course)
+    try:
+        return exercises.summary(root_dir(), name)
+    except (exercises.ExerciseError, ValueError) as exc:
+        raise HTTPException(409, str(exc)) from exc
+
 
 @api.get("/api/courses/{course}/timer")
 def timer_status(course: str, _: Authenticated) -> dict:

@@ -115,6 +115,7 @@
     "platform_api/agentscope_tutors.py",
     "platform_api/app.py",
     "platform_api/evidence.py",
+    "platform_api/exercises.py",
     "platform_api/grounding.py",
     "platform_api/pi_gateway.py",
     "pyproject.toml",
