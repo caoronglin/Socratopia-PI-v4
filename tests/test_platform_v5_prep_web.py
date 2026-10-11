@@ -51,7 +51,7 @@ def test_prep_dry_run_then_create_never_auto_ready(client: TestClient) -> None:
     lesson = data["lesson_id"]
     assert client.get(base, headers=AUTH).json()["lessons"][lesson] == "draft"
     checked = client.get(base + "/" + lesson, headers=AUTH).json()
-    assert checked["status"] == "draft" and checked["errors"]
+    assert checked["status"] == "draft" and checked["ready_for_class"] is False
     repeated = client.post(base + "/chapter/plan", headers=AUTH,
         json={"chapter": "第一章 遗传学", "apply": True})
     assert repeated.status_code == 200

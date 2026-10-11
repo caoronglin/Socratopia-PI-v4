@@ -27,7 +27,7 @@ test('desktop onboarding → textbook → live classroom quiz → AntV → mobil
   await page.getByRole('button', { name: '保存草稿（不覆盖）' }).click();
   await expect(page.getByText('草稿已保存')).toBeVisible();
   await page.getByRole('button', { name: '检查', exact: true }).click();
-  await expect(page.getByText('仍有阻断事项')).toBeVisible();
+  await expect(page.getByText('尚未通过 ready 门禁')).toBeVisible();
 
   // Browser integration: history GET restores a server-provided transcript.
   // Actual SQLite persistence is verified by the Python API tests.

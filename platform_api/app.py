@@ -203,8 +203,10 @@ def course_prep_check(course: str, lesson_id: str, _: Authenticated) -> dict:
         from scripts.lib.repository import validate_lesson_id
         validate_lesson_id(lesson_id)
         errors, warnings = check_prep(root_dir(), name, lesson_id)
-        return {"course": name, "lesson_id": lesson_id,
-                "status": prep_status(root_dir(), name).get(lesson_id, "missing"),
+        status = prep_status(root_dir(), name).get(lesson_id, "missing")
+        return {"course": name, "lesson_id": lesson_id, "status": status,
+                "ready_for_class": status == "ready" and not errors and
+                    not any(w.startswith("stale") for w in warnings),
                 "errors": errors, "warnings": warnings}
     except (ValueError, OSError) as exc:
         raise HTTPException(409, str(exc)) from exc

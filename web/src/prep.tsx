@@ -10,7 +10,7 @@ type Draft = {
   lesson_id: string; chapter: string; preview?: string; path: string;
   draft?: boolean; exists?: boolean; dry_run?: boolean; ready_granted?: boolean;
 };
-type Check = { lesson_id: string; status: string; errors: string[]; warnings: string[] };
+type Check = { lesson_id: string; status: string; ready_for_class: boolean; errors: string[]; warnings: string[] };
 
 export default function PrepPanel({ course, request }: { course: string; request: CourseRequest }) {
   const [book, setBook] = useState<Book | null>(null);
@@ -117,10 +117,11 @@ export default function PrepPanel({ course, request }: { course: string; request
           {check ? <>
             <Text strong>教案 {selectedLesson} · {check.status}</Text>
             <Paragraph type="secondary">检查只读；不会自动将 draft 改为 ready。</Paragraph>
-            {check.errors.length ? <Alert type="warning" showIcon message="仍有阻断事项"
-              description={<ul>{check.errors.map((v, i) => <li key={i}>{v}</li>)}</ul>} /> :
-              <Alert type="success" showIcon message="结构检查无阻断错误"
-                description="仍需人工核查授课内容与教材一致；课堂开课由后端最终验证。" />}
+            {!check.ready_for_class ? <Alert type="warning" showIcon message="尚未通过 ready 门禁"
+              description={check.errors.length ? <ul>{check.errors.map((v, i) => <li key={i}>{v}</li>)}</ul> :
+                "结构校验可以通过，但当前仍是 draft；须经人工审核并在权威 PREP 状态机标记 ready 后才可正式开课。"} /> :
+              <Alert type="success" showIcon message="PREP 已通过结构及版本检查"
+                description="开课仍由后端复核全课程 readiness、教材与计时条件。" />}
             {check.warnings.length > 0 && <Alert type="warning" showIcon className="feedback"
               message="待复核的提示" description={check.warnings.join('；')} />}
           </> : <Empty description="选择左侧教案进行状态检查" />}
