@@ -1,0 +1,8 @@
+{
+  "name": "socratopia-pi-runtime",
+  "private": true,
+  "version": "5.0.0-alpha.1",
+  "type": "module",
+  "scripts": {"start": "node server.mjs", "check": "node --check server.mjs"},
+  "dependencies": {"@earendil-works/pi-coding-agent": "1.1.0"}
+}
