@@ -36,6 +36,8 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
   const [timer, setTimer] = useState<Timer | null>(null);
   const [group, setGroup] = useState<Group | null>(null);
   const [lessonId, setLessonId] = useState('lesson_001');
+  const [newCourse, setNewCourse] = useState('');
+  const [newTutor, setNewTutor] = useState('F');
   const [message, setMessage] = useState('');
   const [turns, setTurns] = useState<Turn[]>([]);
   const [topic, setTopic] = useState('');
@@ -94,6 +96,16 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
   const post = async <T,>(suffix: string, body: object = {}): Promise<T> =>
     request<T>('/courses/' + encodeURIComponent(course) + suffix, 'POST', body);
 
+  const createCourse = async () => {
+    if (!newCourse.trim()) return;
+    await run(async () => {
+      await request('/courses', 'POST', { name: newCourse.trim(), tutor: newTutor });
+      const result = await request<{courses: string[]}>('/courses');
+      setCourses(result.courses);
+      setCourse(newCourse.trim());
+      setNewCourse('');
+    });
+  };
   const chat = async () => {
     const input = message.trim();
     if (!course || !input) return;
@@ -244,7 +256,18 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
                   </Card>
                 </Col>
               </Row>}
-              {tab === 'course' && <Row gutter={[16, 16]}>
+              {tab === 'course' && <>
+                <Card title="创建课程（仅补齐缺失骨架，不自动生成教材）" className="control-card">
+                  <Flex wrap="wrap" gap="small">
+                    <Input placeholder="新课程名称" value={newCourse}
+                      onChange={e => setNewCourse(e.target.value)} style={{ maxWidth: 230 }} />
+                    <Select value={newTutor} onChange={setNewTutor} style={{ minWidth: 130 }}
+                      options={['D','E','F'].map(value => ({value,label:tutorNames[value]}))} />
+                    <Button type="primary" loading={busy} disabled={!newCourse.trim()}
+                      onClick={() => void createCourse()}>创建课程</Button>
+                  </Flex>
+                </Card>
+                <Row gutter={[16, 16]}>
                 <Col xs={24} lg={12}><Card title="课程进度">
                   <Statistic title="当前阶段" value={state?.phase || '尚未载入'} />
                   <Divider />
@@ -260,7 +283,7 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
                     <Alert type="success" showIcon message="未记录课程阻断条件" />}
                   <Paragraph className="section-note" type="secondary">正式开课仍会由后端核对 PREP、教材版本和计时条件。</Paragraph>
                 </Card></Col>
-              </Row>}
+                </Row></>}
             </>
           )}
         </Content>

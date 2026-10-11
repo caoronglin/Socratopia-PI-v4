@@ -10,6 +10,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException
 from pydantic import BaseModel, Field
 
 from scripts.lib import learning_group, lesson_timer
+from scripts.initialize import initialize as initialize_course
 from scripts.lib.course_state import load_state, validate_state
 from scripts.lib.repository import course_dir, iter_course_paths, validate_course_name
 
@@ -43,6 +44,11 @@ def existing_course(course: str) -> str:
         return name
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
+
+
+class CourseCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=120)
+    tutor: Literal["D", "E", "F"] = "F"
 
 
 class ChatRequest(BaseModel):
@@ -87,6 +93,14 @@ def courses(_: Authenticated) -> dict:
         except ValueError:
             continue
     return {"courses": names}
+
+
+@api.post("/api/courses")
+def create_course(payload: CourseCreate, _: Authenticated) -> dict:
+    try:
+        return initialize_course(root_dir(), payload.name, payload.tutor)
+    except (ValueError, OSError) as exc:
+        raise HTTPException(409, str(exc)) from exc
 
 
 @api.get("/api/courses/{course}/state")

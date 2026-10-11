@@ -1,0 +1,55 @@
+name: platform-v5
+
+on:
+  push:
+    branches: [feat/v5-platform-foundation]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  python-api:
+    name: Python 3.15 API and legacy smoke
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.15'
+      - name: Install platform and test dependencies
+        run: python -m pip install -e '.[dev]'
+      - name: Show installed library versions
+        run: python -c "import agentscope, sys; print(sys.version); print(agentscope.__version__)"
+      - name: Compile app and existing scripts
+        run: python -m compileall -q platform_api scripts tests
+      - name: Run API tests
+        run: python -m pytest -q tests/test_platform_v5.py
+      - name: Run original smoke
+        run: python scripts/check.py --strict
+
+  node-web:
+    name: Node Pi SDK and Ant Design build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Install SDK and verify syntax
+        working-directory: runtimes/pi
+        run: |
+          npm install --ignore-scripts --no-audit --no-fund
+          npm run check
+      - name: Install React/Ant Design and build UI
+        working-directory: web
+        run: |
+          npm install --ignore-scripts --no-audit --no-fund
+          npm run build

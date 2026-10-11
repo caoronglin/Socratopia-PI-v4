@@ -1,5 +1,7 @@
 # Socratopia PI v4
 
+> **v5 Alpha 开发分支**：已开始从 v4 提示词/CLI 架构迁移至 Python 3.15 + AgentScope 2.0 + Pi SDK + React/Ant Design 6。**尚未发布/合并 main**。使用方法与限制见 [docs/PLATFORM_V5.md](docs/PLATFORM_V5.md)。v4.3.2 ZIP 仍保持原用法。
+
 面向 PI coding agent 的 Socratopia 提示词/课程状态架构重构版。
 
 ## 核心思想
