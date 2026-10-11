@@ -1,5 +1,20 @@
 # Changelog
 
+## v5.0.0-alpha.2 (candidate, 2026-10-11)
+
+### Added
+- Per-course, SQLite-backed classroom chat transcript; last 50 accepted exchanges restored after reload.
+- Explicit stale textbook evidence warning, original citation snapshot retained as historical evidence.
+- Python3.15 API tests for access control, course isolation, persistence, failed generation and symlink hardening.
+- Playwright browser coverage for transcript restoration, matching desktop and mobile source-of-truth behavior.
+
+### Safeguards
+- Does not persist unchecked model JSON or prompt text; no fake mastery, teaching time or PREP approvals.
+- Main branch remains v5 Alpha; v4.3.2 stable GitHub Release and CLI release process remain unchanged.
+- Alpha.2 still requires E2E with real configured model credentials, provider setup and persisted Pi model session support before stable.
+
+
+
 ## Unreleased — Audit remediation
 
 ### Fixed

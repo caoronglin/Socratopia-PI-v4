@@ -2,6 +2,7 @@ name: v5 Web Standalone Executables
 on:
   push:
     branches: [main, feat/v5-platform-foundation]
+  pull_request:
   workflow_dispatch:
 permissions:
   contents: read
