@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, Button, Card, Col, Collapse, Empty, List, Row, Select, Space, Steps, Tag, Typography } from 'antd';
+import { Alert, Button, Card, Col, Collapse, Empty, Flex, Listy, Row, Select, Space, Steps, Tag, Typography } from 'antd';
 import type { CourseRequest } from './practice';
 
 const { Paragraph, Text } = Typography;
@@ -105,13 +105,14 @@ export default function PrepPanel({ course, request }: { course: string; request
     <Card title="教案检查" className="control-card">
       <Row gutter={[16, 16]}>
         <Col xs={24} md={12}>
-          <List size="small" dataSource={Object.entries(lessons)}
-            locale={{ emptyText: '还没有章节教案，先创建第一份草稿' }}
-            renderItem={([id, status]) => <List.Item>
+          {Object.keys(lessons).length ? <Listy
+            items={Object.entries(lessons).map(([id, status]) => ({ id, status }))}
+            rowKey="id"
+            itemRender={({ id, status }) => <Flex align="center" justify="space-between" gap="middle" wrap="wrap">
               <Space><Text code>{id}</Text><Tag color={status === 'ready' ? 'green' :
                 status === 'stale' || status === 'invalid' ? 'red' : 'default'}>{status}</Tag></Space>
               <Button type="link" onClick={() => validate(id)}>检查</Button>
-            </List.Item>} />
+            </Flex>} /> : <Empty description="还没有章节教案，先创建第一份草稿" />}
         </Col>
         <Col xs={24} md={12}>
           {check ? <>

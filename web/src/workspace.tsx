@@ -5,7 +5,7 @@ import PracticePanel from './practice';
 import ResourcesPanel from './resources';
 import PrepPanel from './prep';
 import {
-  Alert, Badge, Breadcrumb, Button, Card, Col, Divider, Empty, Flex, Input, Layout, List,
+  Alert, Badge, Breadcrumb, Button, Card, Col, Divider, Empty, Flex, Input, Layout, Listy,
   Menu, Progress, Row, Select, Space, Statistic, Switch, Tag, Typography
 } from 'antd';
 
@@ -243,8 +243,7 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
                 <Row gutter={[16, 16]}>
                   <Col xs={24} lg={16}>
                     <Card title="教学对话" className="chat-card" extra={<Tag>最近 50 轮问答</Tag>}>
-                      <List dataSource={turns} locale={{ emptyText: '输入一个问题，开始与 Pi 导师交互' }}
-                        renderItem={(turn, index) => <List.Item key={index}>
+                      {turns.length ? <Listy items={turns.map((turn, index) => ({ ...turn, rowId: index }))} rowKey="rowId" itemRender={turn => <div className="chat-list-item">
                           <div className="chat-turn">
                             <Flex align="center" gap="small" wrap="wrap">
                               <Text strong>{tutorNames[turn.speaker] || turn.speaker}</Text>
@@ -258,7 +257,7 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
                                 <Text code>{citation.source_id}</Text> {citation.section}：{citation.quote}
                               </Paragraph>)}
                             </div>
-                        </List.Item>} />
+                        </div>} /> : <Empty description="输入一个问题，开始与 Pi 导师交互" />}
                       <Divider />
                       <Input.TextArea value={message} onChange={e => setMessage(e.target.value)}
                         placeholder="对课程提问，或解释你的解题思路…" rows={3} maxLength={2000} showCount />
@@ -315,9 +314,7 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
                 </Col>
                 <Col xs={24} lg={15}>
                   <Card title="导师讨论" extra={<Tag>{group?.session?.phase || '未开始'}</Tag>}>
-                    <List locale={{ emptyText: '配置导师与主题后开始讨论' }}
-                      dataSource={group?.session?.turns || []}
-                      renderItem={(turn, index) => <List.Item key={index}>
+                    {(group?.session?.turns?.length || 0) > 0 ? <Listy items={(group?.session?.turns || []).map((turn, index) => ({ ...turn, rowId: index }))} rowKey="rowId" itemRender={turn => <div className="chat-list-item">
                         <div className="chat-turn"><Text strong>{tutorNames[turn.speaker]}</Text>
                           <Paragraph className="message-text">{turn.text}</Paragraph>
                           {turn.evidence?.citations.map((citation, j) =>
@@ -326,7 +323,7 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
                             </Paragraph>)}
                           {turn.evidence && <Text type="secondary">来源摘要：{turn.evidence.sha256.slice(0, 16)}…</Text>}
                         </div>
-                      </List.Item>} />
+                      </div>} /> : <Empty description="配置导师与主题后开始讨论" />}
                     <Space wrap>
                       <Button type="primary" loading={busy} disabled={!group?.next_speaker}
                         onClick={() => void nextGroup()}>
@@ -361,12 +358,10 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
                   <Divider />
                   <Text type="secondary">来源：{evidence.source}</Text>
                   <Paragraph type="secondary" copyable={{text:evidence.sha256}}>SHA-256：{evidence.sha256.slice(0, 16)}…</Paragraph>
-                  <List dataSource={evidence.excerpts}
-                    locale={{emptyText:"当前问题未检索到匹配的教材段落"}}
-                    renderItem={item => <List.Item>
+                  <Listy items={evidence.excerpts.map((item, index) => ({ ...item, rowId: index }))} rowKey="rowId" itemRender={item => <div className="chat-list-item">
                       <div className="chat-turn"><Text strong>{item.id} · {item.section}</Text>
                         <Paragraph className="message-text quote">{item.text}</Paragraph></div>
-                    </List.Item>} />
+                    </div>} />
                 </>}
                 </Card>
               </>}

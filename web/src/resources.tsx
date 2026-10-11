@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Alert, Button, Card, Divider, Empty, Input, List, Space, Tag, Typography, Upload } from 'antd';
+import { Alert, Button, Card, Divider, Empty, Flex, Input, Listy, Space, Tag, Typography, Upload } from 'antd';
 import type { CourseRequest } from './practice';
 
 type Chapter = { title: string; level: number; line: number };
@@ -43,15 +43,14 @@ export default function ResourcesPanel({ course, request, onImported, onExplore 
           文件摘要 SHA-256：{book.sha256?.slice(0, 16)}… · {book.bytes?.toLocaleString()} 字节
         </Paragraph>
         <Divider />
-        <List size="small" header="章节目录（点击查询教材证据）"
-          dataSource={book.chapters}
-          locale={{ emptyText: '教材中暂无 Markdown 标题；仍可使用正文进行证据检索' }}
-          renderItem={chapter => <List.Item>
+        <Text strong>章节目录（点击查询教材证据）</Text>
+        {book.chapters.length ? <Listy items={book.chapters} rowKey="line"
+          itemRender={chapter => <Flex align="center" justify="space-between" wrap="wrap" gap="small">
             <Button type="link" onClick={() => onExplore(chapter.title)}>
               {chapter.level > 1 ? '　'.repeat(chapter.level - 1) : ''}{chapter.title}
             </Button>
             <Text type="secondary">第 {chapter.line} 行</Text>
-          </List.Item>} />
+          </Flex>} /> : <Empty description="教材中暂无 Markdown 标题；仍可使用正文进行证据检索" />}
       </> : <>
         <Alert type="warning" showIcon title="尚无主教材"
           description="可导入 Markdown/TXT 教材或粘贴正文；原有教材一律不可覆盖，导入不会自动解除正式开课 PREP 门禁。" />
