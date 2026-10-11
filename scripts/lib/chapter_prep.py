@@ -38,7 +38,13 @@ def chapter_outline(root: Path, course: str, chapter: str) -> tuple[str, list[st
     base = textbook_dir(root, course)
     if not (base / "book.md").is_file():
         raise ValueError("缺少 active book.md，不允许生成虚构章节教案")
-    headings = _headings(base / "_outline.md") or _headings(base / "book.md")
+    outline_headings = _headings(base / "_outline.md")
+    # scaffold_course initializes _outline.md with a placeholder heading.
+    # Treat it as *not an authored outline*, otherwise a newly imported Web
+    # book is impossible to prepare even when its real Markdown headings exist.
+    if outline_headings == [(1, "Coursebook Outline")]:
+        outline_headings = []
+    headings = outline_headings or _headings(base / "book.md")
     exact = [i for i, (_, title) in enumerate(headings) if title == name]
     candidate = exact or [i for i, (_, title) in enumerate(headings) if title.startswith(name + " ")]
     if len(candidate) != 1:

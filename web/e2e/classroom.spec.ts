@@ -18,6 +18,16 @@ test('desktop onboarding → textbook → live classroom quiz → AntV → mobil
   await page.getByRole('button', { name: '确认导入（只创建，不覆盖）' }).click();
   await expect(page.getByText('主教材已载入')).toBeVisible();
   await expect(page.getByText('第一节 减数分裂')).toBeVisible();
+  await page.getByText('章节备课', { exact: true }).first().click();
+  await expect(page.getByText('章节备课与正式课堂分离')).toBeVisible();
+  await page.getByRole('combobox', { name: '选择备课章节' }).click();
+  await page.locator('.ant-select-item-option-content').getByText('遗传学', { exact: true }).click();
+  await page.getByRole('button', { name: '预览备课草稿' }).click();
+  await expect(page.getByText('仅预览，尚未保存')).toBeVisible();
+  await page.getByRole('button', { name: '保存草稿（不覆盖）' }).click();
+  await expect(page.getByText('草稿已保存')).toBeVisible();
+  await page.getByRole('button', { name: '检查', exact: true }).click();
+  await expect(page.getByText('尚未通过 ready 门禁')).toBeVisible();
 
   // Browser integration: history GET restores a server-provided transcript.
   // Actual SQLite persistence is verified by the Python API tests.
