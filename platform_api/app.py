@@ -19,8 +19,10 @@ from platform_api.evidence import EvidenceError, retrieve, is_current
 from platform_api.grounding import GroundingError, check_response, grounded_prompt
 from platform_api.pi_gateway import PiUnavailable, ask_pi
 from platform_api import exercises, books, chat_history
+from scripts.lib import chapter_prep
+from scripts.lib.prep import prep_status, check_prep, prep_path
 
-api = FastAPI(title="Socratopia API", version="5.0.0-alpha.2", docs_url=None, redoc_url=None)
+api = FastAPI(title="Socratopia API", version="5.0.0-alpha.3", docs_url=None, redoc_url=None)
 
 
 def root_dir() -> Path:
@@ -52,6 +54,12 @@ def existing_course(course: str) -> str:
 class CourseCreate(BaseModel):
     name: str = Field(min_length=1, max_length=120)
     tutor: Literal["D", "E", "F"] = "F"
+
+
+class ChapterPrepRequest(BaseModel):
+    chapter: str = Field(min_length=1, max_length=160)
+    sources: list[str] = Field(default_factory=list, max_length=16)
+    apply: bool = False
 
 
 class ChatRequest(BaseModel):
@@ -177,6 +185,43 @@ def overview(course: str, _: Authenticated) -> dict:
         "mastery_automatically_updated": False,
     }
 
+
+
+@api.get("/api/courses/{course}/prep")
+def course_prep_status(course: str, _: Authenticated) -> dict:
+    name = existing_course(course)
+    try:
+        return {"course": name, "lessons": prep_status(root_dir(), name)}
+    except (ValueError, OSError) as exc:
+        raise HTTPException(409, str(exc)) from exc
+
+
+@api.get("/api/courses/{course}/prep/{lesson_id}")
+def course_prep_check(course: str, lesson_id: str, _: Authenticated) -> dict:
+    name = existing_course(course)
+    try:
+        from scripts.lib.repository import validate_lesson_id
+        validate_lesson_id(lesson_id)
+        errors, warnings = check_prep(root_dir(), name, lesson_id)
+        return {"course": name, "lesson_id": lesson_id,
+                "status": prep_status(root_dir(), name).get(lesson_id, "missing"),
+                "errors": errors, "warnings": warnings}
+    except (ValueError, OSError) as exc:
+        raise HTTPException(409, str(exc)) from exc
+
+
+@api.post("/api/courses/{course}/prep/chapter")
+def course_prep_chapter(course: str, payload: ChapterPrepRequest, _: Authenticated) -> dict:
+    name = existing_course(course)
+    try:
+        result = chapter_prep.plan_chapter(
+            root_dir(), name, payload.chapter,
+            sources=payload.sources, apply=payload.apply
+        )
+        # No automatic ready promotion. Newly created plans remain drafts.
+        return {**result, "ready_granted": False, "mastery_updated": False}
+    except (ValueError, OSError) as exc:
+        raise HTTPException(409, str(exc)) from exc
 
 
 @api.get("/api/courses/{course}/book")
