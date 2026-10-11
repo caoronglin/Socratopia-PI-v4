@@ -3,8 +3,9 @@ import { TabBar } from 'antd-mobile';
 import { AppOutline, MessageOutline, UnorderedListOutline, UserOutline } from 'antd-mobile-icons';
 import PracticePanel from './practice';
 import ResourcesPanel from './resources';
+import PrepPanel from './prep';
 import {
-  Alert, Button, Card, Col, Divider, Empty, Flex, Input, Layout, List,
+  Alert, Badge, Breadcrumb, Button, Card, Col, Divider, Empty, Flex, Input, Layout, List,
   Menu, Progress, Row, Select, Space, Statistic, Switch, Tag, Typography
 } from 'antd';
 
@@ -180,13 +181,15 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
 
   return (
     <Layout className="shell">
+      <a className="skip-link" href="#main-content">跳到主要内容</a>
       <Sider breakpoint="lg" collapsedWidth="0" width={232} theme={dark ? 'dark' : 'light'} className="sidebar desktop-sidebar">
-        <div className="brand">Socratopia <span>v5 Alpha.2</span></div>
+        <div className="brand">Socratopia <span>v5 Alpha.3</span></div>
         <Text type="secondary" className="brand-note">你的课程学习空间</Text>
         <Menu selectedKeys={[tab]} onClick={({ key }) => setTab(key)} mode="inline"
           items={[
             { key: 'class', label: '课堂与对话' },
             { key: 'group', label: '导师学习小组' },
+             { key: 'prep', label: '章节备课' },
             { key: 'course', label: '课程状态' },
             { key: 'evidence', label: '教材证据' },
           ]} />
@@ -197,18 +200,20 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
             <Text strong>学习工作台</Text>
             {course && <Tag color="blue">{course}</Tag>}
           </Space>
-          <Space align="center"><Text type="secondary">深色模式</Text><Switch checked={dark} onChange={onDarkChange} /></Space>
+          <Space align="center"><Text type="secondary">深色模式</Text><Switch aria-label="切换深色模式" checked={dark} onChange={onDarkChange} /></Space>
         </Header>
-        <Content className="content">
+        <Content className="content" id="main-content">
           <div className="page-heading">
-            <Title level={3}>{tab === 'class' ? '课堂与对话' : tab === 'group' ? '学习小组' : tab === 'evidence' ? '教材证据' : '课程概览'}</Title>
+            <Breadcrumb items={[{ title: 'Socratopia' }, { title: course || '选择课程' },
+              { title: tab === 'prep' ? '章节备课' : tab === 'class' ? '课堂' : tab === 'group' ? '学习小组' : tab === 'evidence' ? '教材' : '课程' }]} />
+            <Title level={3}>{tab === 'class' ? '课堂与对话' : tab === 'group' ? '学习小组' : tab === 'prep' ? '章节备课' : tab === 'evidence' ? '教材证据' : '课程概览'}</Title>
             <Paragraph type="secondary">真实运行状态由 Python 服务管理，导师输出不会自动记为知识掌握。</Paragraph>
           </div>
-          <Card size="small" className="control-card">
+          <Card size="small" className="control-card" title={<Space size="small"><Badge status={course ? 'success' : 'default'} />课程连接</Space>}>
             <Flex gap="small" align="center" wrap="wrap">
-              <Input.Password placeholder="服务令牌（仅保存在此页面内存）" value={token}
+              <Input.Password aria-label="本地服务访问令牌" placeholder="服务令牌（仅保存在此页面内存）" value={token}
                 onChange={e => setToken(e.target.value)} style={{ maxWidth: 280 }} />
-              <Button onClick={() => void refreshCourses()} disabled={!token} loading={busy}>连接并刷新</Button>
+              <Button type="primary" onClick={() => void refreshCourses()} disabled={!token} loading={busy}>连接并刷新</Button>
               <Select placeholder="选择课程" value={course || undefined} onChange={setCourse}
                 style={{ minWidth: 180 }} options={courses.map(name => ({ value: name, label: name }))} />
               <Button onClick={() => void run(reload)} disabled={!course} loading={busy}>刷新状态</Button>
@@ -287,7 +292,8 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
                       setError(err instanceof Error ? err.message : '课程状态刷新失败')); }} />
                 </section>
               </>}
-              {tab === 'group' && <Row gutter={[16, 16]}>
+              {tab === 'prep' && <PrepPanel key={course} course={course} request={request} />}
+               {tab === 'group' && <Row gutter={[16, 16]}>
                 <Col xs={24} lg={9}>
                   <Card title="导师配置">
                     <Space direction="vertical" style={{ width: '100%' }}>
@@ -417,6 +423,7 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
           <TabBar activeKey={tab} onChange={setTab} safeArea>
             <TabBar.Item key="class" icon={<MessageOutline />} title="课堂" />
             <TabBar.Item key="group" icon={<UserOutline />} title="导师" />
+             <TabBar.Item key="prep" icon={<UnorderedListOutline />} title="备课" />
             <TabBar.Item key="evidence" icon={<UnorderedListOutline />} title="教材" />
             <TabBar.Item key="course" icon={<AppOutline />} title="课程" />
           </TabBar>

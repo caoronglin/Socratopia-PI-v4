@@ -62,3 +62,27 @@ body { margin: 0; }
 
 .import-form { display: grid; gap: 14px; margin-top: 16px; }
 .import-form .ant-input { min-height: 130px; }
+
+/* Alpha.3: native Ant Design surfaces + keyboard accessibility. */
+.skip-link { position: fixed; left: 12px; top: -60px; z-index: 1000;
+  background: var(--ant-color-bg-container); color: var(--ant-color-text);
+  padding: 10px 14px; border: 2px solid var(--ant-color-primary); border-radius: 6px; }
+.skip-link:focus { top: 10px; }
+.page-heading .ant-breadcrumb { margin-bottom: 8px; }
+.page-heading h3 { font-weight: 620; letter-spacing: -.02em; }
+.control-card .ant-card-head { min-height: 44px; }
+.desktop-sidebar { position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+.prep-workspace { display: grid; gap: 18px; }
+.prep-actions { margin-top: 20px; }
+.prep-preview { margin-top: 20px; }
+.prep-collapse { margin-top: 12px; }
+.prep-markdown { max-height: 380px; overflow: auto; white-space: pre-wrap;
+  overflow-wrap: anywhere; font-size: 12px; padding: 14px;
+  background: var(--ant-color-fill-quaternary); border-radius: var(--ant-border-radius); }
+.prep-workspace .ant-steps { margin-bottom: 8px; }
+:focus-visible { outline: 2px solid var(--ant-color-primary); outline-offset: 2px; }
+@media (max-width: 768px) {
+  .prep-actions .ant-select { width: 100%; }
+  .prep-workspace .ant-steps-item-title { font-size: 11px; }
+  .page-heading .ant-breadcrumb { font-size: 12px; }
+}
