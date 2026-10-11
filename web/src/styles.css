@@ -1,0 +1,25 @@
+:root { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+* { box-sizing: border-box; }
+body { margin: 0; }
+.shell { min-height: 100vh; }
+.sidebar { border-right: 1px solid rgba(128, 128, 128, .12); }
+.brand { padding: 28px 24px 3px; font-size: 21px; font-weight: 720; letter-spacing: -.5px; }
+.brand span { color: #668ab8; font-size: 12px; vertical-align: top; }
+.brand-note { display: block; margin: 0 24px 24px; font-size: 12px; }
+.topbar { display: flex; height: 64px; align-items: center; justify-content: space-between;
+  padding: 0 28px; background: var(--ant-color-bg-container);
+  border-bottom: 1px solid var(--ant-color-border-secondary); }
+.content { max-width: 1380px; width: 100%; margin: 0 auto; padding: 26px 30px 60px; }
+.page-heading { margin-bottom: 18px; }
+.page-heading h3 { margin-bottom: 4px; }
+.control-card { margin-bottom: 18px; }
+.feedback { margin-bottom: 18px; }
+.chat-card .ant-list { min-height: 250px; max-height: 560px; overflow-y: auto; }
+.chat-turn { width: 100%; }
+.message-text { white-space: pre-wrap; overflow-wrap: anywhere; margin: 6px 0 0 !important; }
+.send-row { margin-top: 18px; }
+.section-note { margin-top: 18px; }
+@media (max-width: 768px) {
+  .content { padding: 16px; }
+  .topbar { padding: 0 16px; }
+}
