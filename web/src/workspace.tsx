@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { TabBar } from 'antd-mobile';
 import { AppOutline, MessageOutline, UnorderedListOutline, UserOutline } from 'antd-mobile-icons';
 import PracticePanel from './practice';
@@ -21,7 +21,8 @@ type Timer = {
   minimum_seconds: number; completed: boolean; is_active?: boolean;
 };
 type Citation = { source_id: string; section: string; quote: string };
-type Turn = { speaker: string; text: string; grounding?: string; citations?: Citation[]; fact_verified?: boolean; evidence?: { sha256: string; citations: Citation[]; grounding: string } };
+type Turn = { speaker: string; text: string; grounding?: string; citations?: Citation[]; source_current?: boolean; fact_verified?: boolean; evidence?: { sha256: string; citations: Citation[]; grounding: string } };
+type ChatHistory = { course: string; exchanges: number; turns: Turn[] };
 type Evidence = { course: string; source: string; sha256: string; excerpts: { id: string; section: string; text: string }[]; ready: boolean };
 type Overview = { course: string; book_available: boolean; grounded_chat_ready: boolean; formal_lesson_ready: boolean; blockers: string[]; timer_phase: string; group_phase: string };
 type Group = {
@@ -36,6 +37,7 @@ const tutorNames: Record<string, string> = { D: '三月七', E: '丹恒', F: '�
 
 export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
   const [token, setToken] = useState('');
+  const latestScope = useRef({ course: '', token: '' });
   const [courses, setCourses] = useState<string[]>([]);
   const [course, setCourse] = useState('');
   const [tab, setTab] = useState('class');
@@ -55,6 +57,8 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
   const [lead, setLead] = useState('D');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+
+  latestScope.current = { course, token };
 
   const request = useCallback(async <T,>(path: string, method = 'GET', body?: object): Promise<T> => {
     if (!token) throw new Error('请先输入本地服务访问令牌');
@@ -82,13 +86,18 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
   const reload = useCallback(async () => {
     if (!course || !token) return;
     const path = '/courses/' + encodeURIComponent(course);
-    const [s, t, g, o] = await Promise.all([
+    const [s, t, g, o, history] = await Promise.all([
       request<CourseState>(path + '/state'),
       request<Timer>(path + '/timer'),
       request<Group>(path + '/group'),
       request<Overview>(path + '/overview'),
+      request<ChatHistory>(path + '/chat/history'),
     ]);
+    // A slow request for an earlier course or token must not overwrite
+    // the selected course's new transcript, timer or progress.
+    if (latestScope.current.course !== course || latestScope.current.token !== token) return;
     setState(s); setTimer(t); setGroup(g); setOverview(o);
+    setTurns(history.turns);
     if (s.lesson_id) setLessonId(s.lesson_id);
   }, [course, token, request]);
 
@@ -139,9 +148,9 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
     const input = message.trim();
     if (!course || !input) return;
     await run(async () => {
-      const reply = await post<Turn>('/chat', { message: input });
-      setTurns((old) => [...old, { speaker: 'student', text: input }, reply]);
+      await post<Turn>('/chat', { message: input });
       setMessage('');
+      // The server transcript, not React memory, is the source of history.
       await reload();
     });
   };
@@ -172,7 +181,7 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
   return (
     <Layout className="shell">
       <Sider breakpoint="lg" collapsedWidth="0" width={232} theme={dark ? 'dark' : 'light'} className="sidebar desktop-sidebar">
-        <div className="brand">Socratopia <span>v5</span></div>
+        <div className="brand">Socratopia <span>v5 Alpha.2</span></div>
         <Text type="secondary" className="brand-note">你的课程学习空间</Text>
         <Menu selectedKeys={[tab]} onClick={({ key }) => setTab(key)} mode="inline"
           items={[
@@ -228,14 +237,15 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
 
                 <Row gutter={[16, 16]}>
                   <Col xs={24} lg={16}>
-                    <Card title="教学对话" className="chat-card">
+                    <Card title="教学对话" className="chat-card" extra={<Tag>最近 50 轮问答</Tag>}>
                       <List dataSource={turns} locale={{ emptyText: '输入一个问题，开始与 Pi 导师交互' }}
                         renderItem={(turn, index) => <List.Item key={index}>
                           <div className="chat-turn">
                             <Flex align="center" gap="small" wrap="wrap">
                               <Text strong>{tutorNames[turn.speaker] || turn.speaker}</Text>
-                              {turn.grounding === 'citation_checked' && <Tag color="blue">已核对引文</Tag>}
-                              {turn.grounding === 'insufficient_evidence' && <Tag>证据不足</Tag>}
+                              {turn.grounding === 'citation_checked' && <Tag color="blue">历史引文已核对</Tag>}
+                              {turn.grounding === 'insufficient_evidence' && <Tag>证据不足（未核验）</Tag>}
+                              {turn.source_current === false && <Tag color="orange">原教材已更改，引用可能过期</Tag>}
                             </Flex>
                             <Paragraph className="message-text">{turn.text}</Paragraph>
                             {turn.citations?.map((citation, idx) =>

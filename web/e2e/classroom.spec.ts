@@ -19,7 +19,22 @@ test('desktop onboarding → textbook → live classroom quiz → AntV → mobil
   await expect(page.getByText('主教材已载入')).toBeVisible();
   await expect(page.getByText('第一节 减数分裂')).toBeVisible();
 
+  // Browser integration: history GET restores a server-provided transcript.
+  // Actual SQLite persistence is verified by the Python API tests.
+  await page.route('**/api/courses/**/chat/history', async route => {
+    await route.fulfill({ status: 200, contentType: 'application/json',
+      body: JSON.stringify({ course: NAME, exchanges: 1, turns: [
+        { speaker: 'student', text: '历史对话恢复测试：减数分裂' },
+        { speaker: 'pi', text: '已保存的课堂解释', grounding: 'citation_checked',
+          citations: [{ source_id: 'S1', section: '减数分裂', quote: QUOTE }],
+          source_current: false, fact_verified: false },
+      ] }),
+    });
+  });
   await page.getByText('课堂与对话', { exact: true }).click();
+  await page.getByRole('button', { name: '刷新状态' }).click();
+  await expect(page.getByText('历史对话恢复测试：减数分裂')).toBeVisible();
+  await expect(page.getByText('原教材已更改，引用可能过期')).toBeVisible();
   await expect(page.getByText('课堂互动练习')).toBeVisible();
   await page.getByText('录入已核对的课堂题目').click();
   await page.getByPlaceholder('明确、可客观判分的问题').fill('减数分裂的染色体数目如何变化？');
@@ -43,6 +58,7 @@ test('desktop onboarding → textbook → live classroom quiz → AntV → mobil
   await page.getByRole('button', { name: '连接并刷新' }).click();
   await expect(page.getByText('课堂互动练习')).toBeVisible();
   await expect(page.locator('.practice-question')).toHaveCount(1);
+  await expect(page.getByText('历史对话恢复测试：减数分裂')).toBeVisible();
 
   const mobile = await browser.newContext({
     viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true,

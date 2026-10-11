@@ -6,7 +6,7 @@ import secrets
 from pathlib import Path
 from typing import Annotated, Literal
 
-from fastapi import Depends, FastAPI, Header, HTTPException
+from fastapi import Depends, FastAPI, Header, HTTPException, Response
 from pydantic import BaseModel, Field
 
 from scripts.lib import learning_group, lesson_timer
@@ -18,9 +18,9 @@ from platform_api.agentscope_tutors import TutorUnavailable, generate_tutor_turn
 from platform_api.evidence import EvidenceError, retrieve, is_current
 from platform_api.grounding import GroundingError, check_response, grounded_prompt
 from platform_api.pi_gateway import PiUnavailable, ask_pi
-from platform_api import exercises, books
+from platform_api import exercises, books, chat_history
 
-api = FastAPI(title="Socratopia API", version="5.0.0-alpha.1", docs_url=None, redoc_url=None)
+api = FastAPI(title="Socratopia API", version="5.0.0-alpha.2", docs_url=None, redoc_url=None)
 
 
 def root_dir() -> Path:
@@ -267,6 +267,16 @@ def timer_transition(course: str, payload: TimerTransition, _: Authenticated) ->
         raise HTTPException(409, str(exc)) from exc
 
 
+@api.get("/api/courses/{course}/chat/history")
+def read_chat_history(course: str, response: Response, _: Authenticated) -> dict:
+    response.headers["Cache-Control"] = "no-store"
+    name = existing_course(course)
+    try:
+        return chat_history.recent(root_dir(), name)
+    except (chat_history.HistoryError, OSError, ValueError) as exc:
+        raise HTTPException(409, str(exc)) from exc
+
+
 @api.post("/api/courses/{course}/chat")
 async def chat(course: str, payload: ChatRequest, _: Authenticated) -> dict:
     name = existing_course(course)
@@ -287,9 +297,16 @@ async def chat(course: str, payload: ChatRequest, _: Authenticated) -> dict:
         outcome = check_response(raw, snapshot)
     except GroundingError as exc:
         raise HTTPException(422, str(exc)) from exc
+    response = {"course": name, "speaker": "pi", "source_sha256": snapshot.sha256, **outcome}
+    # A model rejection, invalid citation or textbook revision above never
+    # creates a transcript. Accepted abstentions remain explicitly unverified.
+    try:
+        chat_history.record(root_dir(), name, payload.message, response)
+    except (chat_history.HistoryError, OSError, ValueError) as exc:
+        raise HTTPException(409, "Could not save validated chat: " + str(exc)) from exc
     if outcome["grounding"] == "citation_checked" and lesson_timer.status(root_dir(), name).get("is_active"):
         lesson_timer.transition(root_dir(), name, "heartbeat")
-    return {"course": name, "speaker": "pi", "source_sha256": snapshot.sha256, **outcome}
+    return response
 
 
 def public_group(payload: dict) -> dict:
