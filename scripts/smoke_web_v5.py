@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import signal
 import shutil
 import subprocess
 import sys
@@ -53,6 +54,7 @@ def smoke(archive: Path, platform: str) -> None:
                 [str(binary), "--no-browser", "--port", str(port)],
                 cwd=folder, env=env,
                 stdout=subprocess.DEVNULL, stderr=error_output,
+                start_new_session=(os.name != "nt"),
             )
         try:
             for _ in range(90):
@@ -80,12 +82,29 @@ def smoke(archive: Path, platform: str) -> None:
                 raise RuntimeError("Bundled package contains unexpected user data")
             print(f"PASS: frozen Web + bundled Pi process + UI + API auth on {platform}", flush=True)
         finally:
-            process.terminate()
+            # A frozen --onefile entrypoint launches a secondary Python bootloader
+            # and then Node/Pi. Killing only the outer PID leaves node.exe locked
+            # on Windows (WinError 5 when deleting the extracted distribution).
+            if os.name == "nt":
+                subprocess.run(
+                    ["taskkill", "/PID", str(process.pid), "/T", "/F"],
+                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                    check=False, timeout=15,
+                )
+            else:
+                try:
+                    os.killpg(process.pid, signal.SIGTERM)
+                except ProcessLookupError:
+                    pass
             try:
                 process.wait(timeout=15)
             except subprocess.TimeoutExpired:
                 process.kill()
                 process.wait(timeout=10)
+            if os.name == "nt":
+                # Windows unlocks terminated executable image mappings
+                # asynchronously; this is not a relaxation of verification.
+                time.sleep(1.0)
 
 
 def main() -> int:
