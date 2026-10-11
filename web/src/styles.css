@@ -59,3 +59,6 @@ body { margin: 0; }
   .chat-card .ant-list { max-height: 50vh; }
   .ant-card-body { overflow-wrap: anywhere; }
 }
+
+.import-form { display: grid; gap: 14px; margin-top: 16px; }
+.import-form .ant-input { min-height: 130px; }

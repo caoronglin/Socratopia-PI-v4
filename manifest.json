@@ -228,6 +228,7 @@
     "web/src/main.tsx",
     "web/src/practice.tsx",
     "web/src/practice_chart.tsx",
+    "web/src/resources.tsx",
     "web/src/styles.css",
     "web/src/workspace.tsx",
     "web/tsconfig.json",

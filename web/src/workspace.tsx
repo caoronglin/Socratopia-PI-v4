@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { TabBar } from 'antd-mobile';
 import { AppOutline, MessageOutline, UnorderedListOutline, UserOutline } from 'antd-mobile-icons';
 import PracticePanel from './practice';
+import ResourcesPanel from './resources';
 import {
   Alert, Button, Card, Col, Divider, Empty, Flex, Input, Layout, List,
   Menu, Progress, Row, Select, Space, Statistic, Switch, Tag, Typography
@@ -327,7 +328,12 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
                   </Card>
                 </Col>
               </Row>}
-              {tab === 'evidence' && <Card title="检索主教材证据" extra={<Tag>只读</Tag>}>
+              {tab === 'evidence' && <>
+                <ResourcesPanel key={course} course={course} request={request}
+                  onImported={() => { void reload().catch(err =>
+                    setError(err instanceof Error ? err.message : '课程刷新失败')); }}
+                  onExplore={title => setEvidenceQuery(title)} />
+                <Card title="检索主教材证据" extra={<Tag>只读</Tag>}>
                 <Paragraph type="secondary">从当前课程 book.md 检索相关章节。所有引用显示原文及文件摘要，未验证来源的内容不会自动作为课堂事实。</Paragraph>
                 <Flex gap="small" wrap="wrap">
                   <Input value={evidenceQuery} maxLength={2000} onChange={e => setEvidenceQuery(e.target.value)}
@@ -346,7 +352,8 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
                         <Paragraph className="message-text quote">{item.text}</Paragraph></div>
                     </List.Item>} />
                 </>}
-              </Card>}
+                </Card>
+              </>}
               {tab === 'course' && <>
                 <Card className="control-card" title="模块联动就绪情况">
                   <Flex gap="small" wrap="wrap">
