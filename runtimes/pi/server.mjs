@@ -19,7 +19,7 @@ const cwd = resolve(process.env.SOCRATOPIA_ROOT || process.cwd());
 function courseSessionLocation(course) {
   if (!course || course === '.' || course === '..' ||
       course.includes('/') || course.includes('\\') ||
-        course === '.' || course === '..' || course.includes('\\0') ||
+        course === '.' || course === '..' || course.includes(String.fromCharCode(0)) ||
       course.includes('\0') || course !== course.trim() || course.startsWith('.')) {
     throw new Error('Invalid course name');
   }
