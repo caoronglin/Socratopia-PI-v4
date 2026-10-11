@@ -99,6 +99,8 @@ def test_real_group_state_machine_with_stubbed_llm(client: TestClient, monkeypat
     config = client.post("/api/courses/学习小组课程/group/configure",
                          headers=auth(), json={"members": ["D", "E"], "lead": "D"})
     assert config.status_code == 200, config.text
+    assert config.json()["single_agent_simulation"] is False
+    assert config.json()["execution_backend"] == "agentscope"
     started = client.post("/api/courses/学习小组课程/group/start",
                           headers=auth(), json={"topic": "基因表达", "rounds": 2})
     assert started.json()["next_speaker"] == "D"

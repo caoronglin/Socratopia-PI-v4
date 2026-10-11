@@ -204,16 +204,21 @@ async def chat(course: str, payload: ChatRequest, _: Authenticated) -> dict:
     return {"course": name, "speaker": "pi", "source_sha256": snapshot.sha256, **outcome}
 
 
+def public_group(payload: dict) -> dict:
+    """v4 CLI simulates tutor voices; v5 HTTP executes independent Agents."""
+    return {**payload, "single_agent_simulation": False, "execution_backend": "agentscope"}
+
+
 @api.get("/api/courses/{course}/group")
 def group_status(course: str, _: Authenticated) -> dict:
-    return learning_group.status(root_dir(), existing_course(course))
+    return public_group(learning_group.status(root_dir(), existing_course(course)))
 
 
 @api.post("/api/courses/{course}/group/configure")
 def group_configure(course: str, payload: GroupConfig, _: Authenticated) -> dict:
     name = existing_course(course)
     try:
-        return learning_group.configure(root_dir(), name, payload.members, payload.lead)
+        return public_group(learning_group.configure(root_dir(), name, payload.members, payload.lead))
     except ValueError as exc:
         raise HTTPException(409, str(exc)) from exc
 
@@ -222,7 +227,7 @@ def group_configure(course: str, payload: GroupConfig, _: Authenticated) -> dict
 def group_start(course: str, payload: GroupStart, _: Authenticated) -> dict:
     name = existing_course(course)
     try:
-        return learning_group.start(root_dir(), name, payload.topic, payload.rounds)
+        return public_group(learning_group.start(root_dir(), name, payload.topic, payload.rounds))
     except ValueError as exc:
         raise HTTPException(409, str(exc)) from exc
 
@@ -231,7 +236,7 @@ def group_start(course: str, payload: GroupStart, _: Authenticated) -> dict:
 def group_continue(course: str, payload: GroupContinue, _: Authenticated) -> dict:
     name = existing_course(course)
     try:
-        return learning_group.continue_round(root_dir(), name, payload.question)
+        return public_group(learning_group.continue_round(root_dir(), name, payload.question))
     except ValueError as exc:
         raise HTTPException(409, str(exc)) from exc
 
@@ -271,7 +276,7 @@ async def group_next(course: str, _: Authenticated) -> dict:
         )
     except ValueError as exc:
         raise HTTPException(409, str(exc)) from exc
-    return {**result, "source_sha256": snapshot.sha256,
+    return {**public_group(result), "source_sha256": snapshot.sha256,
             "last_turn_evidence": outcome["citations"],
             "grounding": outcome["grounding"], "fact_verified": False,
             "single_agent_simulation": False, "execution_backend": "agentscope"}
