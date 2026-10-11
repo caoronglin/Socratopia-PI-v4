@@ -1,6 +1,8 @@
 // A real embedded Pi SDK session, not an independent prompt emulation.
 import { createServer } from 'node:http';
 import { timingSafeEqual } from 'node:crypto';
+import { existsSync, lstatSync, mkdirSync, realpathSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 import { createAgentSession, SessionManager } from '@earendil-works/pi-coding-agent';
 
 const token = process.env.SOCRATOPIA_API_TOKEN;
@@ -10,7 +12,38 @@ if (!token || token.length < 16) {
 const sessions = new Map();
 const busy = new Set();
 const maxBytes = 32 * 1024;
-const cwd = process.env.SOCRATOPIA_ROOT || process.cwd();
+const cwd = resolve(process.env.SOCRATOPIA_ROOT || process.cwd());
+
+// Pi SDK sessions are private to a course, not a single shared in-memory
+// session or the global ~/.pi/sessions. This does not mark responses verified.
+function courseSessionLocation(course) {
+  if (!course || course === '.' || course === '..' ||
+      course.includes('/') || course.includes('\\') ||
+        course === '.' || course === '..' || course.includes('\\0') ||
+      course.includes('\0') || course !== course.trim() || course.startsWith('.')) {
+    throw new Error('Invalid course name');
+  }
+  const data = join(cwd, 'DATA');
+  if (!existsSync(data) || lstatSync(data).isSymbolicLink()) throw new Error('Invalid DATA root');
+  const courseDir = join(data, course);
+  if (!existsSync(courseDir) || lstatSync(courseDir).isSymbolicLink() ||
+      !lstatSync(courseDir).isDirectory()) {
+    throw new Error('Course does not exist or is symlinked');
+  }
+  const canonical = realpathSync(courseDir);
+  if (canonical !== resolve(courseDir)) throw new Error('Unsafe course path');
+  const runtime = join(courseDir, 'runtime');
+  if (existsSync(runtime) && lstatSync(runtime).isSymbolicLink()) {
+    throw new Error('Symlinked course runtime is forbidden');
+  }
+  mkdirSync(runtime, { recursive: true, mode: 0o700 });
+  const sessionDir = join(runtime, 'pi_sessions');
+  if (existsSync(sessionDir) && lstatSync(sessionDir).isSymbolicLink()) {
+    throw new Error('Symlinked Pi sessions directory is forbidden');
+  }
+  mkdirSync(sessionDir, { recursive: true, mode: 0o700 });
+  return { courseDir, sessionDir };
+}
 
 function authorized(request) {
   const actual = Buffer.from(request.headers.authorization || '');
@@ -26,9 +59,10 @@ function respond(res, status, data) {
 async function sessionFor(course) {
   if (!sessions.has(course)) {
     // Empty tool set by default. A learner's prompt must not get shell or FS access.
+    const { courseDir, sessionDir } = courseSessionLocation(course);
     const result = await createAgentSession({
-      cwd,
-      sessionManager: SessionManager.inMemory(),
+      cwd: courseDir,
+      sessionManager: SessionManager.continueRecent(courseDir, sessionDir),
       noTools: 'all',
     });
     sessions.set(course, result.session);
