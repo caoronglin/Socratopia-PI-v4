@@ -6,6 +6,7 @@ not invoke other models/agents or change formal lesson progress or timer.
 from __future__ import annotations
 
 from datetime import UTC, datetime
+import re
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -158,7 +159,11 @@ def start(root: Path, course: str, topic: str, rounds: int = 2) -> dict[str, Any
         return _emit(state, root)
 
 
-def record(root: Path, course: str, speaker: str, statement: str) -> dict[str, Any]:
+def record(root: Path, course: str, speaker: str, statement: str, *,
+           expected_session_id: str | None = None,
+           expected_turns: int | None = None,
+           expected_topic: str | None = None,
+           evidence: dict[str, Any] | None = None) -> dict[str, Any]:
     course = validate_course_name(course)
     speaker = speaker.upper().strip()
     statement = statement.strip()
@@ -169,11 +174,32 @@ def record(root: Path, course: str, speaker: str, statement: str) -> dict[str, A
         if not state or not state["session"] or state["session"]["phase"] != "speaking":
             raise ValueError("当前没有等待导师发言的讨论")
         session = state["session"]
+        if expected_session_id is not None and session["id"] != expected_session_id:
+            raise ValueError("讨论会话已变化，拒绝过期模型输出")
+        if expected_turns is not None and len(session["turns"]) != expected_turns:
+            raise ValueError("导师轮次已变化，拒绝重复发言")
+        if expected_topic is not None and session["topic"] != expected_topic:
+            raise ValueError("讨论主题已变化，拒绝过期模型输出")
         expected = state["members"][session["index"]]
         if speaker != expected:
             raise ValueError(f"发言顺序错误，当前应为导师 {expected}")
-        session["turns"].append({"round": session["round"], "speaker": speaker,
-                                 "text": statement})
+        record = {"round": session["round"], "speaker": speaker, "text": statement}
+        if evidence is not None:
+            sha = evidence.get("sha256")
+            quotes = evidence.get("citations")
+            if (not isinstance(sha, str) or not re.fullmatch(r"[0-9a-f]{64}", sha)
+                    or not isinstance(quotes, list) or not 1 <= len(quotes) <= 5
+                    or any(not isinstance(c, dict)
+                           or c.get("source_id") not in {"S1", "S2", "S3"}
+                           or not isinstance(c.get("quote"), str)
+                           or not 8 <= len(c["quote"]) <= 260
+                           for c in quotes)):
+                raise ValueError("导师引文证据记录不合法")
+            record["evidence"] = {
+                "sha256": sha, "citations": quotes, "grounding": "citation_checked",
+                "fact_verified": False,
+            }
+        session["turns"].append(record)
         session["index"] += 1
         if session["index"] == len(state["members"]):
             session["phase"] = ("finished" if session["round"] == session["max_rounds"]

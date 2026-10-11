@@ -1,0 +1,64 @@
+:root { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+* { box-sizing: border-box; }
+body { margin: 0; }
+.shell { min-height: 100vh; }
+.sidebar { border-right: 1px solid rgba(128, 128, 128, .12); }
+.brand { padding: 28px 24px 3px; font-size: 21px; font-weight: 720; letter-spacing: -.5px; }
+.brand span { color: #668ab8; font-size: 12px; vertical-align: top; }
+.brand-note { display: block; margin: 0 24px 24px; font-size: 12px; }
+.topbar { display: flex; height: 64px; align-items: center; justify-content: space-between;
+  padding: 0 28px; background: var(--ant-color-bg-container);
+  border-bottom: 1px solid var(--ant-color-border-secondary); }
+.content { max-width: 1380px; width: 100%; margin: 0 auto; padding: 26px 30px 60px; }
+.page-heading { margin-bottom: 18px; }
+.page-heading h3 { margin-bottom: 4px; }
+.control-card { margin-bottom: 18px; }
+.feedback { margin-bottom: 18px; }
+.chat-card .ant-list { min-height: 250px; max-height: 560px; overflow-y: auto; }
+.chat-turn { width: 100%; }
+.message-text { white-space: pre-wrap; overflow-wrap: anywhere; margin: 6px 0 0 !important; }
+.send-row { margin-top: 18px; }
+.section-note { margin-top: 18px; }
+@media (max-width: 768px) {
+  .content { padding: 16px; }
+  .topbar { padding: 0 16px; }
+}
+
+
+/* Ant Design desktop; Ant Design Mobile navigation/answers at narrow widths. */
+.classroom-practice-section { margin-top: 20px; }
+.class-practice { display: grid; gap: 16px; }
+.practice-question .ant-card-head-title { white-space: normal; }
+.practice-question .ant-checkbox-wrapper,
+.practice-question .ant-radio-wrapper { white-space: normal; line-height: 1.7; }
+.answer-actions, .answer-explanation { margin-top: 18px; }
+.answer-explanation p { margin-top: 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.practice-insights .ant-statistic { min-width: 95px; }
+.practice-chart { height: 210px; width: 100%; margin-top: 12px; }
+.practice-editor { margin-bottom: 20px; }
+.mobile-tabbar, .mobile-practice-options, .mobile-submit { display: none !important; }
+.quote { overflow-wrap: anywhere; }
+@media (max-width: 768px) {
+  .desktop-sidebar { display: none !important; }
+  .shell { width: 100%; overflow: hidden; }
+  .content { padding: 14px 12px calc(116px + env(safe-area-inset-bottom)); }
+  .topbar { height: 56px; padding: 0 12px; gap: 10px; }
+  .topbar .ant-space { min-width: 0; }
+  .page-heading h3 { font-size: 22px !important; }
+  .desktop-practice-options, .desktop-submit { display: none !important; }
+  .mobile-practice-options, .mobile-submit { display: block !important; }
+  .mobile-choices { display: flex; flex-direction: column; gap: 15px; margin: 12px 0; }
+  .mobile-choices .adm-radio, .mobile-choices .adm-checkbox { min-height: 36px; }
+  .mobile-tabbar {
+    display: block !important; position: fixed; inset: auto 0 0;
+    background: var(--ant-color-bg-container); border-top: 1px solid var(--ant-color-border-secondary);
+    z-index: 40; box-shadow: 0 -5px 18px rgba(0, 0, 0, .04);
+  }
+  .practice-chart { height: 190px; }
+  .control-card .ant-flex { align-items: stretch; }
+  .chat-card .ant-list { max-height: 50vh; }
+  .ant-card-body { overflow-wrap: anywhere; }
+}
+
+.import-form { display: grid; gap: 14px; margin-top: 16px; }
+.import-form .ant-input { min-height: 130px; }
