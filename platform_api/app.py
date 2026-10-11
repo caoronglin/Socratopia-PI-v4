@@ -210,7 +210,7 @@ def course_prep_check(course: str, lesson_id: str, _: Authenticated) -> dict:
         raise HTTPException(409, str(exc)) from exc
 
 
-@api.post("/api/courses/{course}/prep/chapter")
+@api.post("/api/courses/{course}/prep/chapter/plan")
 def course_prep_chapter(course: str, payload: ChapterPrepRequest, _: Authenticated) -> dict:
     name = existing_course(course)
     try:
