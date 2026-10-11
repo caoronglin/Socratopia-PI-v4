@@ -44,7 +44,7 @@ FastAPI (platform_api/app.py, Python 3.15)
 
 ### 安全边界
 
-- v5 默认 Pi `noTools: true`：没有默认读写/shell 工具；这不是操作系统级沙箱。不要加载不信任的全局 Pi Extensions/Skills；正式部署前必须独立审计资源加载行为。
+- v5 默认 Pi `noTools: 'all'`：没有默认读写/shell 工具；这不是操作系统级沙箱。不要加载不信任的全局 Pi Extensions/Skills；正式部署前必须独立审计资源加载行为。
 - AgentScope 工具列表为空，未授权模型对教材/PROGRESS 的写入。模型回答视为建议，不视为课程事实。
 - API token 在网页内存中保持；不写入 localStorage。仅用于**可信的单用户本地开发**。没有多用户账号/会话/权限体系。
 - 缺少模型凭据、断网和网关失败返回错误，不能伪造导师答复。模型成本由用户配置的 provider 承担。

@@ -29,7 +29,7 @@ async function sessionFor(course) {
     const result = await createAgentSession({
       cwd,
       sessionManager: SessionManager.inMemory(),
-      noTools: true,
+      noTools: 'all',
     });
     sessions.set(course, result.session);
   }

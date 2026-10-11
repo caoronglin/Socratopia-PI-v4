@@ -25,6 +25,21 @@ jobs:
         run: python -m pip install -e '.[dev]'
       - name: Show installed library versions
         run: python -c "import agentscope, sys; print(sys.version); print(agentscope.__version__)"
+      - name: Check AgentScope 2.0 import and runtime signatures
+        run: |
+          python - <<'PY'
+          import inspect
+          from agentscope.agent import ReActAgent
+          from agentscope.formatter import OpenAIChatFormatter
+          from agentscope.memory import InMemoryMemory
+          from agentscope.message import Msg
+          from agentscope.model import OpenAIChatModel
+          from agentscope.tool import Toolkit
+          assert 'sys_prompt' in inspect.signature(ReActAgent).parameters
+          assert 'model_name' in inspect.signature(OpenAIChatModel).parameters
+          assert callable(OpenAIChatFormatter) and callable(InMemoryMemory)
+          assert callable(Msg) and callable(Toolkit)
+          PY
       - name: Compile app and existing scripts
         run: python -m compileall -q platform_api scripts tests
       - name: Run API tests
