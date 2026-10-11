@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 from collections.abc import Mapping
 
-from platform_api.evidence import EvidenceSnapshot
+from platform_api.evidence import EvidenceSnapshot, _tokens
 
 
 class GroundingError(ValueError):
@@ -72,6 +72,11 @@ def check_response(raw: str, snapshot: EvidenceSnapshot) -> dict:
             raise GroundingError("Missing or excessive evidence quote")
         if quote.strip() not in by_id[sid]["text"]:
             raise GroundingError("Quoted evidence does not occur in the referenced excerpt")
+        # Cheap *relevance* filter: a valid quote cannot authorize an entirely
+        # unrelated statement. This is NOT entailment or scientific validation.
+        terms = _tokens(claim_text)
+        if len(terms) >= 3 and len(terms & _tokens(quote)) < max(2, (len(terms) + 3) // 4):
+            raise GroundingError("Claim has too little lexical support from its quoted excerpt")
         # Final text is assembled from checked claims; the model cannot append
         # an unreferenced conclusion outside the claims envelope.
         lines.append(claim_text.strip() + f" [{sid}]")

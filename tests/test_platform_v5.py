@@ -105,7 +105,7 @@ def test_real_group_state_machine_with_stubbed_llm(client: TestClient, monkeypat
 
     async def fake_tutor(speaker: str, topic: str, prior: list[dict]) -> str:
         assert "基因表达" in topic and "<source id=" in topic
-        return draft("导师 " + speaker + " 的解释", quote)
+        return draft("基因表达涉及遗传信息转化。", quote)
 
     monkeypatch.setattr("platform_api.app.generate_tutor_turn", fake_tutor)
     first = client.post("/api/courses/学习小组课程/group/next", headers=auth())
@@ -164,6 +164,7 @@ def test_sources_are_course_isolated(client: TestClient) -> None:
     '{"status":"answer","claims":[{"text":"错误","source_id":"S404","quote":"细胞分裂会产生子细胞。"}]}',
     '{"status":"answer","claims":[{"text":"错误","source_id":"S1","quote":"一段伪造的原始教材证据。"}]}',
     '{"status":"answer","claims":[]}',
+    '{"status":"answer","claims":[{"text":"海洋洋流决定火山爆发周期。","source_id":"S1","quote":"细胞分裂会产生子细胞。"}]}',
     "根据教材我知道这是真的。",
 ])
 def test_model_invented_citations_rejected(client: TestClient, monkeypatch: pytest.MonkeyPatch, malicious: str) -> None:
