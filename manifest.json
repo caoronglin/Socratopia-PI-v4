@@ -210,6 +210,7 @@
     "tests/test_pedagogical_prompt_design.py",
     "tests/test_pi_agent_constraints.py",
     "tests/test_platform_v5.py",
+    "tests/test_platform_v5_exercises.py",
     "tests/test_prep.py",
     "tests/test_prompt_catalog.py",
     "tests/test_reflection_split.py",
