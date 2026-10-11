@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from contextlib import closing
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -70,7 +71,7 @@ def record(root: Path, course: str, question: str, response: dict) -> None:
         raise HistoryError("Invalid model reply")
     if not isinstance(payload["citations"], list):
         raise HistoryError("Invalid evidence")
-    with _connect(root, course) as db:
+    with closing(_connect(root, course)) as db, db:
         db.execute(
             "INSERT INTO chat_exchanges(question,response_json,source_sha256,created_at) VALUES(?,?,?,?)",
             (question, json.dumps(payload, ensure_ascii=False), payload["source_sha256"],
@@ -82,7 +83,7 @@ def recent(root: Path, course: str, *, limit: int = 50) -> dict:
     """Return at most 50 newest completed exchanges in chronological order."""
     if not 1 <= limit <= 50:
         raise HistoryError("History limit must be 1–50")
-    with _connect(root, course) as db:
+    with closing(_connect(root, course)) as db:
         rows = db.execute(
             "SELECT * FROM chat_exchanges ORDER BY id DESC LIMIT ?", (limit,)
         ).fetchall()

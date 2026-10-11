@@ -6,7 +6,7 @@ import secrets
 from pathlib import Path
 from typing import Annotated, Literal
 
-from fastapi import Depends, FastAPI, Header, HTTPException
+from fastapi import Depends, FastAPI, Header, HTTPException, Response
 from pydantic import BaseModel, Field
 
 from scripts.lib import learning_group, lesson_timer
@@ -268,7 +268,8 @@ def timer_transition(course: str, payload: TimerTransition, _: Authenticated) ->
 
 
 @api.get("/api/courses/{course}/chat/history")
-def read_chat_history(course: str, _: Authenticated) -> dict:
+def read_chat_history(course: str, response: Response, _: Authenticated) -> dict:
+    response.headers["Cache-Control"] = "no-store"
     name = existing_course(course)
     try:
         return chat_history.recent(root_dir(), name)

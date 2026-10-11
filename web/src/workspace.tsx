@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { TabBar } from 'antd-mobile';
 import { AppOutline, MessageOutline, UnorderedListOutline, UserOutline } from 'antd-mobile-icons';
 import PracticePanel from './practice';
@@ -37,6 +37,7 @@ const tutorNames: Record<string, string> = { D: '三月七', E: '丹恒', F: '�
 
 export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
   const [token, setToken] = useState('');
+  const latestScope = useRef({ course: '', token: '' });
   const [courses, setCourses] = useState<string[]>([]);
   const [course, setCourse] = useState('');
   const [tab, setTab] = useState('class');
@@ -56,6 +57,8 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
   const [lead, setLead] = useState('D');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+
+  latestScope.current = { course, token };
 
   const request = useCallback(async <T,>(path: string, method = 'GET', body?: object): Promise<T> => {
     if (!token) throw new Error('请先输入本地服务访问令牌');
@@ -90,6 +93,9 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
       request<Overview>(path + '/overview'),
       request<ChatHistory>(path + '/chat/history'),
     ]);
+    // A slow request for an earlier course or token must not overwrite
+    // the selected course's new transcript, timer or progress.
+    if (latestScope.current.course !== course || latestScope.current.token !== token) return;
     setState(s); setTimer(t); setGroup(g); setOverview(o);
     setTurns(history.turns);
     if (s.lesson_id) setLessonId(s.lesson_id);
