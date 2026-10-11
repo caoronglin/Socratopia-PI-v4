@@ -53,13 +53,6 @@ def test_create_and_read_course_without_mastery(client: TestClient) -> None:
     assert client.post("/api/courses", json={"name": "../escape"}, headers=auth()).status_code == 409
 
 
-@pytest.mark.asyncio
-async def test_placeholder_only():
-    # An explicit placeholder avoids silently claiming real model integration.
-    # Runtime E2E remains a dedicated acceptance gate with configured credentials.
-    assert True
-
-
 def test_chat_preserves_progress(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
     client.post("/api/courses", json={"name": "生物信息学"}, headers=auth())
 
