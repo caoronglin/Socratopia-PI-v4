@@ -1,7 +1,7 @@
 name: v5 Web Standalone Executables
 on:
   push:
-    branches: [feat/v5-platform-foundation]
+    branches: [main, feat/v5-platform-foundation]
   workflow_dispatch:
 permissions:
   contents: read
@@ -103,7 +103,7 @@ jobs:
           sha256sum --check *.sha256
   publish-alpha:
     needs: verify-artifacts
-    if: github.ref == 'refs/heads/feat/v5-platform-foundation' && github.event_name == 'workflow_dispatch'
+    if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
     permissions:
       contents: write
