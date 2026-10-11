@@ -1,5 +1,13 @@
 # Changelog
 
+## v5.0.0-alpha.3 (candidate)
+
+- Ant Design CLI 6.6.5 doctor/lint/usage 加入 CI；导航、焦点跳转及移动端备课界面改善。
+- 按实际教材 Markdown 章节 PREP 预览/仅创建草稿/状态检查，不自动 ready、掌握或授课计时。
+- Pi SDK 课程隔离持久化会话目录，重新运行时恢复模型上下文（真实模型待凭据验收）。
+- 修复首次课程的 `_outline.md` 仅有空白骨架，阻断新导入教材章节备课的问题。
+
+
 ## v5.0.0-alpha.2 (candidate, 2026-10-11)
 
 ### Added
