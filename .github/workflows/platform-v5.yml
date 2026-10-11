@@ -29,16 +29,16 @@ jobs:
         run: |
           python - <<'PY'
           import inspect
-          from agentscope.agent import ReActAgent
-          from agentscope.formatter import OpenAIChatFormatter
-          from agentscope.memory import InMemoryMemory
-          from agentscope.message import Msg
+          from agentscope.agent import Agent
+          from agentscope.credential import OpenAICredential
+          from agentscope.message import UserMsg
           from agentscope.model import OpenAIChatModel
           from agentscope.tool import Toolkit
-          assert 'sys_prompt' in inspect.signature(ReActAgent).parameters
-          assert 'model_name' in inspect.signature(OpenAIChatModel).parameters
-          assert callable(OpenAIChatFormatter) and callable(InMemoryMemory)
-          assert callable(Msg) and callable(Toolkit)
+          assert 'system_prompt' in inspect.signature(Agent).parameters
+          assert 'model' in inspect.signature(OpenAIChatModel).parameters
+          assert 'credential' in inspect.signature(OpenAIChatModel).parameters
+          assert callable(OpenAICredential) and callable(UserMsg)
+          assert callable(Toolkit)
           PY
       - name: Compile app and existing scripts
         run: python -m compileall -q platform_api scripts tests
