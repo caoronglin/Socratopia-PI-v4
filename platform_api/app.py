@@ -267,6 +267,7 @@ async def group_next(course: str, _: Authenticated) -> dict:
             expected_session_id=session["id"],
             expected_turns=len(session["turns"]),
             expected_topic=session["topic"],
+            evidence={"sha256": snapshot.sha256, "citations": outcome["citations"]},
         )
     except ValueError as exc:
         raise HTTPException(409, str(exc)) from exc

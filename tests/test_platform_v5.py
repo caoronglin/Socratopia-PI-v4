@@ -110,6 +110,12 @@ def test_real_group_state_machine_with_stubbed_llm(client: TestClient, monkeypat
     monkeypatch.setattr("platform_api.app.generate_tutor_turn", fake_tutor)
     first = client.post("/api/courses/学习小组课程/group/next", headers=auth())
     assert first.status_code == 200, first.text
+    saved = client.get("/api/courses/学习小组课程/group", headers=auth()).json()
+    evidence = saved["session"]["turns"][0]["evidence"]
+    assert evidence["grounding"] == "citation_checked"
+    assert evidence["fact_verified"] is False
+    assert evidence["citations"][0]["quote"] == quote
+    assert len(evidence["sha256"]) == 64
     second = client.post("/api/courses/学习小组课程/group/next", headers=auth())
     assert second.json()["requires_user_turn"] is True
     blocked = client.post("/api/courses/学习小组课程/group/next", headers=auth())

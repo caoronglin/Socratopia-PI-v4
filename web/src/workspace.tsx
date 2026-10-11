@@ -17,7 +17,7 @@ type Timer = {
   minimum_seconds: number; completed: boolean; is_active?: boolean;
 };
 type Citation = { source_id: string; section: string; quote: string };
-type Turn = { speaker: string; text: string; grounding?: string; citations?: Citation[]; fact_verified?: boolean };
+type Turn = { speaker: string; text: string; grounding?: string; citations?: Citation[]; fact_verified?: boolean; evidence?: { sha256: string; citations: Citation[]; grounding: string } };
 type Evidence = { course: string; source: string; sha256: string; excerpts: { id: string; section: string; text: string }[]; ready: boolean };
 type Overview = { course: string; book_available: boolean; grounded_chat_ready: boolean; formal_lesson_ready: boolean; blockers: string[]; timer_phase: string; group_phase: string };
 type Group = {
@@ -294,7 +294,13 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
                       dataSource={group?.session?.turns || []}
                       renderItem={(turn, index) => <List.Item key={index}>
                         <div className="chat-turn"><Text strong>{tutorNames[turn.speaker]}</Text>
-                          <Paragraph className="message-text">{turn.text}</Paragraph></div>
+                          <Paragraph className="message-text">{turn.text}</Paragraph>
+                          {turn.evidence?.citations.map((citation, j) =>
+                            <Paragraph key={j} type="secondary" className="quote">
+                              <Text code>{citation.source_id}</Text> {citation.section}：{citation.quote}
+                            </Paragraph>)}
+                          {turn.evidence && <Text type="secondary">来源摘要：{turn.evidence.sha256.slice(0, 16)}…</Text>}
+                        </div>
                       </List.Item>} />
                     <Space wrap>
                       <Button type="primary" loading={busy} disabled={!group?.next_speaker}
