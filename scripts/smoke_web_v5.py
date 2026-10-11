@@ -45,15 +45,19 @@ def smoke(archive: Path, platform: str) -> None:
         env = {**os.environ, "SOCRATOPIA_ROOT": str(course_root),
                "SOCRATOPIA_API_TOKEN": "e2e-package-token-0123456789"}
         port = 18765
-        process = subprocess.Popen(
-            [str(binary), "--no-browser", "--port", str(port)],
-            cwd=folder, env=env,
-            stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
-        )
+        # Log to a regular file, never a PIPE: the embedded Node process can
+        # inherit file descriptors and keep communicate() blocked after exit.
+        logfile = root / "web-smoke.log"
+        with logfile.open("wb") as error_output:
+            process = subprocess.Popen(
+                [str(binary), "--no-browser", "--port", str(port)],
+                cwd=folder, env=env,
+                stdout=subprocess.DEVNULL, stderr=error_output,
+            )
         try:
             for _ in range(90):
                 if process.poll() is not None:
-                    raise RuntimeError("Frozen Web app exited early")
+                    raise RuntimeError("Frozen Web app exited early: " + logfile.read_text(errors="replace")[-1500:])
                 try:
                     status, text = fetch(f"http://127.0.0.1:{port}/api/health")
                     if status == 200 and '"socratopia"' in text:
@@ -61,7 +65,7 @@ def smoke(archive: Path, platform: str) -> None:
                 except (OSError, urllib.error.URLError):
                     time.sleep(1)
             else:
-                raise RuntimeError("Bundled Web API did not start")
+                raise RuntimeError("Bundled Web API did not start: " + logfile.read_text(errors="replace")[-1500:])
             code, html = fetch(f"http://127.0.0.1:{port}/")
             if code != 200 or "<div id=\"root\">" not in html:
                 raise RuntimeError("React HTML is missing from packaged Web")
@@ -78,10 +82,10 @@ def smoke(archive: Path, platform: str) -> None:
         finally:
             process.terminate()
             try:
-                process.communicate(timeout=15)
+                process.wait(timeout=15)
             except subprocess.TimeoutExpired:
                 process.kill()
-                process.communicate()
+                process.wait(timeout=10)
 
 
 def main() -> int:
