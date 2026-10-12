@@ -106,6 +106,9 @@ test('desktop onboarding → textbook → live classroom quiz → AntV → mobil
   await page.unroute('**/api/courses/**/chat/history');
   await page.getByText('课程状态', { exact: true }).click();
   await expect(page.getByText('学习路径', { exact: true })).toBeVisible();
+  // Imported book = one finished preparation step; PREP draft alone is
+  // not represented as "completed classroom".
+  await expect(page.locator('.journey-card .ant-steps-item-finish')).toHaveCount(1);
   await page.getByPlaceholder('新课程名称').fill(secondCourseName);
   await page.getByRole('button', { name: '创建课程' }).click();
   await expect(page.getByText('教材：缺失')).toBeVisible();

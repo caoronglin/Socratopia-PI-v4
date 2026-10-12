@@ -12,7 +12,9 @@ const { Paragraph } = Typography;
 
 /** Navigation guidance only; never evidence of lesson completion or mastery. */
 export default function LearningJourney({ bookAvailable, prepCount, formalReady, onNavigate }: Props) {
-  const current = !bookAvailable ? 0 : !prepCount ? 1 : formalReady ? 3 : 2;
+  // A saved PREP draft is not a finished lesson. A formally ready lesson
+  // has not yet been taught, so the classroom step stays in progress.
+  const current = !bookAvailable ? 0 : formalReady ? 2 : 1;
   const next = !bookAvailable ? '请先导入本课程的主教材。' :
     !prepCount ? '选择教材的实际章节，预览并创建 PREP 草稿。' :
     !formalReady ? '已有教案草稿；仍须完成审查并通过后端 PREP 与课程就绪门禁。' :
