@@ -21,7 +21,7 @@
 增加 **问题链 / 预期证据 / 教研会决议** 的结构化字段保存 API：
 `PUT /api/courses/{course}/prep/{lesson_id}/sections`
 
-服务端只接受三个白名单 Markdown 小节、源文件完整 SHA-256、已存在 draft；由同一原子文件编辑器保存，**不更改 YAML 状态、教材锚点、教学评表格、来源或 PROGRESS**。拒绝插入新的二级标题、YAML front matter、版本冲突。后续接 Web 表单（非强制修改 raw Markdown），不自动审批 ready。
+服务端只接受三个白名单 Markdown 小节、源文件完整 SHA-256、已存在 draft；由同一原子文件编辑器保存，**不更改 YAML 状态、教材锚点、教学评表格、来源或 PROGRESS**。拒绝插入新的二级标题、YAML front matter、版本冲突。本轮也提供 Ant Design Web 结构化表单，可填写三个字段并显式保存，保留完整 raw Markdown 模式，不自动审批 ready。
 
 ## 下一阶段
 

@@ -50,7 +50,13 @@ test('desktop onboarding → textbook → live classroom quiz → AntV → mobil
   // Alpha.5 end-to-end draft edit: saved content survives an explicit reload
   // without granting ready, starting a timer or modifying student progress.
   await page.getByRole('button', { name: '编辑草稿' }).click();
+  await expect(page.getByRole('textbox', { name: '填写问题链' })).toBeVisible();
+  await page.getByRole('textbox', { name: '填写问题链' }).fill('1. 核对染色体减半的过程与证据。');
+  await page.getByRole('button', { name: '保存草稿', exact: true }).click();
+  await expect(page.getByText('教案已保存')).toBeVisible();
+  await page.getByRole('button', { name: '编辑 Markdown' }).click();
   const draftEditor = page.getByRole('textbox', { name: '编辑 PREP 教案正文' });
+  await expect(draftEditor).toHaveValue(/核对染色体减半的过程与证据/);
   await expect(draftEditor).toBeVisible();
   const originalDraft = await draftEditor.inputValue();
   await draftEditor.fill(originalDraft + '\n\n课堂备注：对比有丝分裂与减数分裂。');
