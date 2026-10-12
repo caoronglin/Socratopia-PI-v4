@@ -40,6 +40,7 @@ const tutorNames: Record<string, string> = { D: '三月七', E: '丹恒', F: '�
 
 export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
   const [token, setToken] = useState('');
+  const [connectedToken, setConnectedToken] = useState('');
   const latestScope = useRef({ course: '', token: '' });
   const lessonSelectionManual = useRef(false);
   const [courses, setCourses] = useState<string[]>([]);
@@ -130,6 +131,7 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
     if (next !== token) {
       chooseCourse('');
       setCourses([]);
+      setConnectedToken('');
       setTab('class');
     }
     setToken(next);
@@ -143,6 +145,7 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
   const refreshCourses = async () => {
     await run(async () => {
       const result = await request<{courses: string[]}>('/courses');
+      setConnectedToken(token);
       setCourses(result.courses);
       if (!result.courses.includes(course)) chooseCourse(result.courses[0] || '');
     });
@@ -151,7 +154,7 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
     request<T>('/courses/' + encodeURIComponent(course) + suffix, 'POST', body);
 
   const createCourse = async () => {
-    if (!newCourse.trim()) return;
+    if (!newCourse.trim() || connectedToken !== token) return;
     await run(async () => {
       await request('/courses', 'POST', { name: newCourse.trim(), tutor: newTutor });
       const result = await request<{courses: string[]}>('/courses');
@@ -245,7 +248,7 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
                 onChange={e => changeToken(e.target.value)} disabled={busy} style={{ maxWidth: 280 }} />
               <Button type="primary" onClick={() => void refreshCourses()} disabled={!token} loading={busy}>连接并刷新</Button>
               <Select aria-label="选择当前课程" placeholder="选择课程" value={course || undefined}
-                onChange={chooseCourse} disabled={!token || busy}
+                onChange={chooseCourse} disabled={!connectedToken || connectedToken !== token || busy}
                 style={{ minWidth: 180 }} options={courses.map(name => ({ value: name, label: name }))} />
               <Button onClick={() => void run(reload)} disabled={!course || !token} loading={busy}>刷新状态</Button>
             </Flex>
@@ -258,7 +261,7 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
                 onChange={e => setNewCourse(e.target.value)} style={{ width: 240 }} />
               <Select value={newTutor} onChange={setNewTutor} style={{ minWidth: 120 }}
                 options={['D','E','F'].map(value => ({value,label:tutorNames[value]}))} />
-              <Button type="primary" disabled={!token || !newCourse.trim()} loading={busy}
+              <Button type="primary" disabled={!connectedToken || connectedToken !== token || !newCourse.trim()} loading={busy}
                 onClick={() => void createCourse()}>创建课程</Button>
             </Flex>
           </Card> : (
@@ -437,7 +440,7 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
                       onChange={e => setNewCourse(e.target.value)} style={{ maxWidth: 230 }} />
                     <Select value={newTutor} onChange={setNewTutor} style={{ minWidth: 130 }}
                       options={['D','E','F'].map(value => ({value,label:tutorNames[value]}))} />
-                    <Button type="primary" loading={busy} disabled={!newCourse.trim()}
+                    <Button type="primary" loading={busy} disabled={!connectedToken || connectedToken !== token || !newCourse.trim()}
                       onClick={() => void createCourse()}>创建课程</Button>
                   </Flex>
                 </Card>

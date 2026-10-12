@@ -134,7 +134,7 @@ test('desktop onboarding → textbook → live classroom quiz → AntV → mobil
   await page.getByRole('menuitem', { name: '课堂与对话' }).click();
   await expect(page.getByText('课堂互动练习')).toBeVisible();
   await page.getByPlaceholder('服务令牌（仅保存在此页面内存）').fill('invalid-token');
-  await expect(page.getByRole('combobox', { name: '选择当前课程' })).toBeDisabled();
+  await expect(page.locator('.control-card').first().locator('.ant-select')).toHaveClass(/ant-select-disabled/);
   await expect(page.getByText('课堂互动练习')).toHaveCount(0);
   await page.getByPlaceholder('服务令牌（仅保存在此页面内存）').fill(TOKEN);
   await page.getByRole('button', { name: '连接并刷新' }).click();
