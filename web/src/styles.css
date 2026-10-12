@@ -123,3 +123,14 @@ body { min-width: 320px; background: var(--ant-color-bg-layout); }
 @media (max-width: 768px) {
   .chat-card .chat-list-item .chat-turn { max-width: 100%; }
 }
+
+/* Alpha.5: readable PREP draft editor with clear saving state. */
+.prep-editor { min-width: 0; }
+.prep-editor-actions { margin: 12px 0 16px; }
+.prep-editor-input textarea, .prep-editor .ant-input { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; line-height: 1.7; }
+.prep-editor-preview { min-height: 240px; max-height: 540px; }
+.prep-editor-footer { margin-top: 14px; }
+@media (max-width: 768px) {
+  .prep-editor-actions { width: 100%; }
+  .prep-editor-input textarea { font-size: 13px; }
+}

@@ -216,7 +216,7 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
     <Layout className="shell">
       <a className="skip-link" href="#main-content">跳到主要内容</a>
       <Sider breakpoint="lg" collapsedWidth="0" width={232} theme={dark ? 'dark' : 'light'} className="sidebar desktop-sidebar">
-        <div className="brand">Socratopia <span>v5 Alpha.3</span></div>
+        <div className="brand">Socratopia <span>v5 Alpha.5</span></div>
         <Text type="secondary" className="brand-note">你的课程学习空间</Text>
         <Menu selectedKeys={[tab]} onClick={({ key }) => setTab(key as LearningTab)} mode="inline"
           items={[
