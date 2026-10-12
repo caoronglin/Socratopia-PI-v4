@@ -90,6 +90,8 @@ export default function PrepPanel({ course, request, onSelectLesson, onCreated, 
 
   const editorPath = (lesson: string) => '/courses/' + encodeURIComponent(course) +
     '/prep/' + encodeURIComponent(lesson) + '/document';
+  const sectionsPath = (lesson: string) => '/courses/' + encodeURIComponent(course) +
+    '/prep/' + encodeURIComponent(lesson) + '/sections';
 
   const openEditor = (lesson: string) => void action(async () => {
     const latest = await request<PrepDocument>(editorPath(lesson));
@@ -114,7 +116,7 @@ export default function PrepPanel({ course, request, onSelectLesson, onCreated, 
     const updates = Object.fromEntries(Object.entries(sectionEdits)
       .filter(([key, value]) => value !== document.sections[key]));
     const updated = editorMode === 'guided'
-      ? await request<PrepDocument>(editorPath(document.lesson_id) + '/sections', 'PUT',
+      ? await request<PrepDocument>(sectionsPath(document.lesson_id), 'PUT',
         { updates, expected_sha256: document.sha256 })
       : await request<PrepDocument>(editorPath(document.lesson_id), 'PUT',
         { body: editedBody, expected_sha256: document.sha256 });
