@@ -18,11 +18,11 @@ from platform_api.agentscope_tutors import TutorUnavailable, generate_tutor_turn
 from platform_api.evidence import EvidenceError, retrieve, is_current
 from platform_api.grounding import GroundingError, check_response, grounded_prompt
 from platform_api.pi_gateway import PiUnavailable, ask_pi
-from platform_api import exercises, books, chat_history
+from platform_api import exercises, books, chat_history, prep_editor
 from scripts.lib import chapter_prep
 from scripts.lib.prep import prep_status, check_prep, prep_path
 
-api = FastAPI(title="Socratopia API", version="5.0.0-alpha.4", docs_url=None, redoc_url=None)
+api = FastAPI(title="Socratopia API", version="5.0.0-alpha.5", docs_url=None, redoc_url=None)
 
 
 def root_dir() -> Path:
@@ -60,6 +60,11 @@ class ChapterPrepRequest(BaseModel):
     chapter: str = Field(min_length=1, max_length=160)
     sources: list[str] = Field(default_factory=list, max_length=16)
     apply: bool = False
+
+
+class DraftSaveRequest(BaseModel):
+    body: str = Field(min_length=1, max_length=262144)
+    expected_sha256: str = Field(min_length=64, max_length=64)
 
 
 class ChatRequest(BaseModel):
@@ -208,6 +213,29 @@ def course_prep_check(course: str, lesson_id: str, _: Authenticated) -> dict:
                 "ready_for_class": status == "ready" and not errors and
                     not any(w.startswith("stale") for w in warnings),
                 "errors": errors, "warnings": warnings}
+    except (ValueError, OSError) as exc:
+        raise HTTPException(409, str(exc)) from exc
+
+
+@api.get("/api/courses/{course}/prep/{lesson_id}/document")
+def course_prep_document(course: str, lesson_id: str, response: Response, _: Authenticated) -> dict:
+    name = existing_course(course)
+    response.headers["Cache-Control"] = "no-store"
+    try:
+        return prep_editor.get_document(root_dir(), name, lesson_id)
+    except (ValueError, OSError) as exc:
+        raise HTTPException(409, str(exc)) from exc
+
+
+@api.put("/api/courses/{course}/prep/{lesson_id}/document")
+def course_prep_save_draft(course: str, lesson_id: str, payload: DraftSaveRequest,
+                           response: Response, _: Authenticated) -> dict:
+    name = existing_course(course)
+    response.headers["Cache-Control"] = "no-store"
+    try:
+        return prep_editor.save_draft(
+            root_dir(), name, lesson_id, payload.body, payload.expected_sha256
+        )
     except (ValueError, OSError) as exc:
         raise HTTPException(409, str(exc)) from exc
 
