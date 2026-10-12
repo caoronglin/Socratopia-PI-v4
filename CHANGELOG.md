@@ -1,5 +1,14 @@
 # Changelog
 
+## v5.0.0-alpha.4 (candidate)
+
+- Harmonized desktop/mobile learning flow (book → chapter PREP → lesson → practice) with Ant Design native UI.
+- Course/token scope reset, evidence navigation, preparatory lesson transfer without bypassing readiness gates.
+- More precise evidence-only tutor prompt, zero false mastery, strict prompt contract tests.
+- Expanded Chromium E2E for navigation and cross-course isolation.
+
+
+
 ## v5.0.0-alpha.3 (candidate)
 
 - Ant Design CLI 6.6.5 doctor/lint/usage 加入 CI；导航、焦点跳转及移动端备课界面改善。

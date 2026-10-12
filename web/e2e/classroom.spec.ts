@@ -12,13 +12,15 @@ test('desktop onboarding → textbook → live classroom quiz → AntV → mobil
   await page.getByRole('button', { name: '创建课程' }).click();
   await expect(page.getByText('当前课程没有可用主教材')).toBeVisible();
 
-  await page.getByText('教材证据', { exact: true }).click();
+  await page.getByRole('button', { name: '前往教材导入' }).click();
   await expect(page.getByText('尚无主教材')).toBeVisible();
   await page.locator('.import-form textarea').fill('# 遗传学\n## 第一节 减数分裂\n' + QUOTE);
   await page.getByRole('button', { name: '确认导入（只创建，不覆盖）' }).click();
   await expect(page.getByText('主教材已载入')).toBeVisible();
   await expect(page.getByText('第一节 减数分裂')).toBeVisible();
-  await page.getByText('章节备课', { exact: true }).first().click();
+  await page.getByRole('button', { name: /第一节 减数分裂/ }).click();
+  await expect(page.getByText(/来源：TEXTBOOK/)).toBeVisible();
+  await page.getByRole('button', { name: '下一步：章节备课' }).click();
   await expect(page.getByText('章节备课与正式课堂分离')).toBeVisible();
   await page.getByRole('combobox', { name: '选择备课章节' }).click();
   await page.locator('.ant-select-item-option-content').getByText('遗传学', { exact: true }).click();
@@ -28,6 +30,10 @@ test('desktop onboarding → textbook → live classroom quiz → AntV → mobil
   await expect(page.getByText('草稿已保存')).toBeVisible();
   await page.getByRole('button', { name: '检查', exact: true }).click();
   await expect(page.getByText('尚未通过 ready 门禁')).toBeVisible();
+  await page.getByRole('button', { name: /将 lesson_001 带入课堂/ }).click();
+  await expect(page.getByText('课堂互动练习')).toBeVisible();
+  await expect(page.getByPlaceholder('lesson_001')).toHaveValue('lesson_001');
+  await expect(page.getByRole('button', { name: '开始', exact: true })).toBeDisabled();
 
   // Browser integration: history GET restores a server-provided transcript.
   // Actual SQLite persistence is verified by the Python API tests.
@@ -90,4 +96,23 @@ test('desktop onboarding → textbook → live classroom quiz → AntV → mobil
   } finally {
     await mobile.close();
   }
+
+  // Cross-course data must not survive an explicit course change.
+  await page.unroute('**/api/courses/**/chat/history');
+  await page.getByText('课程状态', { exact: true }).click();
+  await expect(page.getByText('学习路径', { exact: true })).toBeVisible();
+  await page.getByPlaceholder('新课程名称').fill('第二课程');
+  await page.getByRole('button', { name: '创建课程' }).click();
+  await expect(page.getByText('当前课程没有可用主教材')).toBeVisible();
+  await expect(page.getByText('历史对话恢复测试：减数分裂')).toHaveCount(0);
+  await page.getByRole('combobox', { name: '选择当前课程' }).click();
+  await page.locator('.ant-select-item-option-content').getByText(NAME, { exact: true }).click();
+  await expect(page.getByText('课堂互动练习')).toBeVisible();
+  await page.getByRole('textbox', { name: '本地服务访问令牌' }).count();
+  await page.getByPlaceholder('服务令牌（仅保存在此页面内存）').fill('invalid-token');
+  await expect(page.getByRole('combobox', { name: '选择当前课程' })).toBeDisabled();
+  await expect(page.getByText('课堂互动练习')).toHaveCount(0);
+  await page.getByPlaceholder('服务令牌（仅保存在此页面内存）').fill(TOKEN);
+  await page.getByRole('button', { name: '连接并刷新' }).click();
+  await expect(page.getByText('课堂互动练习')).toBeVisible();
 });

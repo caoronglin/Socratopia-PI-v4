@@ -22,7 +22,7 @@ from platform_api import exercises, books, chat_history
 from scripts.lib import chapter_prep
 from scripts.lib.prep import prep_status, check_prep, prep_path
 
-api = FastAPI(title="Socratopia API", version="5.0.0-alpha.3", docs_url=None, redoc_url=None)
+api = FastAPI(title="Socratopia API", version="5.0.0-alpha.4", docs_url=None, redoc_url=None)
 
 
 def root_dir() -> Path:
