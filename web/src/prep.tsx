@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, Button, Card, Col, Collapse, Empty, Flex, Listy, Row, Select, Space, Steps, Tag, Typography } from 'antd';
+import { Alert, Button, Card, Col, Collapse, Empty, Flex, Input, Listy, Modal, Row, Select, Space, Steps, Tag, Typography } from 'antd';
 import type { CourseRequest } from './practice';
 
 const { Paragraph, Text } = Typography;
@@ -11,6 +11,11 @@ type Draft = {
   draft?: boolean; exists?: boolean; dry_run?: boolean; ready_granted?: boolean;
 };
 type Check = { lesson_id: string; status: string; ready_for_class: boolean; errors: string[]; warnings: string[] };
+type PrepDocument = {
+  lesson_id: string; chapter: string; status: string; editable: boolean;
+  body: string; sha256: string; errors: string[]; warnings: string[];
+  ready_granted: false; mastery_updated: false;
+};
 
 export default function PrepPanel({ course, request, onSelectLesson, onCreated, onOpenBook }: {
   course: string; request: CourseRequest;
@@ -26,6 +31,11 @@ export default function PrepPanel({ course, request, onSelectLesson, onCreated, 
   const [check, setCheck] = useState<Check | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [document, setDocument] = useState<PrepDocument | null>(null);
+  const [editedBody, setEditedBody] = useState('');
+  const [saved, setSaved] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const dirty = document !== null && editedBody !== document.body;
 
   const refresh = useCallback(async () => {
     const base = '/courses/' + encodeURIComponent(course);
@@ -72,6 +82,48 @@ export default function PrepPanel({ course, request, onSelectLesson, onCreated, 
     setSelectedLesson(lesson);
     setCheck(result);
   });
+
+  const editorPath = (lesson: string) => '/courses/' + encodeURIComponent(course) +
+    '/prep/' + encodeURIComponent(lesson) + '/document';
+
+  const openEditor = (lesson: string) => void action(async () => {
+    const latest = await request<PrepDocument>(editorPath(lesson));
+    setDocument(latest); setEditedBody(latest.body);
+    setSelectedLesson(lesson); setSaved(false); setShowPreview(false);
+  });
+
+  const confirmOpenEditor = (lesson: string) => {
+    if (!dirty) { openEditor(lesson); return; }
+    Modal.confirm({
+      title: '放弃尚未保存的修改？',
+      content: '本地编辑内容尚未保存。打开另一份教案会丢弃这些修改。',
+      okText: '放弃并打开', cancelText: '继续编辑',
+      onOk: () => openEditor(lesson),
+    });
+  };
+
+  const save = () => void action(async () => {
+    if (!document?.editable || !dirty || !editedBody.trim()) return;
+    const updated = await request<PrepDocument>(editorPath(document.lesson_id), 'PUT',
+      { body: editedBody, expected_sha256: document.sha256 });
+    setDocument(updated); setEditedBody(updated.body); setSaved(true);
+    setCheck({ lesson_id: updated.lesson_id, status: updated.status,
+      ready_for_class: false, errors: updated.errors, warnings: updated.warnings });
+    setSelectedLesson(updated.lesson_id);
+    await refresh();
+    onCreated();
+  });
+
+  const discard = () => {
+    if (!document) return;
+    if (!dirty) { openEditor(document.lesson_id); return; }
+    Modal.confirm({
+      title: '重新读取会丢弃当前修改',
+      content: '如果其他窗口已经保存了内容，重新读取后可继续编辑最新版本。',
+      okText: '丢弃并重新读取', cancelText: '继续编辑',
+      onOk: () => openEditor(document.lesson_id),
+    });
+  };
 
   const chapterOptions = (book?.chapters || []).filter(c => c.level <= 2)
     .map(c => ({ label: c.title, value: c.title }));
@@ -120,7 +172,10 @@ export default function PrepPanel({ course, request, onSelectLesson, onCreated, 
             itemRender={({ id, status }) => <Flex align="center" justify="space-between" gap="middle" wrap="wrap">
               <Space><Text code>{id}</Text><Tag color={status === 'ready' ? 'green' :
                 status === 'stale' || status === 'invalid' ? 'red' : 'default'}>{status}</Tag></Space>
-              <Button type="link" onClick={() => validate(id)}>检查</Button>
+              <Space size="small">
+                <Button type="link" onClick={() => validate(id)}>检查</Button>
+                <Button type="link" onClick={() => confirmOpenEditor(id)}>编辑草稿</Button>
+              </Space>
             </Flex>} /> : <Empty description="还没有章节教案，先创建第一份草稿" />}
         </Col>
         <Col xs={24} md={12}>
@@ -141,5 +196,42 @@ export default function PrepPanel({ course, request, onSelectLesson, onCreated, 
         </Col>
       </Row>
     </Card>
+    {document && <Card className="prep-editor" title={<Space wrap>
+      <Text>教案正文 · {document.lesson_id}</Text>
+      <Tag color={document.editable ? 'processing' : 'default'}>
+        {document.editable ? '仅编辑 draft' : '只读'}
+      </Tag>
+      {dirty && <Tag color="warning">有未保存更改</Tag>}
+    </Space>} extra={<Button onClick={discard} disabled={loading}>重新读取</Button>}>
+      <Paragraph type="secondary">
+        教材版本、课号、章节范围与 PREP 状态由服务器保留。修改正文不会自动批准备课、解锁课堂或改变掌握度。
+      </Paragraph>
+      {!document.editable && <Alert type="warning" showIcon className="feedback"
+        title="这份教案当前只读" description="只有 draft 可在网页编辑；已 ready 或旧版教案须按原有审核流程处理。" />}
+      {saved && !dirty && <Alert type="success" showIcon className="feedback"
+        title="教案已保存" description="保存结果已同步到本课程，下面的检查结果已按最新文件重新计算。" />}
+      <Space wrap className="prep-editor-actions">
+        <Button type={!showPreview ? 'primary' : 'default'} onClick={() => setShowPreview(false)}>编辑 Markdown</Button>
+        <Button type={showPreview ? 'primary' : 'default'} onClick={() => setShowPreview(true)}>文本预览</Button>
+        <Button type="primary" loading={loading} onClick={save}
+          disabled={!document.editable || !dirty || !editedBody.trim()}>保存草稿</Button>
+      </Space>
+      {showPreview ? <pre className="prep-markdown prep-editor-preview">{editedBody}</pre> :
+        <Input.TextArea aria-label="编辑 PREP 教案正文" rows={18} autoSize={false}
+          placeholder="在此编辑教案正文" value={editedBody} maxLength={170000}
+          readOnly={!document.editable} onChange={event => {
+            setEditedBody(event.target.value); setSaved(false);
+          }} className="prep-editor-input" />}
+      <Flex align="center" justify="space-between" gap="small" wrap="wrap" className="prep-editor-footer">
+        <Text type="secondary">保存前自动检查版本冲突。保留未写完的 TODO 是合法草稿，但不能开课。</Text>
+        <Button onClick={() => validate(document.lesson_id)}>检查当前已保存版本</Button>
+      </Flex>
+      {document.errors.length > 0 && !dirty && <Alert type="info" showIcon className="feedback"
+        title={`还有 ${document.errors.length} 项待完善`}
+        description={<ul>{document.errors.slice(0, 10).map((item, index) =>
+          <li key={index}>{item}</li>)}</ul>} />}
+      {document.warnings.length > 0 && !dirty && <Alert type="warning" showIcon
+        title="教案警告" description={document.warnings.join('；')} />}
+    </Card>}
   </div>;
 }
