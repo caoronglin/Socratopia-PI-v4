@@ -29,7 +29,7 @@ type ChatHistory = { course: string; exchanges: number; turns: Turn[] };
 type Evidence = { course: string; source: string; sha256: string; excerpts: { id: string; section: string; text: string }[]; ready: boolean };
 type Overview = { course: string; book_available: boolean; grounded_chat_ready: boolean; formal_lesson_ready: boolean; blockers: string[]; timer_phase: string; group_phase: string };
 type Group = {
-  configured?: boolean; members?: string[]; next_speaker?: string | null;
+  configured?: boolean; members?: string[]; lead?: string; next_speaker?: string | null;
   requires_user_turn?: boolean; grounding?: string; last_turn_evidence?: Citation[];
   session?: { topic: string; phase: string; round: number; max_rounds: number; turns: Turn[] } | null;
 };
@@ -41,6 +41,7 @@ const tutorNames: Record<string, string> = { D: '三月七', E: '丹恒', F: '�
 export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
   const [token, setToken] = useState('');
   const latestScope = useRef({ course: '', token: '' });
+  const lessonSelectionManual = useRef(false);
   const [courses, setCourses] = useState<string[]>([]);
   const [course, setCourse] = useState('');
   const [tab, setTab] = useState<LearningTab>('class');
@@ -104,7 +105,11 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
     setState(s); setTimer(t); setGroup(g); setOverview(o);
     setPrepLessons(prep.lessons);
     setTurns(history.turns);
-    if (s.lesson_id) setLessonId(s.lesson_id);
+    if (s.lesson_id && !lessonSelectionManual.current) setLessonId(s.lesson_id);
+    if (g.configured && g.members?.length) {
+      setMembers([...g.members]);
+      setLead(g.lead && g.members.includes(g.lead) ? g.lead : g.members[0]);
+    }
   }, [course, token, request]);
 
   const chooseCourse = (next: string) => {
@@ -114,6 +119,8 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
     setTurns([]); setEvidence(null); setEvidenceQuery('');
     setOverview(null); setPrepLessons({}); setState(null);
     setGroup(null); setTimer(null); setMessage(''); setTopic('');
+    setMembers(['D', 'E']); setLead('D');
+    lessonSelectionManual.current = false;
     setLessonId('lesson_001'); setError('');
   };
 
@@ -183,19 +190,20 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
         ? await post<Timer>('/timer/start', { lesson_id: lessonId })
         : await post<Timer>('/timer/transition', { action });
       setTimer(next);
+      await reload();
     });
   };
   const configureGroup = async () => {
-    await run(async () => { setGroup(await post<Group>('/group/configure', { members, lead })); });
+    await run(async () => { setGroup(await post<Group>('/group/configure', { members, lead })); await reload(); });
   };
   const startGroup = async () => {
-    await run(async () => { setGroup(await post<Group>('/group/start', { topic, rounds: 2 })); });
+    await run(async () => { setGroup(await post<Group>('/group/start', { topic, rounds: 2 })); await reload(); });
   };
   const nextGroup = async () => {
-    await run(async () => { setGroup(await post<Group>('/group/next')); });
+    await run(async () => { setGroup(await post<Group>('/group/next')); await reload(); });
   };
   const continueGroup = async () => {
-    await run(async () => { setGroup(await post<Group>('/group/continue', {})); });
+    await run(async () => { setGroup(await post<Group>('/group/continue', {})); await reload(); });
   };
   const activeSeconds = timer?.elapsed_seconds || 0;
   const minimum = timer?.minimum_seconds || 2700;
@@ -267,7 +275,8 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
                 <Row gutter={[16, 16]}>
                   <Col xs={24} lg={16}>
                     <Card title="教学对话" className="chat-card" extra={<Tag>最近 50 轮问答</Tag>}>
-                      {turns.length ? <Listy items={turns.map((turn, index) => ({ ...turn, rowId: index }))} rowKey="rowId" itemRender={turn => <div className="chat-list-item">
+                      {turns.length ? <Listy items={turns.map((turn, index) => ({ ...turn, rowId: index }))} rowKey="rowId" itemRender={turn =>
+                        <div className={turn.speaker === 'student' ? 'chat-list-item chat-list-item--student' : 'chat-list-item'}>
                           <div className="chat-turn">
                             <Flex align="center" gap="small" wrap="wrap">
                               <Text strong>{tutorNames[turn.speaker] || turn.speaker}</Text>
@@ -300,7 +309,10 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
                         description={<Button type="link" onClick={() => setTab('prep')}>前往章节备课检查</Button>} />}
                       <Divider />
                       <Space orientation="vertical" style={{ width: '100%' }}>
-                        <Input value={lessonId} onChange={e => setLessonId(e.target.value)} placeholder="lesson_001" />
+                        <Input aria-label="准备开始的课号" value={lessonId} onChange={e => {
+                          lessonSelectionManual.current = true;
+                          setLessonId(e.target.value);
+                        }} placeholder="lesson_001" />
                         <Space wrap>
                           <Button disabled={busy || !overview?.formal_lesson_ready} onClick={() => void timerAction('start')}>开始</Button>
                           <Button disabled={busy || !timer?.is_active} onClick={() => void timerAction('pause')}>暂停</Button>
@@ -319,7 +331,7 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
                 </section>
               </>}
               {tab === 'prep' && <PrepPanel key={course + ':' + token} course={course} request={request}
-                onSelectLesson={id => { setLessonId(id); setTab('class'); }}
+                onSelectLesson={id => { lessonSelectionManual.current = true; setLessonId(id); setTab('class'); }}
                 onCreated={() => { void reload().catch(err =>
                   setError(err instanceof Error ? err.message : '无法刷新课程就绪状态')); }}
                 onOpenBook={() => setTab('evidence')} />}

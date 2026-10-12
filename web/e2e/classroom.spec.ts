@@ -104,6 +104,7 @@ test('desktop onboarding → textbook → live classroom quiz → AntV → mobil
   await page.getByPlaceholder('新课程名称').fill('第二课程');
   await page.getByRole('button', { name: '创建课程' }).click();
   await expect(page.getByText('教材：缺失')).toBeVisible();
+  await page.getByText('课堂与对话', { exact: true }).click();
   await expect(page.getByText('历史对话恢复测试：减数分裂')).toHaveCount(0);
   await page.getByRole('combobox', { name: '选择当前课程' }).click();
   await page.locator('.ant-select-item-option-content').getByText(NAME, { exact: true }).click();

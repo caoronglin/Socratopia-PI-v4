@@ -110,3 +110,16 @@ body { min-width: 320px; background: var(--ant-color-bg-layout); }
   .topbar { overflow: hidden; }
   .topbar .ant-tag { max-width: 128px; text-overflow: ellipsis; overflow: hidden; }
 }
+
+/* Tutor dialogue: keep speaker context visually distinct without imitating chat apps. */
+.chat-card .chat-list-item { display: flex; align-items: flex-start; }
+.chat-card .chat-list-item .chat-turn { width: fit-content; max-width: 94%;
+  padding: 10px 14px; border-radius: var(--ant-border-radius-lg);
+  background: var(--ant-color-fill-quaternary); }
+.chat-card .chat-list-item--student { justify-content: flex-end; }
+.chat-card .chat-list-item--student .chat-turn { background: var(--ant-color-primary-bg); }
+.chat-card .message-text { line-height: 1.7; }
+.chat-card .quote { font-size: 12px; line-height: 1.6; }
+@media (max-width: 768px) {
+  .chat-card .chat-list-item .chat-turn { max-width: 100%; }
+}
