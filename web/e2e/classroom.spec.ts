@@ -15,8 +15,8 @@ test('desktop onboarding → textbook → live classroom quiz → AntV → mobil
   const initialList = page.waitForResponse(r =>
     r.request().method() === 'GET' && new URL(r.url()).pathname === '/api/courses');
   await page.getByRole('button', { name: '连接并刷新' }).click();
-  await initialList;
-  if (await page.getByPlaceholder('课程名称', { exact: true }).isVisible()) {
+  const available = await (await initialList).json() as { courses: string[] };
+  if (available.courses.length === 0) {
     await page.getByPlaceholder('课程名称', { exact: true }).fill(courseName);
   } else {
     // The API workspace is reused on retries; navigate to the existing
