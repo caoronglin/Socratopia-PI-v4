@@ -86,3 +86,40 @@ body { margin: 0; }
   .prep-workspace .ant-steps-item-title { font-size: 11px; }
   .page-heading .ant-breadcrumb { font-size: 12px; }
 }
+
+/* Alpha.4: product-level rhythm without overriding Ant Design internals. */
+:root { --workspace-space: 20px; }
+body { min-width: 320px; background: var(--ant-color-bg-layout); }
+.sidebar { background: var(--ant-color-bg-container); }
+.brand { letter-spacing: -.035em; }
+.topbar { box-shadow: 0 1px 0 var(--ant-color-border-secondary); }
+.content { max-width: 1280px; }
+.content .ant-card { border-color: var(--ant-color-border-secondary); }
+.page-heading { margin-bottom: 22px; }
+.page-heading .ant-typography { margin-bottom: 0; }
+.journey-card { margin-bottom: var(--workspace-space); }
+.journey-guidance { margin: 14px 0 10px; }
+.journey-actions { margin-top: 16px; }
+.chat-list-item { min-width: 0; width: 100%; padding: 12px 4px; border-bottom: 1px solid var(--ant-color-border-secondary); }
+.chat-list-item:last-child { border-bottom: 0; }
+.prep-workspace .ant-card { min-width: 0; }
+@media (max-width: 768px) {
+  .content { padding-left: 12px; padding-right: 12px; }
+  .journey-card .ant-steps-item-title { font-size: 12px; }
+  .chat-list-item { padding: 12px 2px; }
+  .topbar { overflow: hidden; }
+  .topbar .ant-tag { max-width: 128px; text-overflow: ellipsis; overflow: hidden; }
+}
+
+/* Tutor dialogue: keep speaker context visually distinct without imitating chat apps. */
+.chat-card .chat-list-item { display: flex; align-items: flex-start; }
+.chat-card .chat-list-item .chat-turn { width: fit-content; max-width: 94%;
+  padding: 10px 14px; border-radius: var(--ant-border-radius-lg);
+  background: var(--ant-color-fill-quaternary); }
+.chat-card .chat-list-item--student { justify-content: flex-end; }
+.chat-card .chat-list-item--student .chat-turn { background: var(--ant-color-primary-bg); }
+.chat-card .message-text { line-height: 1.7; }
+.chat-card .quote { font-size: 12px; line-height: 1.6; }
+@media (max-width: 768px) {
+  .chat-card .chat-list-item .chat-turn { max-width: 100%; }
+}

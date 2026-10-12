@@ -4,6 +4,8 @@ import { AppOutline, MessageOutline, UnorderedListOutline, UserOutline } from 'a
 import PracticePanel from './practice';
 import ResourcesPanel from './resources';
 import PrepPanel from './prep';
+import LearningJourney from './learning_journey';
+import type { LearningTab } from './learning_journey';
 import {
   Alert, Badge, Breadcrumb, Button, Card, Col, Divider, Empty, Flex, Input, Layout, Listy,
   Menu, Progress, Row, Select, Space, Statistic, Switch, Tag, Typography
@@ -27,7 +29,7 @@ type ChatHistory = { course: string; exchanges: number; turns: Turn[] };
 type Evidence = { course: string; source: string; sha256: string; excerpts: { id: string; section: string; text: string }[]; ready: boolean };
 type Overview = { course: string; book_available: boolean; grounded_chat_ready: boolean; formal_lesson_ready: boolean; blockers: string[]; timer_phase: string; group_phase: string };
 type Group = {
-  configured?: boolean; members?: string[]; next_speaker?: string | null;
+  configured?: boolean; members?: string[]; lead?: string; next_speaker?: string | null;
   requires_user_turn?: boolean; grounding?: string; last_turn_evidence?: Citation[];
   session?: { topic: string; phase: string; round: number; max_rounds: number; turns: Turn[] } | null;
 };
@@ -38,14 +40,17 @@ const tutorNames: Record<string, string> = { D: '三月七', E: '丹恒', F: '�
 
 export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
   const [token, setToken] = useState('');
+  const [connectedToken, setConnectedToken] = useState('');
   const latestScope = useRef({ course: '', token: '' });
+  const lessonSelectionManual = useRef(false);
   const [courses, setCourses] = useState<string[]>([]);
   const [course, setCourse] = useState('');
-  const [tab, setTab] = useState('class');
+  const [tab, setTab] = useState<LearningTab>('class');
   const [state, setState] = useState<CourseState | null>(null);
   const [timer, setTimer] = useState<Timer | null>(null);
   const [group, setGroup] = useState<Group | null>(null);
   const [overview, setOverview] = useState<Overview | null>(null);
+  const [prepLessons, setPrepLessons] = useState<Record<string, string>>({});
   const [evidence, setEvidence] = useState<Evidence | null>(null);
   const [evidenceQuery, setEvidenceQuery] = useState('');
   const [lessonId, setLessonId] = useState('lesson_001');
@@ -87,29 +92,50 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
   const reload = useCallback(async () => {
     if (!course || !token) return;
     const path = '/courses/' + encodeURIComponent(course);
-    const [s, t, g, o, history] = await Promise.all([
+    const [s, t, g, o, history, prep] = await Promise.all([
       request<CourseState>(path + '/state'),
       request<Timer>(path + '/timer'),
       request<Group>(path + '/group'),
       request<Overview>(path + '/overview'),
       request<ChatHistory>(path + '/chat/history'),
+      request<{ lessons: Record<string, string> }>(path + '/prep'),
     ]);
     // A slow request for an earlier course or token must not overwrite
     // the selected course's new transcript, timer or progress.
     if (latestScope.current.course !== course || latestScope.current.token !== token) return;
     setState(s); setTimer(t); setGroup(g); setOverview(o);
+    setPrepLessons(prep.lessons);
     setTurns(history.turns);
-    if (s.lesson_id) setLessonId(s.lesson_id);
+    if (s.lesson_id && !lessonSelectionManual.current) setLessonId(s.lesson_id);
+    if (g.configured && g.members?.length) {
+      setMembers([...g.members]);
+      setLead(g.lead && g.members.includes(g.lead) ? g.lead : g.members[0]);
+    }
   }, [course, token, request]);
 
-  useEffect(() => {
-    setTurns([]);
-    setEvidence(null);
-    setOverview(null);
-    setState(null);
-    setGroup(null);
-    setTimer(null);
-  }, [course]);
+  const chooseCourse = (next: string) => {
+    // Reset all per-course editing and evidence state atomically on selection.
+    // No stale answer, source or lesson number should survive a course switch.
+    setCourse(next);
+    setTurns([]); setEvidence(null); setEvidenceQuery('');
+    setOverview(null); setPrepLessons({}); setState(null);
+    setGroup(null); setTimer(null); setMessage(''); setTopic('');
+    setMembers(['D', 'E']); setLead('D');
+    lessonSelectionManual.current = false;
+    setLessonId('lesson_001'); setError('');
+  };
+
+  const changeToken = (next: string) => {
+    // Local bearer tokens are never persisted. A different token revokes the
+    // current selection and makes all course data require a fresh connection.
+    if (next !== token) {
+      chooseCourse('');
+      setCourses([]);
+      setConnectedToken('');
+      setTab('class');
+    }
+    setToken(next);
+  };
 
   useEffect(() => {
     if (!course) return;
@@ -119,30 +145,36 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
   const refreshCourses = async () => {
     await run(async () => {
       const result = await request<{courses: string[]}>('/courses');
+      setConnectedToken(token);
       setCourses(result.courses);
-      setCourse((previous) => result.courses.includes(previous) ? previous : (result.courses[0] || ''));
+      if (!result.courses.includes(course)) chooseCourse(result.courses[0] || '');
     });
   };
   const post = async <T,>(suffix: string, body: object = {}): Promise<T> =>
     request<T>('/courses/' + encodeURIComponent(course) + suffix, 'POST', body);
 
   const createCourse = async () => {
-    if (!newCourse.trim()) return;
+    if (!newCourse.trim() || connectedToken !== token) return;
     await run(async () => {
       await request('/courses', 'POST', { name: newCourse.trim(), tutor: newTutor });
       const result = await request<{courses: string[]}>('/courses');
       setCourses(result.courses);
-      setCourse(newCourse.trim());
+      chooseCourse(newCourse.trim());
       setNewCourse('');
     });
   };
-  const searchEvidence = async () => {
-    if (!evidenceQuery.trim() || !course) return;
+  const searchEvidence = async (rawQuery: string = evidenceQuery) => {
+    const query = rawQuery.trim();
+    if (!query || !course) return;
+    const requestedCourse = course, requestedToken = token;
+    setEvidence(null); setEvidenceQuery(query);
     await run(async () => {
       const result = await request<Evidence>(
-        '/courses/' + encodeURIComponent(course) + '/evidence?q=' + encodeURIComponent(evidenceQuery.trim())
+        '/courses/' + encodeURIComponent(requestedCourse) + '/evidence?q=' + encodeURIComponent(query)
       );
-      setEvidence(result);
+      if (latestScope.current.course === requestedCourse && latestScope.current.token === requestedToken) {
+        setEvidence(result);
+      }
     });
   };
   const chat = async () => {
@@ -161,19 +193,20 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
         ? await post<Timer>('/timer/start', { lesson_id: lessonId })
         : await post<Timer>('/timer/transition', { action });
       setTimer(next);
+      await reload();
     });
   };
   const configureGroup = async () => {
-    await run(async () => { setGroup(await post<Group>('/group/configure', { members, lead })); });
+    await run(async () => { setGroup(await post<Group>('/group/configure', { members, lead })); await reload(); });
   };
   const startGroup = async () => {
-    await run(async () => { setGroup(await post<Group>('/group/start', { topic, rounds: 2 })); });
+    await run(async () => { setGroup(await post<Group>('/group/start', { topic, rounds: 2 })); await reload(); });
   };
   const nextGroup = async () => {
-    await run(async () => { setGroup(await post<Group>('/group/next')); });
+    await run(async () => { setGroup(await post<Group>('/group/next')); await reload(); });
   };
   const continueGroup = async () => {
-    await run(async () => { setGroup(await post<Group>('/group/continue', {})); });
+    await run(async () => { setGroup(await post<Group>('/group/continue', {})); await reload(); });
   };
   const activeSeconds = timer?.elapsed_seconds || 0;
   const minimum = timer?.minimum_seconds || 2700;
@@ -185,7 +218,7 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
       <Sider breakpoint="lg" collapsedWidth="0" width={232} theme={dark ? 'dark' : 'light'} className="sidebar desktop-sidebar">
         <div className="brand">Socratopia <span>v5 Alpha.3</span></div>
         <Text type="secondary" className="brand-note">你的课程学习空间</Text>
-        <Menu selectedKeys={[tab]} onClick={({ key }) => setTab(key)} mode="inline"
+        <Menu selectedKeys={[tab]} onClick={({ key }) => setTab(key as LearningTab)} mode="inline"
           items={[
             { key: 'class', label: '课堂与对话' },
             { key: 'group', label: '导师学习小组' },
@@ -212,11 +245,12 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
           <Card size="small" className="control-card" title={<Space size="small"><Badge status={course ? 'success' : 'default'} />课程连接</Space>}>
             <Flex gap="small" align="center" wrap="wrap">
               <Input.Password aria-label="本地服务访问令牌" placeholder="服务令牌（仅保存在此页面内存）" value={token}
-                onChange={e => setToken(e.target.value)} style={{ maxWidth: 280 }} />
+                onChange={e => changeToken(e.target.value)} disabled={busy} style={{ maxWidth: 280 }} />
               <Button type="primary" onClick={() => void refreshCourses()} disabled={!token} loading={busy}>连接并刷新</Button>
-              <Select placeholder="选择课程" value={course || undefined} onChange={setCourse}
+              <Select aria-label="选择当前课程" placeholder="选择课程" value={course || undefined}
+                onChange={chooseCourse} disabled={!connectedToken || connectedToken !== token || busy}
                 style={{ minWidth: 180 }} options={courses.map(name => ({ value: name, label: name }))} />
-              <Button onClick={() => void run(reload)} disabled={!course} loading={busy}>刷新状态</Button>
+              <Button onClick={() => void run(reload)} disabled={!course || !token} loading={busy}>刷新状态</Button>
             </Flex>
           </Card>
           {error && <Alert className="feedback" type="error" showIcon title={error} closable={{ onClose: () => setError('') }} />}
@@ -227,7 +261,7 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
                 onChange={e => setNewCourse(e.target.value)} style={{ width: 240 }} />
               <Select value={newTutor} onChange={setNewTutor} style={{ minWidth: 120 }}
                 options={['D','E','F'].map(value => ({value,label:tutorNames[value]}))} />
-              <Button type="primary" disabled={!token || !newCourse.trim()} loading={busy}
+              <Button type="primary" disabled={!connectedToken || connectedToken !== token || !newCourse.trim()} loading={busy}
                 onClick={() => void createCourse()}>创建课程</Button>
             </Flex>
           </Card> : (
@@ -235,7 +269,8 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
               {tab === 'class' && <>
                 {!overview?.book_available && <Alert className="feedback" type="warning" showIcon
                   title="当前课程没有可用主教材"
-                  description="请先在该课程 TEXTBOOK 目录准备 book.md；无教材时禁止 AI 凭记忆生成课程证据。" />}
+                  description={<Space wrap><Text>先导入本课程的 Markdown 主教材，才能开展有教材引文的对话。</Text>
+                    <Button type="link" onClick={() => setTab('evidence')}>前往教材导入</Button></Space>} />}
                 {overview?.book_available && <Alert className="feedback" type="info" showIcon
                   title="引用核验已启用"
                   description="模型必须提供来自本课程教材的逐字引文；引用通过不代表科学事实已被自动核实。" />}
@@ -243,7 +278,8 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
                 <Row gutter={[16, 16]}>
                   <Col xs={24} lg={16}>
                     <Card title="教学对话" className="chat-card" extra={<Tag>最近 50 轮问答</Tag>}>
-                      {turns.length ? <Listy items={turns.map((turn, index) => ({ ...turn, rowId: index }))} rowKey="rowId" itemRender={turn => <div className="chat-list-item">
+                      {turns.length ? <Listy items={turns.map((turn, index) => ({ ...turn, rowId: index }))} rowKey="rowId" itemRender={turn =>
+                        <div className={turn.speaker === 'student' ? 'chat-list-item chat-list-item--student' : 'chat-list-item'}>
                           <div className="chat-turn">
                             <Flex align="center" gap="small" wrap="wrap">
                               <Text strong>{tutorNames[turn.speaker] || turn.speaker}</Text>
@@ -262,7 +298,7 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
                       <Input.TextArea value={message} onChange={e => setMessage(e.target.value)}
                         placeholder="对课程提问，或解释你的解题思路…" rows={3} maxLength={2000} showCount />
                       <Flex justify="end" className="send-row">
-                        <Button type="primary" loading={busy} disabled={!message.trim()} onClick={() => void chat()}>发送给 Pi</Button>
+                        <Button type="primary" loading={busy} disabled={!message.trim() || !overview?.book_available} onClick={() => void chat()}>发送给 Pi</Button>
                       </Flex>
                     </Card>
                   </Col>
@@ -271,11 +307,17 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
                       <Statistic title="已核验有效时长" value={Math.floor(activeSeconds / 60)} suffix="分钟" />
                       <Progress percent={percent} />
                       <Text type="secondary">达到 2700 秒并满足课程门禁后，才能正式完成课堂。</Text>
+                      {!overview?.formal_lesson_ready && <Alert className="section-note" type="info" showIcon
+                        title="课堂尚未通过就绪检查"
+                        description={<Button type="link" onClick={() => setTab('prep')}>前往章节备课检查</Button>} />}
                       <Divider />
                       <Space orientation="vertical" style={{ width: '100%' }}>
-                        <Input value={lessonId} onChange={e => setLessonId(e.target.value)} placeholder="lesson_001" />
+                        <Input aria-label="准备开始的课号" value={lessonId} onChange={e => {
+                          lessonSelectionManual.current = true;
+                          setLessonId(e.target.value);
+                        }} placeholder="lesson_001" />
                         <Space wrap>
-                          <Button disabled={busy} onClick={() => void timerAction('start')}>开始</Button>
+                          <Button disabled={busy || !overview?.formal_lesson_ready} onClick={() => void timerAction('start')}>开始</Button>
                           <Button disabled={busy || !timer?.is_active} onClick={() => void timerAction('pause')}>暂停</Button>
                           <Button disabled={busy || timer?.phase !== 'paused'} onClick={() => void timerAction('resume')}>继续</Button>
                           <Button type="primary" disabled={busy || activeSeconds < minimum} onClick={() => void timerAction('finish')}>完成课堂</Button>
@@ -286,12 +328,16 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
                   </Col>
                 </Row>
                 <section aria-label="课堂互动题与练习表现" className="classroom-practice-section">
-                  <PracticePanel key={course} course={course} request={request}
+                  <PracticePanel key={course + ':' + token} course={course} request={request}
                     onAnswered={() => { void reload().catch(err =>
                       setError(err instanceof Error ? err.message : '课程状态刷新失败')); }} />
                 </section>
               </>}
-              {tab === 'prep' && <PrepPanel key={course} course={course} request={request} />}
+              {tab === 'prep' && <PrepPanel key={course + ':' + token} course={course} request={request}
+                onSelectLesson={id => { lessonSelectionManual.current = true; setLessonId(id); setTab('class'); }}
+                onCreated={() => { void reload().catch(err =>
+                  setError(err instanceof Error ? err.message : '无法刷新课程就绪状态')); }}
+                onOpenBook={() => setTab('evidence')} />}
                {tab === 'group' && <Row gutter={[16, 16]}>
                 <Col xs={24} lg={9}>
                   <Card title="导师配置">
@@ -342,10 +388,10 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
                 </Col>
               </Row>}
               {tab === 'evidence' && <>
-                <ResourcesPanel key={course} course={course} request={request}
+                <ResourcesPanel key={course + ':' + token} course={course} request={request}
                   onImported={() => { void reload().catch(err =>
                     setError(err instanceof Error ? err.message : '课程刷新失败')); }}
-                  onExplore={title => setEvidenceQuery(title)} />
+                  onExplore={title => { void searchEvidence(title); }} onStartPrep={() => setTab('prep')} />
                 <Card title="检索主教材证据" extra={<Tag>只读</Tag>}>
                 <Paragraph type="secondary">从当前课程 book.md 检索相关章节。所有引用显示原文及文件摘要，未验证来源的内容不会自动作为课堂事实。</Paragraph>
                 <Flex gap="small" wrap="wrap">
@@ -366,6 +412,10 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
                 </Card>
               </>}
               {tab === 'course' && <>
+                <LearningJourney bookAvailable={Boolean(overview?.book_available)}
+                  prepCount={Object.keys(prepLessons).length}
+                  formalReady={Boolean(overview?.formal_lesson_ready)}
+                  onNavigate={setTab} />
                 <Card className="control-card" title="模块联动就绪情况">
                   <Flex gap="small" wrap="wrap">
                     <Tag color={overview?.book_available ? 'success' : 'warning'}>
@@ -390,7 +440,7 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
                       onChange={e => setNewCourse(e.target.value)} style={{ maxWidth: 230 }} />
                     <Select value={newTutor} onChange={setNewTutor} style={{ minWidth: 130 }}
                       options={['D','E','F'].map(value => ({value,label:tutorNames[value]}))} />
-                    <Button type="primary" loading={busy} disabled={!newCourse.trim()}
+                    <Button type="primary" loading={busy} disabled={!connectedToken || connectedToken !== token || !newCourse.trim()}
                       onClick={() => void createCourse()}>创建课程</Button>
                   </Flex>
                 </Card>
@@ -415,7 +465,7 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
           )}
         </Content>
         <nav className="mobile-tabbar" aria-label="移动端模块导航">
-          <TabBar activeKey={tab} onChange={setTab} safeArea>
+          <TabBar activeKey={tab} onChange={key => setTab(key as LearningTab)} safeArea>
             <TabBar.Item key="class" icon={<MessageOutline />} title="课堂" />
             <TabBar.Item key="group" icon={<UserOutline />} title="导师" />
              <TabBar.Item key="prep" icon={<UnorderedListOutline />} title="备课" />
