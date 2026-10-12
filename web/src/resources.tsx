@@ -7,9 +7,9 @@ type Book = { course: string; available: boolean; can_import: boolean;
   sha256?: string; bytes?: number; source?: string; chapters: Chapter[] };
 const { Text, Paragraph } = Typography;
 
-export default function ResourcesPanel({ course, request, onImported, onExplore }: {
+export default function ResourcesPanel({ course, request, onImported, onExplore, onStartPrep }: {
   course: string; request: CourseRequest; onImported: () => void;
-  onExplore: (title: string) => void;
+  onExplore: (title: string) => void; onStartPrep: () => void;
 }) {
   const [book, setBook] = useState<Book | null>(null);
   const [content, setContent] = useState('');
@@ -38,12 +38,15 @@ export default function ResourcesPanel({ course, request, onImported, onExplore 
     {error && <Alert type="error" showIcon className="feedback" title={error} />}
     {!book ? <Text type="secondary">读取教材状态中…</Text> :
       book.available ? <>
-        <Space wrap><Tag color="success">主教材已载入</Tag><Text type="secondary">{book.source}</Text></Space>
+        <Flex gap="small" wrap="wrap" align="center" justify="space-between">
+          <Space wrap><Tag color="success">主教材已载入</Tag><Text type="secondary">{book.source}</Text></Space>
+          <Button type="primary" onClick={onStartPrep}>下一步：章节备课</Button>
+        </Flex>
         <Paragraph copyable={{ text: book.sha256 }} type="secondary">
           文件摘要 SHA-256：{book.sha256?.slice(0, 16)}… · {book.bytes?.toLocaleString()} 字节
         </Paragraph>
         <Divider />
-        <Text strong>章节目录（点击查询教材证据）</Text>
+        <Text strong>章节目录（点击章节立即检索对应教材证据）</Text>
         {book.chapters.length ? <Listy items={book.chapters} rowKey="line"
           itemRender={chapter => <Flex align="center" justify="space-between" wrap="wrap" gap="small">
             <Button type="link" onClick={() => onExplore(chapter.title)}>

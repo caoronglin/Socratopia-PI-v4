@@ -12,7 +12,12 @@ type Draft = {
 };
 type Check = { lesson_id: string; status: string; ready_for_class: boolean; errors: string[]; warnings: string[] };
 
-export default function PrepPanel({ course, request }: { course: string; request: CourseRequest }) {
+export default function PrepPanel({ course, request, onSelectLesson, onCreated, onOpenBook }: {
+  course: string; request: CourseRequest;
+  onSelectLesson: (lessonId: string) => void;
+  onCreated: () => void;
+  onOpenBook: () => void;
+}) {
   const [book, setBook] = useState<Book | null>(null);
   const [lessons, setLessons] = useState<Record<string, string>>({});
   const [chapter, setChapter] = useState('');
@@ -58,6 +63,7 @@ export default function PrepPanel({ course, request }: { course: string; request
     setDraft(result);
     setSelectedLesson(result.lesson_id);
     await refresh();
+    onCreated();
   });
 
   const validate = (lesson: string) => void action(async () => {
@@ -81,7 +87,10 @@ export default function PrepPanel({ course, request }: { course: string; request
       <Paragraph type="secondary" className="section-note">
         使用现有教材目录；含小节的章自动生成对应教学单元，禁止人工填写不存在的章节标题。
       </Paragraph>
-      {!book?.available ? <Empty description="请先在「教材」页导入主教材" /> : <>
+      {!book?.available ? <Empty description={<Space orientation="vertical">
+        <Text>先导入主教材，再选择真实章节创建备课草稿。</Text>
+        <Button type="primary" onClick={onOpenBook}>前往教材导入</Button>
+      </Space>} /> : <>
         <Space wrap className="prep-actions">
           <Select aria-label="选择备课章节" showSearch={{ optionFilterProp: "label" }}
             placeholder="选择教材章节" style={{ minWidth: 240, maxWidth: '100%' }}
@@ -125,6 +134,9 @@ export default function PrepPanel({ course, request }: { course: string; request
                 description="开课仍由后端复核全课程 readiness、教材与计时条件。" />}
             {check.warnings.length > 0 && <Alert type="warning" showIcon className="feedback"
               title="待复核的提示" description={check.warnings.join('；')} />}
+            <Button className="section-note" type="primary" onClick={() => onSelectLesson(selectedLesson)}>
+              将 {selectedLesson} 带入课堂（不自动开课）
+            </Button>
           </> : <Empty description="选择左侧教案进行状态检查" />}
         </Col>
       </Row>
