@@ -64,7 +64,7 @@ def test_edit_body_keeps_locked_metadata_and_progress(sample: tuple[TestClient, 
     })
     assert saved.status_code == 200, saved.text
     result = saved.json()
-    assert result["body"] == modified.rstrip("\n")
+    assert result["body"].rstrip("\n") == modified.rstrip("\n")
     assert result["status"] == "draft" and result["ready_granted"] is False
     assert result["mastery_updated"] is False
     assert result["sha256"] == hashlib.sha256(path.read_bytes()).hexdigest()

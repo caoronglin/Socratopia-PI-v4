@@ -53,12 +53,12 @@ test('desktop onboarding → textbook → live classroom quiz → AntV → mobil
   const draftEditor = page.getByRole('textbox', { name: '编辑 PREP 教案正文' });
   await expect(draftEditor).toBeVisible();
   const originalDraft = await draftEditor.inputValue();
-  await draftEditor.fill(originalDraft + '\\n\\n课堂备注：对比有丝分裂与减数分裂。'.replaceAll('\\n', '\n'));
+  await draftEditor.fill(originalDraft + '\n\n课堂备注：对比有丝分裂与减数分裂。');
   await expect(page.getByText('有未保存更改')).toBeVisible();
   await page.getByRole('button', { name: '保存草稿', exact: true }).click();
   await expect(page.getByText('教案已保存')).toBeVisible();
   await page.getByRole('button', { name: '重新读取' }).click();
-  await expect(draftEditor).toContainText('课堂备注：对比有丝分裂与减数分裂。');
+  await expect(draftEditor).toHaveValue(/课堂备注：对比有丝分裂与减数分裂。/);
   await expect(page.getByText('尚未通过 ready 门禁')).toBeVisible();
   await page.getByRole('button', { name: /将 lesson_001 带入课堂/ }).click();
   await expect(page.getByText('课堂互动练习')).toBeVisible();
