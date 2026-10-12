@@ -12,9 +12,20 @@ test('desktop onboarding → textbook → live classroom quiz → AntV → mobil
 
   await page.goto('/');
   await page.getByPlaceholder('服务令牌（仅保存在此页面内存）').fill(TOKEN);
+  const initialList = page.waitForResponse(r =>
+    r.request().method() === 'GET' && new URL(r.url()).pathname === '/api/courses');
   await page.getByRole('button', { name: '连接并刷新' }).click();
-  await page.getByPlaceholder('课程名称', { exact: true }).fill(courseName);
+  await initialList;
+  if (await page.getByPlaceholder('课程名称', { exact: true }).isVisible()) {
+    await page.getByPlaceholder('课程名称', { exact: true }).fill(courseName);
+  } else {
+    // The API workspace is reused on retries; navigate to the existing
+    // course manager to create a fresh isolated course for this retry.
+    await page.getByRole('menuitem', { name: '课程状态' }).click();
+    await page.getByPlaceholder('新课程名称').fill(courseName);
+  }
   await page.getByRole('button', { name: '创建课程' }).click();
+  await page.getByRole('menuitem', { name: '课堂与对话' }).click();
   await expect(page.getByText('当前课程没有可用主教材')).toBeVisible();
 
   await page.getByRole('button', { name: '前往教材导入' }).click();
@@ -52,7 +63,7 @@ test('desktop onboarding → textbook → live classroom quiz → AntV → mobil
       ] }),
     });
   });
-  await page.getByText('课堂与对话', { exact: true }).click();
+  await page.getByRole('menuitem', { name: '课堂与对话' }).click();
   await page.getByRole('button', { name: '刷新状态' }).click();
   await expect(page.getByText('历史对话恢复测试：减数分裂')).toBeVisible();
   await expect(page.getByText('原教材已更改，引用可能过期')).toBeVisible();
@@ -77,6 +88,8 @@ test('desktop onboarding → textbook → live classroom quiz → AntV → mobil
   await page.reload();
   await page.getByPlaceholder('服务令牌（仅保存在此页面内存）').fill(TOKEN);
   await page.getByRole('button', { name: '连接并刷新' }).click();
+  await page.getByRole('combobox', { name: '选择当前课程' }).click();
+  await page.locator('.ant-select-item-option-content').getByText(courseName, { exact: true }).click();
   await expect(page.getByText('课堂互动练习')).toBeVisible();
   await expect(page.locator('.practice-question')).toHaveCount(1);
   await expect(page.getByText('历史对话恢复测试：减数分裂')).toBeVisible();
@@ -89,6 +102,8 @@ test('desktop onboarding → textbook → live classroom quiz → AntV → mobil
     await mobilePage.goto('/');
     await mobilePage.getByPlaceholder('服务令牌（仅保存在此页面内存）').fill(TOKEN);
     await mobilePage.getByRole('button', { name: '连接并刷新' }).click();
+    await mobilePage.getByRole('combobox', { name: '选择当前课程' }).click();
+    await mobilePage.locator('.ant-select-item-option-content').getByText(courseName, { exact: true }).click();
     await expect(mobilePage.locator('.mobile-tabbar')).toBeVisible();
     await expect(mobilePage.locator('.desktop-sidebar')).toBeHidden();
     await expect(mobilePage.locator('.mobile-practice-options')).toBeVisible();
@@ -104,7 +119,7 @@ test('desktop onboarding → textbook → live classroom quiz → AntV → mobil
 
   // Cross-course data must not survive an explicit course change.
   await page.unroute('**/api/courses/**/chat/history');
-  await page.getByText('课程状态', { exact: true }).click();
+  await page.getByRole('menuitem', { name: '课程状态' }).click();
   await expect(page.getByText('学习路径', { exact: true })).toBeVisible();
   // Imported book = one finished preparation step; PREP draft alone is
   // not represented as "completed classroom".
@@ -112,11 +127,11 @@ test('desktop onboarding → textbook → live classroom quiz → AntV → mobil
   await page.getByPlaceholder('新课程名称').fill(secondCourseName);
   await page.getByRole('button', { name: '创建课程' }).click();
   await expect(page.getByText('教材：缺失')).toBeVisible();
-  await page.getByText('课堂与对话', { exact: true }).click();
+  await page.getByRole('menuitem', { name: '课堂与对话' }).click();
   await expect(page.getByText('历史对话恢复测试：减数分裂')).toHaveCount(0);
   await page.getByRole('combobox', { name: '选择当前课程' }).click();
   await page.locator('.ant-select-item-option-content').getByText(courseName, { exact: true }).click();
-  await page.getByText('课堂与对话', { exact: true }).click();
+  await page.getByRole('menuitem', { name: '课堂与对话' }).click();
   await expect(page.getByText('课堂互动练习')).toBeVisible();
   await page.getByPlaceholder('服务令牌（仅保存在此页面内存）').fill('invalid-token');
   await expect(page.getByRole('combobox', { name: '选择当前课程' })).toBeDisabled();
