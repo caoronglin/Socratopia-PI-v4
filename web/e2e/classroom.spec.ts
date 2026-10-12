@@ -52,7 +52,12 @@ test('desktop onboarding → textbook → live classroom quiz → AntV → mobil
   await page.getByRole('button', { name: '编辑草稿' }).click();
   await expect(page.getByRole('textbox', { name: '填写问题链' })).toBeVisible();
   await page.getByRole('textbox', { name: '填写问题链' }).fill('1. 核对染色体减半的过程与证据。');
+  const guidedSave = page.waitForResponse(response =>
+    response.request().method() === 'PUT' &&
+    new URL(response.url()).pathname.endsWith('/prep/lesson_001/sections'));
   await page.getByRole('button', { name: '保存草稿', exact: true }).click();
+  const savedSection = await guidedSave;
+  expect(savedSection.status(), await savedSection.text()).toBe(200);
   await expect(page.getByText('教案已保存')).toBeVisible();
   await page.getByRole('button', { name: '编辑 Markdown' }).click();
   const draftEditor = page.getByRole('textbox', { name: '编辑 PREP 教案正文' });
