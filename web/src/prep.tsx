@@ -13,7 +13,7 @@ type Draft = {
 type Check = { lesson_id: string; status: string; ready_for_class: boolean; errors: string[]; warnings: string[] };
 type PrepDocument = {
   lesson_id: string; chapter: string; status: string; editable: boolean;
-  body: string; sha256: string; errors: string[]; warnings: string[];
+  body: string; sha256: string; sections: Record<string, string>; errors: string[]; warnings: string[];
   ready_granted: false; mastery_updated: false;
 };
 
@@ -34,9 +34,13 @@ export default function PrepPanel({ course, request, onSelectLesson, onCreated, 
   const [loading, setLoading] = useState(false);
   const [document, setDocument] = useState<PrepDocument | null>(null);
   const [editedBody, setEditedBody] = useState('');
+  const [sectionEdits, setSectionEdits] = useState<Record<string, string>>({});
+  const [editorMode, setEditorMode] = useState<'guided' | 'raw'>('guided');
   const [saved, setSaved] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
-  const dirty = document !== null && editedBody !== document.body;
+  const dirty = document !== null && (editorMode === 'guided'
+    ? Object.entries(sectionEdits).some(([key, value]) => value !== document.sections[key])
+    : editedBody !== document.body);
 
   const refresh = useCallback(async () => {
     const base = '/courses/' + encodeURIComponent(course);
@@ -86,10 +90,14 @@ export default function PrepPanel({ course, request, onSelectLesson, onCreated, 
 
   const editorPath = (lesson: string) => '/courses/' + encodeURIComponent(course) +
     '/prep/' + encodeURIComponent(lesson) + '/document';
+  const sectionsPath = (lesson: string) => '/courses/' + encodeURIComponent(course) +
+    '/prep/' + encodeURIComponent(lesson) + '/sections';
 
-  const openEditor = (lesson: string) => void action(async () => {
+  const openEditor = (lesson: string, preserveMode = false) => void action(async () => {
     const latest = await request<PrepDocument>(editorPath(lesson));
     setDocument(latest); setEditedBody(latest.body);
+    setSectionEdits({ ...latest.sections });
+    if (!preserveMode) setEditorMode('guided');
     setSelectedLesson(lesson); setSaved(false); setShowPreview(false);
   });
 
@@ -104,10 +112,17 @@ export default function PrepPanel({ course, request, onSelectLesson, onCreated, 
   };
 
   const save = () => void action(async () => {
-    if (!document?.editable || !dirty || !editedBody.trim()) return;
-    const updated = await request<PrepDocument>(editorPath(document.lesson_id), 'PUT',
-      { body: editedBody, expected_sha256: document.sha256 });
-    setDocument(updated); setEditedBody(updated.body); setSaved(true);
+    if (!document?.editable || !dirty) return;
+    if (editorMode === 'raw' && !editedBody.trim()) return;
+    const updates = Object.fromEntries(Object.entries(sectionEdits)
+      .filter(([key, value]) => value !== document.sections[key]));
+    const updated = editorMode === 'guided'
+      ? await request<PrepDocument>(sectionsPath(document.lesson_id), 'PUT',
+        { updates, expected_sha256: document.sha256 })
+      : await request<PrepDocument>(editorPath(document.lesson_id), 'PUT',
+        { body: editedBody, expected_sha256: document.sha256 });
+    setDocument(updated); setEditedBody(updated.body);
+    setSectionEdits({ ...updated.sections }); setSaved(true);
     setCheck({ lesson_id: updated.lesson_id, status: updated.status,
       ready_for_class: false, errors: updated.errors, warnings: updated.warnings });
     setSelectedLesson(updated.lesson_id);
@@ -115,14 +130,31 @@ export default function PrepPanel({ course, request, onSelectLesson, onCreated, 
     onCreated();
   });
 
+  const switchMode = (next: 'guided' | 'raw') => {
+    if (editorMode === next) { setShowPreview(false); return; }
+    if (!dirty) { setEditorMode(next); setShowPreview(false); return; }
+    modal.confirm({
+      title: '切换模式并放弃尚未保存的修改？',
+      content: '两种编辑模式均以服务器保存的教案为准。请先保存或明确放弃本地修改。',
+      okText: '放弃修改并切换', cancelText: '继续编辑',
+      onOk: () => {
+        if (document) {
+          setEditedBody(document.body);
+          setSectionEdits({ ...document.sections });
+        }
+        setEditorMode(next); setShowPreview(false);
+      },
+    });
+  };
+
   const discard = () => {
     if (!document) return;
-    if (!dirty) { openEditor(document.lesson_id); return; }
+    if (!dirty) { openEditor(document.lesson_id, true); return; }
     modal.confirm({
       title: '重新读取会丢弃当前修改',
       content: '如果其他窗口已经保存了内容，重新读取后可继续编辑最新版本。',
       okText: '丢弃并重新读取', cancelText: '继续编辑',
-      onOk: () => openEditor(document.lesson_id),
+      onOk: () => openEditor(document.lesson_id, true),
     });
   };
 
@@ -213,12 +245,28 @@ export default function PrepPanel({ course, request, onSelectLesson, onCreated, 
       {saved && !dirty && <Alert type="success" showIcon className="feedback"
         title="教案已保存" description="保存结果已同步到本课程，下面的检查结果已按最新文件重新计算。" />}
       <Space wrap className="prep-editor-actions">
-        <Button type={!showPreview ? 'primary' : 'default'} onClick={() => setShowPreview(false)}>编辑 Markdown</Button>
-        <Button type={showPreview ? 'primary' : 'default'} onClick={() => setShowPreview(true)}>文本预览</Button>
+        <Button type={editorMode === 'guided' ? 'primary' : 'default'}
+          onClick={() => switchMode('guided')}>结构化填写</Button>
+        <Button type={editorMode === 'raw' && !showPreview ? 'primary' : 'default'}
+          onClick={() => switchMode('raw')}>编辑 Markdown</Button>
+        <Button type={editorMode === 'raw' && showPreview ? 'primary' : 'default'}
+          onClick={() => { switchMode('raw'); setShowPreview(true); }}>文本预览</Button>
         <Button type="primary" loading={loading} onClick={save}
-          disabled={!document.editable || !dirty || !editedBody.trim()}>保存草稿</Button>
+          disabled={!document.editable || !dirty ||
+            (editorMode === 'raw' && !editedBody.trim())}>保存草稿</Button>
       </Space>
-      {showPreview ? <pre className="prep-markdown prep-editor-preview">{editedBody}</pre> :
+      {editorMode === 'guided' ?
+        <div className="prep-guided">
+          {Object.entries(sectionEdits).map(([name, content]) =>
+            <div key={name} className="prep-guided-field">
+              <Text strong>{name}</Text>
+              <Input.TextArea aria-label={'填写' + name} rows={name === '教研会决议' ? 8 : 5}
+                value={content} readOnly={!document.editable} maxLength={16384}
+                onChange={event => { setSectionEdits(old => ({ ...old, [name]: event.target.value })); setSaved(false); }} />
+            </div>)}
+          <Paragraph type="secondary">核心教学目标、锚点和来源表格保留在 Markdown 模式；结构化表单不会修改它们。</Paragraph>
+        </div> :
+        showPreview ? <pre className="prep-markdown prep-editor-preview">{editedBody}</pre> :
         <Input.TextArea aria-label="编辑 PREP 教案正文" rows={18} autoSize={false}
           placeholder="在此编辑教案正文" value={editedBody} maxLength={170000}
           readOnly={!document.editable} onChange={event => {

@@ -134,3 +134,7 @@ body { min-width: 320px; background: var(--ant-color-bg-layout); }
   .prep-editor-actions { width: 100%; }
   .prep-editor-input textarea { font-size: 13px; }
 }
+
+.prep-guided { display: grid; gap: 14px; }
+.prep-guided-field { display: grid; gap: 8px; }
+.prep-guided-field textarea { line-height: 1.7; }

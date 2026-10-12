@@ -66,7 +66,7 @@ def get_document(root: Path, course: str, lesson_id: str) -> dict:
     return {
         "course": course, "lesson_id": lesson_id, "chapter": front.get("chapter", ""),
         "status": status, "editable": front.get("status") == "draft",
-        "body": body, "sha256": digest,
+        "body": body, "sha256": digest, "sections": editable_sections(body),
         "errors": errors, "warnings": warnings,
         "ready_granted": False, "mastery_updated": False,
     }
@@ -122,3 +122,62 @@ def save_draft(root: Path, course: str, lesson_id: str, body: str, expected_sha2
             temp_path.unlink(missing_ok=True)
         lock_path.unlink(missing_ok=True)
     return get_document(root, course, lesson_id)
+
+
+# Structured editing is deliberately limited to free-text teaching sections.
+# The source/anchor/objective tables and authoritative metadata still require
+# the explicitly versioned Markdown editor and human verification.
+EDITABLE_SECTIONS = ("问题链", "预期证据", "教研会决议")
+_HEADING = re.compile(r"(?m)^## ([^\n]+)\n")
+
+
+def editable_sections(body: str) -> dict[str, str]:
+    markers = list(_HEADING.finditer(body))
+    sections: dict[str, str] = {}
+    for i, marker in enumerate(markers):
+        title = marker.group(1).strip()
+        if title not in EDITABLE_SECTIONS:
+            continue
+        if title in sections:
+            raise DraftEditorError("教案存在重复章节标题，无法安全结构化编辑")
+        end = markers[i + 1].start() if i + 1 < len(markers) else len(body)
+        sections[title] = body[marker.end():end].strip("\n")
+    return sections
+
+
+def rewrite_sections(body: str, updates: dict[str, str]) -> str:
+    if not updates or set(updates) - set(EDITABLE_SECTIONS):
+        raise DraftEditorError("只能编辑已授权的教案教学字段")
+    for title, value in updates.items():
+        if not isinstance(value, str) or not value.strip() or len(value) > 16_384:
+            raise DraftEditorError(f"{title} 必须有内容且不超过 16384 字")
+        if "\x00" in value or _HEADING.search(value + "\n") or value.lstrip().startswith("---"):
+            raise DraftEditorError("不能在结构化字段内插入新章节或 YAML 元数据")
+    matches = list(_HEADING.finditer(body))
+    known: set[str] = set()
+    result: list[str] = [body[:matches[0].start()]] if matches else [body]
+    for i, marker in enumerate(matches):
+        title = marker.group(1).strip()
+        end = matches[i + 1].start() if i + 1 < len(matches) else len(body)
+        fragment = body[marker.end():end]
+        if title in updates:
+            if title in known:
+                raise DraftEditorError("重复字段不能修改，请先人工修正 Markdown")
+            known.add(title)
+            result.append(marker.group(0) + "\n" + updates[title].strip("\n") + "\n\n")
+        else:
+            result.append(marker.group(0) + fragment)
+    if set(updates) != known:
+        raise DraftEditorError("教案缺少指定字段或存在格式冲突")
+    return "".join(result).rstrip("\n") + "\n"
+
+
+def save_sections(root: Path, course: str, lesson_id: str,
+                  updates: dict[str, str], expected_sha256: str) -> dict:
+    document = get_document(root, course, lesson_id)
+    if not document["editable"]:
+        raise DraftEditorError("只有 draft 教案允许保存结构化字段")
+    if document["sha256"] != expected_sha256:
+        raise DraftEditorError("文件版本已变化，请重新读取后再修改")
+    return save_draft(root, course, lesson_id,
+                      rewrite_sections(document["body"], updates), expected_sha256)

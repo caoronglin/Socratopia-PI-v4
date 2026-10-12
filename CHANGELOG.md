@@ -1,5 +1,14 @@
 # Changelog
 
+## v5.0.0-alpha.6 (candidate)
+
+- Structured PREP editing in Ant Design 6: teach questions, observable evidence and human review notes without directly rewriting unrelated Markdown tables.
+- Server-side allowlist for guided section updates; retains original SHA-256 collision protection, atomic writes and draft-only guardrails.
+- Document responsibilities of Pi model session, AgentScope independent multi-tutor turns and Python deterministic bounded group state machine. Agent Loop is not falsely advertised as a separate autonomous controller.
+- Human ready approval and multi-user permissions remain out of scope until identity and audit exist.
+
+
+
 ## v5.0.0-alpha.5 (candidate)
 
 - Web PREP draft Markdown editor: open, edit, preview, explicit save, reload and revalidate.
