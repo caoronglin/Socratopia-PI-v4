@@ -1,5 +1,14 @@
 # Changelog
 
+## v5.0.0-alpha.5 (candidate)
+
+- Web PREP draft Markdown editor: open, edit, preview, explicit save, reload and revalidate.
+- SHA-256 optimistic concurrency and cross-worker lock; refuse overwrites, symlinks, legacy and ready documents.
+- Only update the existing PREP body; YAML course/lesson/source metadata, book, progress, timer and mastery remain untouched.
+- Python API concurrency/safety regression and Chromium browser save/reload integration.
+
+
+
 ## v5.0.0-alpha.4 (candidate)
 
 - Harmonized desktop/mobile learning flow (book → chapter PREP → lesson → practice) with Ant Design native UI.
