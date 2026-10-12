@@ -103,12 +103,12 @@ test('desktop onboarding → textbook → live classroom quiz → AntV → mobil
   await expect(page.getByText('学习路径', { exact: true })).toBeVisible();
   await page.getByPlaceholder('新课程名称').fill('第二课程');
   await page.getByRole('button', { name: '创建课程' }).click();
-  await expect(page.getByText('当前课程没有可用主教材')).toBeVisible();
+  await expect(page.getByText('教材：缺失')).toBeVisible();
   await expect(page.getByText('历史对话恢复测试：减数分裂')).toHaveCount(0);
   await page.getByRole('combobox', { name: '选择当前课程' }).click();
   await page.locator('.ant-select-item-option-content').getByText(NAME, { exact: true }).click();
+  await page.getByText('课堂与对话', { exact: true }).click();
   await expect(page.getByText('课堂互动练习')).toBeVisible();
-  await page.getByRole('textbox', { name: '本地服务访问令牌' }).count();
   await page.getByPlaceholder('服务令牌（仅保存在此页面内存）').fill('invalid-token');
   await expect(page.getByRole('combobox', { name: '选择当前课程' })).toBeDisabled();
   await expect(page.getByText('课堂互动练习')).toHaveCount(0);
