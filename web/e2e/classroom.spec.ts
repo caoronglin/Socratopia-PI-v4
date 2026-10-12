@@ -5,10 +5,15 @@ const NAME = '自动化遗传学';
 const QUOTE = '减数分裂将染色体数目减半，形成单倍体细胞。';
 
 test('desktop onboarding → textbook → live classroom quiz → AntV → mobile controls', async ({ page, browser }) => {
+  // The backend workspace outlives individual Playwright retries.
+  // Each retry must own distinct course fixtures, not reuse a prior attempt.
+  const courseName = NAME + (test.info().retry ? '-retry-' + test.info().retry : '');
+  const secondCourseName = '第二课程' + (test.info().retry ? '-retry-' + test.info().retry : '');
+
   await page.goto('/');
   await page.getByPlaceholder('服务令牌（仅保存在此页面内存）').fill(TOKEN);
   await page.getByRole('button', { name: '连接并刷新' }).click();
-  await page.getByPlaceholder('课程名称', { exact: true }).fill(NAME);
+  await page.getByPlaceholder('课程名称', { exact: true }).fill(courseName);
   await page.getByRole('button', { name: '创建课程' }).click();
   await expect(page.getByText('当前课程没有可用主教材')).toBeVisible();
 
@@ -33,13 +38,13 @@ test('desktop onboarding → textbook → live classroom quiz → AntV → mobil
   await page.getByRole('button', { name: /将 lesson_001 带入课堂/ }).click();
   await expect(page.getByText('课堂互动练习')).toBeVisible();
   await expect(page.getByPlaceholder('lesson_001')).toHaveValue('lesson_001');
-  await expect(page.getByRole('button', { name: '开始', exact: true })).toBeDisabled();
+  await expect(page.getByText('课堂尚未通过就绪检查')).toBeVisible();
 
   // Browser integration: history GET restores a server-provided transcript.
   // Actual SQLite persistence is verified by the Python API tests.
   await page.route('**/api/courses/**/chat/history', async route => {
     await route.fulfill({ status: 200, contentType: 'application/json',
-      body: JSON.stringify({ course: NAME, exchanges: 1, turns: [
+      body: JSON.stringify({ course: courseName, exchanges: 1, turns: [
         { speaker: 'student', text: '历史对话恢复测试：减数分裂' },
         { speaker: 'pi', text: '已保存的课堂解释', grounding: 'citation_checked',
           citations: [{ source_id: 'S1', section: '减数分裂', quote: QUOTE }],
@@ -101,13 +106,13 @@ test('desktop onboarding → textbook → live classroom quiz → AntV → mobil
   await page.unroute('**/api/courses/**/chat/history');
   await page.getByText('课程状态', { exact: true }).click();
   await expect(page.getByText('学习路径', { exact: true })).toBeVisible();
-  await page.getByPlaceholder('新课程名称').fill('第二课程');
+  await page.getByPlaceholder('新课程名称').fill(secondCourseName);
   await page.getByRole('button', { name: '创建课程' }).click();
   await expect(page.getByText('教材：缺失')).toBeVisible();
   await page.getByText('课堂与对话', { exact: true }).click();
   await expect(page.getByText('历史对话恢复测试：减数分裂')).toHaveCount(0);
   await page.getByRole('combobox', { name: '选择当前课程' }).click();
-  await page.locator('.ant-select-item-option-content').getByText(NAME, { exact: true }).click();
+  await page.locator('.ant-select-item-option-content').getByText(courseName, { exact: true }).click();
   await page.getByText('课堂与对话', { exact: true }).click();
   await expect(page.getByText('课堂互动练习')).toBeVisible();
   await page.getByPlaceholder('服务令牌（仅保存在此页面内存）').fill('invalid-token');
