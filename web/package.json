@@ -13,7 +13,7 @@
     "antd:usage": "antd usage ./src --format json"
   },
   "dependencies": {
-    "antd": "^6.0.0",
+    "antd": "^6.6.5",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "@antv/g2": "^5.4.8",

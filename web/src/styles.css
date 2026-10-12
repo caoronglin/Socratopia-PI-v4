@@ -14,7 +14,7 @@ body { margin: 0; }
 .page-heading h3 { margin-bottom: 4px; }
 .control-card { margin-bottom: 18px; }
 .feedback { margin-bottom: 18px; }
-.chat-card .ant-list { min-height: 250px; max-height: 560px; overflow-y: auto; }
+.chat-card .ant-listy { min-height: 250px; max-height: 560px; overflow-y: auto; }
 .chat-turn { width: 100%; }
 .message-text { white-space: pre-wrap; overflow-wrap: anywhere; margin: 6px 0 0 !important; }
 .send-row { margin-top: 18px; }
@@ -56,7 +56,7 @@ body { margin: 0; }
   }
   .practice-chart { height: 190px; }
   .control-card .ant-flex { align-items: stretch; }
-  .chat-card .ant-list { max-height: 50vh; }
+  .chat-card .ant-listy { max-height: 50vh; }
   .ant-card-body { overflow-wrap: anywhere; }
 }
 

@@ -5,7 +5,7 @@ import PracticePanel from './practice';
 import ResourcesPanel from './resources';
 import PrepPanel from './prep';
 import {
-  Alert, Badge, Breadcrumb, Button, Card, Col, Divider, Empty, Flex, Input, Layout, List,
+  Alert, Badge, Breadcrumb, Button, Card, Col, Divider, Empty, Flex, Input, Layout, Listy,
   Menu, Progress, Row, Select, Space, Statistic, Switch, Tag, Typography
 } from 'antd';
 
@@ -219,7 +219,7 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
               <Button onClick={() => void run(reload)} disabled={!course} loading={busy}>刷新状态</Button>
             </Flex>
           </Card>
-          {error && <Alert className="feedback" type="error" showIcon message={error} closable onClose={() => setError('')} />}
+          {error && <Alert className="feedback" type="error" showIcon title={error} closable={{ onClose: () => setError('') }} />}
           {!course ? <Card title="开始新的课程">
             <Empty description="选择已初始化课程，或直接在这里新建课程骨架" />
             <Flex gap="small" justify="center" wrap="wrap" className="send-row">
@@ -234,17 +234,16 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
             <>
               {tab === 'class' && <>
                 {!overview?.book_available && <Alert className="feedback" type="warning" showIcon
-                  message="当前课程没有可用主教材"
+                  title="当前课程没有可用主教材"
                   description="请先在该课程 TEXTBOOK 目录准备 book.md；无教材时禁止 AI 凭记忆生成课程证据。" />}
                 {overview?.book_available && <Alert className="feedback" type="info" showIcon
-                  message="引用核验已启用"
+                  title="引用核验已启用"
                   description="模型必须提供来自本课程教材的逐字引文；引用通过不代表科学事实已被自动核实。" />}
 
                 <Row gutter={[16, 16]}>
                   <Col xs={24} lg={16}>
                     <Card title="教学对话" className="chat-card" extra={<Tag>最近 50 轮问答</Tag>}>
-                      <List dataSource={turns} locale={{ emptyText: '输入一个问题，开始与 Pi 导师交互' }}
-                        renderItem={(turn, index) => <List.Item key={index}>
+                      {turns.length ? <Listy items={turns.map((turn, index) => ({ ...turn, rowId: index }))} rowKey="rowId" itemRender={turn => <div className="chat-list-item">
                           <div className="chat-turn">
                             <Flex align="center" gap="small" wrap="wrap">
                               <Text strong>{tutorNames[turn.speaker] || turn.speaker}</Text>
@@ -258,7 +257,7 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
                                 <Text code>{citation.source_id}</Text> {citation.section}：{citation.quote}
                               </Paragraph>)}
                             </div>
-                        </List.Item>} />
+                        </div>} /> : <Empty description="输入一个问题，开始与 Pi 导师交互" />}
                       <Divider />
                       <Input.TextArea value={message} onChange={e => setMessage(e.target.value)}
                         placeholder="对课程提问，或解释你的解题思路…" rows={3} maxLength={2000} showCount />
@@ -273,7 +272,7 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
                       <Progress percent={percent} />
                       <Text type="secondary">达到 2700 秒并满足课程门禁后，才能正式完成课堂。</Text>
                       <Divider />
-                      <Space direction="vertical" style={{ width: '100%' }}>
+                      <Space orientation="vertical" style={{ width: '100%' }}>
                         <Input value={lessonId} onChange={e => setLessonId(e.target.value)} placeholder="lesson_001" />
                         <Space wrap>
                           <Button disabled={busy} onClick={() => void timerAction('start')}>开始</Button>
@@ -296,7 +295,7 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
                {tab === 'group' && <Row gutter={[16, 16]}>
                 <Col xs={24} lg={9}>
                   <Card title="导师配置">
-                    <Space direction="vertical" style={{ width: '100%' }}>
+                    <Space orientation="vertical" style={{ width: '100%' }}>
                       <Text>选择 2–3 位导师</Text>
                       <Select mode="multiple" value={members} onChange={setMembers}
                         options={Object.entries(tutorNames).filter(([id]) => ['D','E','F'].includes(id))
@@ -315,9 +314,7 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
                 </Col>
                 <Col xs={24} lg={15}>
                   <Card title="导师讨论" extra={<Tag>{group?.session?.phase || '未开始'}</Tag>}>
-                    <List locale={{ emptyText: '配置导师与主题后开始讨论' }}
-                      dataSource={group?.session?.turns || []}
-                      renderItem={(turn, index) => <List.Item key={index}>
+                    {(group?.session?.turns?.length || 0) > 0 ? <Listy items={(group?.session?.turns || []).map((turn, index) => ({ ...turn, rowId: index }))} rowKey="rowId" itemRender={turn => <div className="chat-list-item">
                         <div className="chat-turn"><Text strong>{tutorNames[turn.speaker]}</Text>
                           <Paragraph className="message-text">{turn.text}</Paragraph>
                           {turn.evidence?.citations.map((citation, j) =>
@@ -326,7 +323,7 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
                             </Paragraph>)}
                           {turn.evidence && <Text type="secondary">来源摘要：{turn.evidence.sha256.slice(0, 16)}…</Text>}
                         </div>
-                      </List.Item>} />
+                      </div>} /> : <Empty description="配置导师与主题后开始讨论" />}
                     <Space wrap>
                       <Button type="primary" loading={busy} disabled={!group?.next_speaker}
                         onClick={() => void nextGroup()}>
@@ -361,12 +358,10 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
                   <Divider />
                   <Text type="secondary">来源：{evidence.source}</Text>
                   <Paragraph type="secondary" copyable={{text:evidence.sha256}}>SHA-256：{evidence.sha256.slice(0, 16)}…</Paragraph>
-                  <List dataSource={evidence.excerpts}
-                    locale={{emptyText:"当前问题未检索到匹配的教材段落"}}
-                    renderItem={item => <List.Item>
+                  <Listy items={evidence.excerpts.map((item, index) => ({ ...item, rowId: index }))} rowKey="rowId" itemRender={item => <div className="chat-list-item">
                       <div className="chat-turn"><Text strong>{item.id} · {item.section}</Text>
                         <Paragraph className="message-text quote">{item.text}</Paragraph></div>
-                    </List.Item>} />
+                    </div>} />
                 </>}
                 </Card>
               </>}
@@ -411,8 +406,8 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
                 </Card></Col>
                 <Col xs={24} lg={12}><Card title="检查与限制">
                   {state?.blockers?.length ? <Alert type="warning" showIcon
-                    message="存在课堂阻断条件" description={state.blockers.join('、')} /> :
-                    <Alert type="success" showIcon message="未记录课程阻断条件" />}
+                    title="存在课堂阻断条件" description={state.blockers.join('、')} /> :
+                    <Alert type="success" showIcon title="未记录课程阻断条件" />}
                   <Paragraph className="section-note" type="secondary">正式开课仍会由后端核对 PREP、教材版本和计时条件。</Paragraph>
                 </Card></Col>
                 </Row></>}
