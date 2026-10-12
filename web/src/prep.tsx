@@ -23,6 +23,7 @@ export default function PrepPanel({ course, request, onSelectLesson, onCreated, 
   onCreated: () => void;
   onOpenBook: () => void;
 }) {
+  const [modal, contextHolder] = Modal.useModal();
   const [book, setBook] = useState<Book | null>(null);
   const [lessons, setLessons] = useState<Record<string, string>>({});
   const [chapter, setChapter] = useState('');
@@ -94,7 +95,7 @@ export default function PrepPanel({ course, request, onSelectLesson, onCreated, 
 
   const confirmOpenEditor = (lesson: string) => {
     if (!dirty) { openEditor(lesson); return; }
-    Modal.confirm({
+    modal.confirm({
       title: '放弃尚未保存的修改？',
       content: '本地编辑内容尚未保存。打开另一份教案会丢弃这些修改。',
       okText: '放弃并打开', cancelText: '继续编辑',
@@ -117,7 +118,7 @@ export default function PrepPanel({ course, request, onSelectLesson, onCreated, 
   const discard = () => {
     if (!document) return;
     if (!dirty) { openEditor(document.lesson_id); return; }
-    Modal.confirm({
+    modal.confirm({
       title: '重新读取会丢弃当前修改',
       content: '如果其他窗口已经保存了内容，重新读取后可继续编辑最新版本。',
       okText: '丢弃并重新读取', cancelText: '继续编辑',
@@ -130,6 +131,7 @@ export default function PrepPanel({ course, request, onSelectLesson, onCreated, 
   const step = !book?.available ? 0 : !draft ? 1 : draft.exists || draft.dry_run === false ? 3 : 2;
 
   return <div className="prep-workspace">
+    {contextHolder}
     <Alert type="info" showIcon className="feedback" title="章节备课与正式课堂分离"
       description="按真实教材章节生成草稿，先预览再保存；保存草稿不会解锁 PREP ready、45 分钟计时或已验证掌握度。" />
     {error && <Alert className="feedback" type="error" showIcon title={error} />}

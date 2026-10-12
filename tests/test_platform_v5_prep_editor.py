@@ -87,9 +87,9 @@ def test_stale_revision_rejected_without_overwriting_draft(sample: tuple[TestCli
     assert path.read_bytes() == actual
     assert "其他窗口" in denied.json()["detail"]
     assert client.put(route(), headers=AUTH,
-                      json={"body": "", "expected_sha256": doc["sha256"]}).status_code == 409
+                      json={"body": "", "expected_sha256": doc["sha256"]}).status_code == 422
     assert client.put(route(), headers=AUTH,
-                      json={"body": "hello", "expected_sha256": "invalid"}).status_code == 409
+                      json={"body": "hello", "expected_sha256": "invalid"}).status_code == 422
 
 
 def test_ready_and_legacy_documents_read_only(sample: tuple[TestClient, Path]) -> None:
