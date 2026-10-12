@@ -7,7 +7,32 @@ if sys.version_info < (3, 15):
     pytest.skip("v5 runtime requires Python 3.15", allow_module_level=True)
 pytest.importorskip("fastapi")
 pytest.importorskip("httpx")
-from tests.test_platform_v5_prep_editor import sample, AUTH, COURSE, route
+import shutil
+from pathlib import Path
+from fastapi.testclient import TestClient
+from platform_api.app import api
+
+AUTH = {"Authorization": "Bearer alpha6-test-secret-987654"}
+COURSE = "遗传学"
+
+@pytest.fixture
+def sample(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    root = Path(__file__).resolve().parents[1]
+    shutil.copytree(root / "templates", tmp_path / "templates")
+    monkeypatch.setenv("SOCRATOPIA_ROOT", str(tmp_path))
+    monkeypatch.setenv("SOCRATOPIA_API_TOKEN", "alpha6-test-secret-987654")
+    client = TestClient(api)
+    assert client.post("/api/courses", headers=AUTH, json={"name": COURSE}).status_code == 200
+    book = tmp_path / "TEXTBOOK" / COURSE / "book.md"
+    book.parent.mkdir(parents=True, exist_ok=True)
+    book.write_text("# 第一章 遗传学\n## 第一节 减数分裂\n染色体数目减半。\n", encoding="utf-8")
+    result = client.post(f"/api/courses/{COURSE}/prep/chapter/plan",
+                         headers=AUTH, json={"chapter": "第一章 遗传学", "apply": True})
+    assert result.status_code == 200, result.text
+    return client, Path(result.json()["path"])
+
+def route():
+    return f"/api/courses/{COURSE}/prep/lesson_001/document"
 
 
 def test_guided_fields_preserve_unrelated_tables(sample):
