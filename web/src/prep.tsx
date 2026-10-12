@@ -93,10 +93,11 @@ export default function PrepPanel({ course, request, onSelectLesson, onCreated, 
   const sectionsPath = (lesson: string) => '/courses/' + encodeURIComponent(course) +
     '/prep/' + encodeURIComponent(lesson) + '/sections';
 
-  const openEditor = (lesson: string) => void action(async () => {
+  const openEditor = (lesson: string, preserveMode = false) => void action(async () => {
     const latest = await request<PrepDocument>(editorPath(lesson));
     setDocument(latest); setEditedBody(latest.body);
-    setSectionEdits({ ...latest.sections }); setEditorMode('guided');
+    setSectionEdits({ ...latest.sections });
+    if (!preserveMode) setEditorMode('guided');
     setSelectedLesson(lesson); setSaved(false); setShowPreview(false);
   });
 
@@ -148,12 +149,12 @@ export default function PrepPanel({ course, request, onSelectLesson, onCreated, 
 
   const discard = () => {
     if (!document) return;
-    if (!dirty) { openEditor(document.lesson_id); return; }
+    if (!dirty) { openEditor(document.lesson_id, true); return; }
     modal.confirm({
       title: '重新读取会丢弃当前修改',
       content: '如果其他窗口已经保存了内容，重新读取后可继续编辑最新版本。',
       okText: '丢弃并重新读取', cancelText: '继续编辑',
-      onOk: () => openEditor(document.lesson_id),
+      onOk: () => openEditor(document.lesson_id, true),
     });
   };
 
