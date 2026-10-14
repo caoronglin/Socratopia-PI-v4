@@ -1,7 +1,7 @@
 """Create explicit, platform-verified v5 Web runtime ZIP + SHA-256.
 
-Only the native launcher, built Web assets, bundled Node/Pi production runtime
-and fixed templates are included. No DATA/, TEXTBOOK/, .env or local secrets.
+Only the native AgentScope/Python launcher, built Web assets and fixed templates
+are included. No Node/Pi runtime, DATA/, TEXTBOOK/, .env or credentials.
 """
 from __future__ import annotations
 
@@ -60,7 +60,7 @@ def _magic(path: Path, platform: str) -> None:
         raise ValueError(f"Native binary does not match {platform}: {path}")
 
 
-def build(platform: str, node_binary: Path, output: Path) -> dict:
+def build(platform: str, output: Path) -> dict:
     if platform not in PLATFORMS:
         raise ValueError("Unsupported Web target")
     win = platform.startswith("windows")
@@ -68,29 +68,15 @@ def build(platform: str, node_binary: Path, output: Path) -> dict:
         ROOT / "build" / "standalone-v5" / ("Socratopia-Web.exe" if win else "Socratopia-Web"),
         ROOT,
     )
-    node = _readable(node_binary, ROOT) if node_binary.is_relative_to(ROOT) else node_binary
-    if not node.is_file() or node.is_symlink():
-        raise ValueError("Supplied platform Node executable is invalid")
     _magic(executable, platform)
-    _magic(node, platform)
     web = ROOT / "web" / "dist"
-    node_modules = ROOT / "runtimes" / "pi" / "node_modules"
-    gateway = ROOT / "runtimes" / "pi"
     if not (web / "index.html").is_file() or not list((web / "assets").glob("*.js")):
         raise ValueError("Web UI has not been built")
-    if not (node_modules / "@earendil-works" / "pi-coding-agent" / "package.json").is_file():
-        raise ValueError("Pi SDK production dependencies are missing")
-    entries: dict[str, Path] = {
-        executable.name: executable,
-        "runtime/node/" + ("node.exe" if win else "node"): node,
-        "runtime/pi/server.mjs": _readable(gateway / "server.mjs", ROOT),
-        "runtime/pi/package.json": _readable(gateway / "package.json", ROOT),
-    }
+    entries: dict[str, Path] = {executable.name: executable}
     for name in TEMPLATES:
         entries["templates/" + name] = _readable(ROOT / "templates" / name, ROOT)
-    for base, prefix in ((web, "web/dist/"), (node_modules, "runtime/pi/node_modules/")):
-        for candidate in _walk_files(base):
-            entries[prefix + candidate.relative_to(base).as_posix()] = candidate
+    for candidate in _walk_files(web):
+        entries["web/dist/" + candidate.relative_to(web).as_posix()] = candidate
     output.mkdir(parents=True, exist_ok=True)
     filename = f"Socratopia-v5-Web-alpha-{platform}.zip"
     dest = output / filename
@@ -99,7 +85,7 @@ def build(platform: str, node_binary: Path, output: Path) -> dict:
         for relative, path in sorted(entries.items()):
             info = zipfile.ZipInfo("Socratopia-Web/" + relative, STAMP)
             info.compress_type = zipfile.ZIP_DEFLATED
-            is_native = relative in (executable.name, "runtime/node/" + node.name)
+            is_native = relative == executable.name
             info.external_attr = ((0o100755 if is_native else 0o100644) << 16)
             archive.writestr(info, path.read_bytes(), compress_type=zipfile.ZIP_DEFLATED)
     sha = hashlib.sha256(dest.read_bytes()).hexdigest()
@@ -109,7 +95,8 @@ def build(platform: str, node_binary: Path, output: Path) -> dict:
         expected = {"Socratopia-Web/" + name for name in entries}
         if set(archive.namelist()) != expected:
             raise ValueError("Incomplete archive contents")
-        if any(name.startswith(("Socratopia-Web/DATA/", "Socratopia-Web/TEXTBOOK/"))
+        if any(name.startswith(("Socratopia-Web/DATA/", "Socratopia-Web/TEXTBOOK/",
+                                "Socratopia-Web/runtime/node/", "Socratopia-Web/runtime/pi/"))
                or "/.env" in name for name in expected):
             raise ValueError("User data was accidentally packaged")
     result = {"archive": str(dest), "checksum": str(checksum),
@@ -121,10 +108,9 @@ def build(platform: str, node_binary: Path, output: Path) -> dict:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--platform", choices=sorted(PLATFORMS), required=True)
-    parser.add_argument("--node", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, default=ROOT / "dist")
     args = parser.parse_args()
-    build(args.platform, args.node, args.output_dir)
+    build(args.platform, args.output_dir)
     return 0
 
 

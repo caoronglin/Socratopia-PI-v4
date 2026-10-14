@@ -35,10 +35,10 @@ def smoke(archive: Path, platform: str) -> None:
             zip_file.extractall(root)
         folder = root / "Socratopia-Web"
         binary = folder / ("Socratopia-Web.exe" if platform.startswith("windows") else "Socratopia-Web")
-        node = folder / "runtime" / "node" / ("node.exe" if platform.startswith("windows") else "node")
         if os.name != "nt":
             binary.chmod(0o755)
-            node.chmod(0o755)
+        if (folder / "runtime" / "pi").exists() or (folder / "runtime" / "node").exists():
+            raise RuntimeError("Legacy Node/Pi runtime must not be bundled")
         completed = subprocess.run([str(binary), "--check"], capture_output=True, text=True, timeout=100)
         if completed.returncode != 0 or "bundle: complete" not in completed.stdout:
             raise RuntimeError("Bundle self-check failed: " + completed.stderr)
@@ -46,8 +46,7 @@ def smoke(archive: Path, platform: str) -> None:
         env = {**os.environ, "SOCRATOPIA_ROOT": str(course_root),
                "SOCRATOPIA_API_TOKEN": "e2e-package-token-0123456789"}
         port = 18765
-        # Log to a regular file, never a PIPE: the embedded Node process can
-        # inherit file descriptors and keep communicate() blocked after exit.
+        # Use a regular log file for reliable cross-platform traceback capture.
         logfile = root / "web-smoke.log"
         with logfile.open("wb") as error_output:
             process = subprocess.Popen(
@@ -80,11 +79,9 @@ def smoke(archive: Path, platform: str) -> None:
                 raise RuntimeError("User workspace templates were not initialized")
             if any((folder / name).exists() for name in ("DATA", "TEXTBOOK")):
                 raise RuntimeError("Bundled package contains unexpected user data")
-            print(f"PASS: frozen Web + bundled Pi process + UI + API auth on {platform}", flush=True)
+            print(f"PASS: single-process AgentScope Web + UI + API auth on {platform}", flush=True)
         finally:
-            # A frozen --onefile entrypoint launches a secondary Python bootloader
-            # and then Node/Pi. Killing only the outer PID leaves node.exe locked
-            # on Windows (WinError 5 when deleting the extracted distribution).
+            # PyInstaller on Windows can retain process handles briefly.
             if os.name == "nt":
                 subprocess.run(
                     ["taskkill", "/PID", str(process.pid), "/T", "/F"],

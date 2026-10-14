@@ -1,6 +1,6 @@
 """Socratopia v5 offline desktop Web launcher (PyInstaller executable).
 
-Owns the localhost web server, isolated workspace and the embedded Pi SDK child.
+Owns the localhost Web server and the integrated AgentScope Python runtime.
 The app ships built static assets; it never runs npm, pip or an online installer.
 """
 from __future__ import annotations
@@ -9,7 +9,6 @@ import argparse
 import os
 import secrets
 import shutil
-import subprocess
 import sys
 import threading
 import time
@@ -68,28 +67,20 @@ def _prepare_templates(workspace: Path) -> None:
                 pass
 
 
-def _asset_paths() -> tuple[Path, Path, Path]:
-    base = _bundle_root()
-    node = base / "runtime" / "node" / ("node.exe" if os.name == "nt" else "node")
-    gateway = base / "runtime" / "pi" / "server.mjs"
-    static = base / "web" / "dist"
-    return node, gateway, static
+def _static_path() -> Path:
+    return _bundle_root() / "web" / "dist"
 
 
 def check_distribution() -> None:
-    node, gateway, static = _asset_paths()
-    required = [
-        node, gateway, static / "index.html",
-        gateway.parent / "package.json",
-        gateway.parent / "node_modules" / "@earendil-works" / "pi-coding-agent" / "package.json",
-    ]
+    static = _static_path()
+    required = [static / "index.html"]
     required.extend(_templates_root() / filename for filename in TEMPLATE_NAMES)
     for path in required:
         if not path.is_file() or path.is_symlink():
             raise RuntimeError(f"Incomplete Web bundle: {path}")
     if not list((static / "assets").glob("*.js")):
         raise RuntimeError("Incomplete Web bundle: missing Vite JavaScript assets")
-    for path in (gateway.parent, static, static / "assets"):
+    for path in (static, static / "assets"):
         if path.is_symlink():
             raise RuntimeError("Symlinked distribution asset is not accepted")
 
@@ -109,7 +100,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Socratopia v5 native local Web launcher")
     parser.add_argument("--port", type=int, default=8765, help="Local Web port (default: 8765)")
     parser.add_argument("--no-browser", action="store_true", help="Do not open a browser")
-    parser.add_argument("--no-pi", action="store_true", help="Start without Pi SDK (offline exercises)")
+    parser.add_argument("--no-pi", action="store_true", help=argparse.SUPPRESS)  # legacy no-op
     parser.add_argument("--check", action="store_true", help="Check bundled runtime and exit")
     args = parser.parse_args(argv)
     try:
@@ -127,40 +118,21 @@ def main(argv: list[str] | None = None) -> int:
         token = supplied or secrets.token_urlsafe(32)
         os.environ["SOCRATOPIA_API_TOKEN"] = token
         os.environ["SOCRATOPIA_ROOT"] = str(root)
-        node, gateway, static = _asset_paths()
-        child = None
-        if not args.no_pi:
-            child = subprocess.Popen(
-                [str(node), str(gateway)],
-                cwd=root,
-                env=os.environ.copy(),
-                stdin=subprocess.DEVNULL,
-            )
-            time.sleep(0.4)
-            if child.poll() is not None:
-                raise RuntimeError("Embedded Pi SDK gateway failed to start")
-        try:
-            from fastapi.staticfiles import StaticFiles
-            from platform_api.app import app
-            import uvicorn
+        static = _static_path()
+        from fastapi.staticfiles import StaticFiles
+        from platform_api.app import app
+        import uvicorn
 
-            app.mount("/", StaticFiles(directory=str(static), html=True), name="desktop-static")
-            url = f"http://127.0.0.1:{args.port}"
-            print(f"\nSocratopia Web: {url}")
-            print(f"API token (paste into Web login): {token}")
-            print(f"Workspace: {root}")
-            print("Close this terminal / press Ctrl+C to stop.\n", flush=True)
-            if not args.no_browser:
-                threading.Thread(target=_open_when_ready, args=(url,), daemon=True).start()
-            uvicorn.run(app, host="127.0.0.1", port=args.port, log_level="warning")
-        finally:
-            if child is not None and child.poll() is None:
-                child.terminate()
-                try:
-                    child.wait(timeout=8)
-                except subprocess.TimeoutExpired:
-                    child.kill()
-                    child.wait()
+        app.mount("/", StaticFiles(directory=str(static), html=True), name="desktop-static")
+        url = f"http://127.0.0.1:{args.port}"
+        print(f"\nSocratopia Web: {url}")
+        print(f"API token (paste into Web login): {token}")
+        print(f"Workspace: {root}")
+        print("Agent runtime: AgentScope (single Python process)")
+        print("Close this terminal / press Ctrl+C to stop.\n", flush=True)
+        if not args.no_browser:
+            threading.Thread(target=_open_when_ready, args=(url,), daemon=True).start()
+        uvicorn.run(app, host="127.0.0.1", port=args.port, log_level="warning")
         return 0
     except (OSError, RuntimeError, ValueError) as exc:
         print(f"ERROR: {exc}", file=sys.stderr)

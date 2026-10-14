@@ -29,7 +29,7 @@ jobs:
         run: |
           python - <<'PY'
           import inspect
-          from agentscope.agent import Agent
+          from agentscope.agent import Agent, ReActConfig
           from agentscope.credential import OpenAICredential
           from agentscope.message import UserMsg
           from agentscope.model import OpenAIChatModel
@@ -38,17 +38,17 @@ jobs:
           assert 'model' in inspect.signature(OpenAIChatModel).parameters
           assert 'credential' in inspect.signature(OpenAIChatModel).parameters
           assert callable(OpenAICredential) and callable(UserMsg)
-          assert callable(Toolkit)
+          assert callable(Toolkit) and 'max_iters' in inspect.signature(ReActConfig).parameters
           PY
       - name: Compile app and existing scripts
         run: python -m compileall -q platform_api scripts tests
       - name: Run API tests
-        run: python -m pytest -q tests/test_platform_v5.py tests/test_platform_v5_exercises.py tests/test_platform_v5_chat_history.py tests/test_platform_v5_prep_web.py tests/test_platform_v5_prompt_contract.py tests/test_platform_v5_prep_editor.py
+        run: python -m pytest -q tests/test_platform_v5.py tests/test_platform_v5_exercises.py tests/test_platform_v5_chat_history.py tests/test_platform_v5_prep_web.py tests/test_platform_v5_prompt_contract.py tests/test_platform_v5_prep_editor.py tests/test_agentscope_runtime.py
       - name: Run original smoke
         run: python scripts/check.py --strict
 
   node-web:
-    name: Node Pi SDK and Ant Design build
+    name: AgentScope-backed React / Ant Design build
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -58,12 +58,6 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: '22'
-      - name: Install SDK and verify syntax
-        working-directory: runtimes/pi
-        run: |
-          npm install --ignore-scripts --no-audit --no-fund
-          npm run check
-          node -e "import('@earendil-works/pi-coding-agent').then(m => { if (!m.createAgentSession || !m.SessionManager) process.exit(1) })"
       - name: Install React/Ant Design and build UI
         working-directory: web
         run: |
