@@ -33,10 +33,15 @@ type Group = {
   requires_user_turn?: boolean; grounding?: string; last_turn_evidence?: Citation[];
   session?: { topic: string; phase: string; round: number; max_rounds: number; turns: Turn[] } | null;
 };
+type AgentStatus = {
+  backend: 'agentscope'; sdk_version: string; configured: boolean;
+  model: string; max_agent_iterations: number; max_concurrent_turns: number;
+  tool_access: false; verified_history: string;
+};
 type WorkspaceProps = { dark: boolean; onDarkChange: (value: boolean) => void };
 const { Sider, Header, Content } = Layout;
 const { Title, Text, Paragraph } = Typography;
-const tutorNames: Record<string, string> = { D: '三月七', E: '丹恒', F: '姬子', pi: 'Pi 导师', student: '我' };
+const tutorNames: Record<string, string> = { D: '三月七', E: '丹恒', F: '姬子', pi: '历史 Pi 导师', agentscope: 'Socratopia 导师', student: '我' };
 
 export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
   const [token, setToken] = useState('');
@@ -51,6 +56,7 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
   const [group, setGroup] = useState<Group | null>(null);
   const [overview, setOverview] = useState<Overview | null>(null);
   const [prepLessons, setPrepLessons] = useState<Record<string, string>>({});
+  const [agentStatus, setAgentStatus] = useState<AgentStatus | null>(null);
   const [evidence, setEvidence] = useState<Evidence | null>(null);
   const [evidenceQuery, setEvidenceQuery] = useState('');
   const [lessonId, setLessonId] = useState('lesson_001');
@@ -132,6 +138,7 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
       chooseCourse('');
       setCourses([]);
       setConnectedToken('');
+      setAgentStatus(null);
       setTab('class');
     }
     setToken(next);
@@ -144,7 +151,10 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
 
   const refreshCourses = async () => {
     await run(async () => {
-      const result = await request<{courses: string[]}>('/courses');
+      const [result, agent] = await Promise.all([
+        request<{courses: string[]}>('/courses'), request<AgentStatus>('/runtime'),
+      ]);
+      setAgentStatus(agent);
       setConnectedToken(token);
       setCourses(result.courses);
       if (!result.courses.includes(course)) chooseCourse(result.courses[0] || '');
@@ -216,7 +226,7 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
     <Layout className="shell">
       <a className="skip-link" href="#main-content">跳到主要内容</a>
       <Sider breakpoint="lg" collapsedWidth="0" width={232} theme={dark ? 'dark' : 'light'} className="sidebar desktop-sidebar">
-        <div className="brand">Socratopia <span>v5 Alpha.5</span></div>
+        <div className="brand">Socratopia <span>v5 Alpha.7</span></div>
         <Text type="secondary" className="brand-note">你的课程学习空间</Text>
         <Menu selectedKeys={[tab]} onClick={({ key }) => setTab(key as LearningTab)} mode="inline"
           items={[
@@ -240,7 +250,7 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
             <Breadcrumb items={[{ title: 'Socratopia' }, { title: course || '选择课程' },
               { title: tab === 'prep' ? '章节备课' : tab === 'class' ? '课堂' : tab === 'group' ? '学习小组' : tab === 'evidence' ? '教材' : '课程' }]} />
             <Title level={3}>{tab === 'class' ? '课堂与对话' : tab === 'group' ? '学习小组' : tab === 'prep' ? '章节备课' : tab === 'evidence' ? '教材证据' : '课程概览'}</Title>
-            <Paragraph type="secondary">真实运行状态由 Python 服务管理，导师输出不会自动记为知识掌握。</Paragraph>
+            <Paragraph type="secondary">AgentScope 统一运行导师；教材依据、备课门禁与学业状态仍由课程服务验证。</Paragraph>
           </div>
           <Card size="small" className="control-card" title={<Space size="small"><Badge status={course ? 'success' : 'default'} />课程连接</Space>}>
             <Flex gap="small" align="center" wrap="wrap">
@@ -253,6 +263,16 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
               <Button onClick={() => void run(reload)} disabled={!course || !token} loading={busy}>刷新状态</Button>
             </Flex>
           </Card>
+          {agentStatus && <Flex wrap="wrap" align="center" gap="small" className="runtime-strip">
+            <Tag color="blue">AgentScope {agentStatus.sdk_version}</Tag>
+            <Tag color={agentStatus.configured ? 'success' : 'warning'}>
+              {agentStatus.configured ? '模型凭据已配置' : '尚未配置模型凭据'}
+            </Tag>
+            <Text type="secondary">模型：{agentStatus.model} · 循环 ≤ {agentStatus.max_agent_iterations} · 单机并发 ≤ {agentStatus.max_concurrent_turns}</Text>
+          </Flex>}
+          {agentStatus && !agentStatus.configured && <Alert className="feedback" type="info" showIcon
+            title="当前可以导入教材、编辑教案和完成练习"
+            description="导师对话需要在本机服务端配置 OPENAI_API_KEY；密钥不在网页中存储，也不会通过课程接口返回。" />}
           {error && <Alert className="feedback" type="error" showIcon title={error} closable={{ onClose: () => setError('') }} />}
           {!course ? <Card title="开始新的课程">
             <Empty description="选择已初始化课程，或直接在这里新建课程骨架" />
@@ -273,7 +293,7 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
                     <Button type="link" onClick={() => setTab('evidence')}>前往教材导入</Button></Space>} />}
                 {overview?.book_available && <Alert className="feedback" type="info" showIcon
                   title="引用核验已启用"
-                  description="模型必须提供来自本课程教材的逐字引文；引用通过不代表科学事实已被自动核实。" />}
+                  description="AgentScope 回应仍须附本课逐字教材引文，服务器逐项核对；引用通过不等于事实已被自动审定。" />}
 
                 <Row gutter={[16, 16]}>
                   <Col xs={24} lg={16}>
@@ -298,7 +318,7 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
                       <Input.TextArea value={message} onChange={e => setMessage(e.target.value)}
                         placeholder="对课程提问，或解释你的解题思路…" rows={3} maxLength={2000} showCount />
                       <Flex justify="end" className="send-row">
-                        <Button type="primary" loading={busy} disabled={!message.trim() || !overview?.book_available} onClick={() => void chat()}>发送给 Pi</Button>
+                        <Button type="primary" loading={busy} disabled={!message.trim() || !overview?.book_available || !agentStatus?.configured} onClick={() => void chat()}>向导师提问</Button>
                       </Flex>
                     </Card>
                   </Col>
@@ -371,7 +391,7 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
                         </div>
                       </div>} /> : <Empty description="配置导师与主题后开始讨论" />}
                     <Space wrap>
-                      <Button type="primary" loading={busy} disabled={!group?.next_speaker}
+                      <Button type="primary" loading={busy} disabled={!group?.next_speaker || !agentStatus?.configured}
                         onClick={() => void nextGroup()}>
                         请 {tutorNames[group?.next_speaker || ''] || '下一位导师'} 发言
                       </Button>
@@ -383,7 +403,7 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
                       <Paragraph key={index} type="secondary" className="quote">
                         <Text code>{source.source_id}</Text> {source.section}：{source.quote}
                       </Paragraph>)}
-                    <Paragraph type="secondary" className="section-note">导师独立生成回应并核对教材引文；讨论轮次由后端控制，回答不构成学生掌握证据。</Paragraph>
+                    <Paragraph type="secondary" className="section-note">AgentScope 导师独立生成发言；Python 有界轮次控制每次最多发言一位，必须等待学生继续。回答不代表掌握。</Paragraph>
                   </Card>
                 </Col>
               </Row>}

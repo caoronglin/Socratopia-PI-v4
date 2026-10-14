@@ -51,6 +51,11 @@ def test_auth_fails_closed(client: TestClient) -> None:
     assert client.get("/api/courses").status_code == 401
     assert client.get("/api/courses", headers={"Authorization": "Bearer incorrect"}).status_code == 401
     assert client.get("/api/health").status_code == 200
+    assert client.get("/api/runtime").status_code == 401
+    info = client.get("/api/runtime", headers=auth()).json()
+    assert info["backend"] == "agentscope"
+    assert info["tool_access"] is False
+    assert info["max_agent_iterations"] == 2
 
 
 def test_create_and_read_course_without_mastery(client: TestClient) -> None:

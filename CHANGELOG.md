@@ -1,5 +1,15 @@
 # Changelog
 
+## v5.0.0-alpha.7 (candidate)
+
+- Complete **v5 online runtime** transition from Node/Pi bridge to in-process AgentScope 2.0.9.
+- Classroom and multi-tutor roles share one bounded, course-isolated model dispatcher; distinct educational personas, safe runtime status, no shell/file tools.
+- Fail-fast per-course single-flight and global concurrency 4; model deadline 90 seconds, internal max iterations 2, verified-only SQLite transcripts.
+- Eliminate Node and production Pi package from four native Web ZIP distributions; retain historic source for compatibility only.
+- Ant Design runtime status/credential setup guidance and regression CI + browser + cross-platform package smoke.
+
+
+
 ## v5.0.0-alpha.5 (candidate)
 
 - Web PREP draft Markdown editor: open, edit, preview, explicit save, reload and revalidate.

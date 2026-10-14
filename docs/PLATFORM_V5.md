@@ -97,3 +97,8 @@ P6：交付。为 Windows/Linux/macOS 分别制定可重复安装、升级、回
 每门课程使用独立 SQLite/WAL 记录完整通过服务器验证的问答成对数据；不保存原始模型提示词或不可信的原始模型输出。客户端刷新时调用 `GET /chat/history` 加载最近 50 轮；历史引文按当前 `book.md` 指纹标记是否过期。服务器会在已核验返回后才落盘，失败不写入。历史属于学习记录，和 Pi SDK 内存会话不同，**不恢复模型隐藏会话状态，也不授予掌握度**。
 
 验收：Python3.15 测试鉴权、中文课程隔离、跨 TestClient 持久化、教材 SHA 失效、拒答状态、非法引文不落盘、符号链接拒绝、原 PROGRESS 不变；Playwright 断言刷新恢复和过期警告；保留四平台打包与 v4 回归。
+
+
+## v5 Alpha.7 运行时迁移
+
+现有 v5 模型请求全部由同进程 AgentScope 2.0.9 负责，Node/Pi gateway 不再启用。课程引文核验、PREP、真实授课计时与成绩仍由 Python 原有状态机控制，详见 [迁移报告](AGENTSCOPE_MIGRATION.md)。
