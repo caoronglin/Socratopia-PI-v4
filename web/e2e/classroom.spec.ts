@@ -15,6 +15,8 @@ test('desktop onboarding → textbook → live classroom quiz → AntV → mobil
   const initialList = page.waitForResponse(r =>
     r.request().method() === 'GET' && new URL(r.url()).pathname === '/api/courses');
   await page.getByRole('button', { name: '连接并刷新' }).click();
+  await expect(page.getByText(/AgentScope 2\.0\.9/)).toBeVisible();
+  await expect(page.getByText('尚未配置模型凭据')).toBeVisible();
   const available = await (await initialList).json() as { courses: string[] };
   if (available.courses.length === 0) {
     await page.getByPlaceholder('课程名称', { exact: true }).fill(courseName);
@@ -71,7 +73,7 @@ test('desktop onboarding → textbook → live classroom quiz → AntV → mobil
     await route.fulfill({ status: 200, contentType: 'application/json',
       body: JSON.stringify({ course: courseName, exchanges: 1, turns: [
         { speaker: 'student', text: '历史对话恢复测试：减数分裂' },
-        { speaker: 'pi', text: '已保存的课堂解释', grounding: 'citation_checked',
+        { speaker: 'agentscope', text: '已保存的课堂解释', grounding: 'citation_checked',
           citations: [{ source_id: 'S1', section: '减数分裂', quote: QUOTE }],
           source_current: false, fact_verified: false },
       ] }),

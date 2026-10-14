@@ -1,6 +1,6 @@
 # Socratopia PI v4
 
-> **主线版本：v5 Alpha（v5.0.0-alpha.5 候选开发中）**。`main` 包含 Python 3.15、AgentScope 2、Pi SDK、React / Ant Design 6、Ant Design Mobile 和 AntV G2 Web 工作台。当前仍是 Alpha，并非功能完全交付的稳定版；旧版 **v4.3.2** 的正式 Release 与 Git 标签保持不变。参见 [v5 功能说明](docs/PLATFORM_V5.md)和 [原生可执行版安装及限制](docs/WEB_V5_PACKAGE.md)。
+> **主线版本：v5 Alpha（v5.0.0-alpha.7 AgentScope-only 候选开发中）**。`main` 包含 Python 3.15、AgentScope 2（v5 模型运行时）、React / Ant Design 6、Ant Design Mobile 和 AntV G2 Web 工作台。当前仍是 Alpha，并非功能完全交付的稳定版；旧版 **v4.3.2** 的正式 Release 与 Git 标签保持不变。参见 [v5 功能说明](docs/PLATFORM_V5.md)和 [原生可执行版安装及限制](docs/WEB_V5_PACKAGE.md)。
 
 面向 PI coding agent 的 Socratopia 提示词/课程状态架构重构版。
 

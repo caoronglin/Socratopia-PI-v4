@@ -50,13 +50,6 @@ jobs:
           set -euo pipefail
           npm install --ignore-scripts --no-audit --no-fund
           npm run build
-      - name: Install Pi SDK production runtime
-        shell: bash
-        working-directory: runtimes/pi
-        run: |
-          set -euo pipefail
-          npm install --omit=dev --ignore-scripts --no-audit --no-fund
-          node -e "import('@earendil-works/pi-coding-agent').then(m=>{if(!m.createAgentSession)process.exit(1)})"
       - name: Freeze native Web executable
         shell: bash
         run: python scripts/freeze_web_v5.py
@@ -66,8 +59,7 @@ jobs:
           PLATFORM: ${{ matrix.platform }}
         run: |
           set -euo pipefail
-          NODE_BINARY="$(node -p 'process.execPath')"
-          python scripts/package_web_v5.py --platform "$PLATFORM" --node "$NODE_BINARY" --output-dir dist
+          python scripts/package_web_v5.py --platform "$PLATFORM" --output-dir dist
       - name: Smoke test extracted executable and localhost Web
         shell: bash
         env:
@@ -133,4 +125,4 @@ jobs:
           gh release create "$TAG" dist/*.zip dist/*.sha256 \
             --target "$GITHUB_SHA" --prerelease \
             --title "Socratopia v5 Web Alpha (native executables)" \
-            --notes "Preview only. Frozen Python 3.15, Ant Design 6 UI, bundled Node/Pi. ZIP includes runtime, no user data. Four-platform extracted binary checks passed."
+            --notes "Preview only. Frozen Python 3.15, Ant Design 6 UI, single-process AgentScope runtime. No Node/Pi, no user data. Four-platform extracted binary checks passed."

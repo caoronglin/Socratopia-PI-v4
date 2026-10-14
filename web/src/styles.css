@@ -134,3 +134,8 @@ body { min-width: 320px; background: var(--ant-color-bg-layout); }
   .prep-editor-actions { width: 100%; }
   .prep-editor-input textarea { font-size: 13px; }
 }
+
+/* AgentScope-only runtime state is visible but never discloses credentials. */
+.runtime-strip { padding: 8px 4px 12px; min-height: 38px; }
+.runtime-strip .ant-tag { margin: 0; }
+@media (max-width: 768px) { .runtime-strip { gap: 6px; } }

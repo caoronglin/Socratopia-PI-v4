@@ -19,8 +19,8 @@
 1. 在 Linux、Windows、macOS x86_64/arm64 原生 Actions runner 上安装 Python 3.15、Node22。
 2. 构建 React/Ant Design Mobile/AntV 资源；Pi SDK 复制生产依赖。
 3. PyInstaller 6.22.3 冻结 Python/FastAPI/AgentScope 到 Socratopia-Web(.exe)。
-4. 各平台打包完整运行时到 ZIP，打包清单只包含可信模板、Node/Pi 依赖、Web 静态资源及原生二进制；禁止个人 DATA、TEXTBOOK、Token、.env、软链接。
-5. 解压 ZIP 并**真实执行原生文件**，检查 --check、Node/Pi 后端、本地 API、React 静态页面、401/200 鉴权、私有工作区模板。
+4. 各平台打包完整运行时到 ZIP，打包清单只包含可信模板、AgentScope 依赖、Web 静态资源及原生二进制；禁止个人 DATA、TEXTBOOK、Token、.env、软链接。
+5. 解压 ZIP 并**真实执行原生文件**，检查 --check、AgentScope 后端、本地 API、React 静态页面、401/200 鉴权、私有工作区模板。
 6. 每个平台上传 ZIP 与 SHA-256；四平台全部通过后校验 4 个 ZIP 的校验和。
 7. `main` 的每次相关推送自动构建四平台测试包。只有从 `main` 手动执行 workflow_dispatch 后才发布带 v5.0.0-alpha.web.* 标签的 **GitHub 预发布**，不发布 stable，也不修改旧 v4.3.2 Release。
 
