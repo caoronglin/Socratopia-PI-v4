@@ -14,15 +14,14 @@ from scripts.initialize import initialize as initialize_course
 from scripts.lib.course_state import load_state, validate_state
 from scripts.lib.repository import course_dir, iter_course_paths, validate_course_name
 
-from platform_api.agentscope_tutors import TutorUnavailable, generate_tutor_turn
+from platform_api.agentscope_runtime import AgentUnavailable, ask_agent, generate_tutor_turn, runtime_status
 from platform_api.evidence import EvidenceError, retrieve, is_current
 from platform_api.grounding import GroundingError, check_response, grounded_prompt
-from platform_api.pi_gateway import PiUnavailable, ask_pi
 from platform_api import exercises, books, chat_history, prep_editor
 from scripts.lib import chapter_prep
 from scripts.lib.prep import prep_status, check_prep, prep_path
 
-api = FastAPI(title="Socratopia API", version="5.0.0-alpha.5", docs_url=None, redoc_url=None)
+api = FastAPI(title="Socratopia API", version="5.0.0-alpha.7", docs_url=None, redoc_url=None)
 
 
 def root_dir() -> Path:
@@ -116,6 +115,12 @@ class GroupContinue(BaseModel):
 @api.get("/api/health")
 def health() -> dict:
     return {"service": "socratopia", "version": api.version, "ready": bool(os.getenv("SOCRATOPIA_API_TOKEN"))}
+
+
+@api.get("/api/runtime")
+def runtime_information(response: Response, _: Authenticated) -> dict:
+    response.headers["Cache-Control"] = "no-store"
+    return runtime_status()
 
 
 @api.get("/api/courses")
@@ -363,8 +368,8 @@ async def chat(course: str, payload: ChatRequest, _: Authenticated) -> dict:
     except (EvidenceError, GroundingError) as exc:
         raise HTTPException(409, str(exc)) from exc
     try:
-        raw = await ask_pi(name, prompt)
-    except PiUnavailable as exc:
+        raw = await ask_agent(name, prompt)
+    except AgentUnavailable as exc:
         raise HTTPException(503, str(exc)) from exc
     if not is_current(root_dir(), snapshot):
         raise HTTPException(409, "Textbook changed during generation; retry against current sources")
@@ -372,7 +377,7 @@ async def chat(course: str, payload: ChatRequest, _: Authenticated) -> dict:
         outcome = check_response(raw, snapshot)
     except GroundingError as exc:
         raise HTTPException(422, str(exc)) from exc
-    response = {"course": name, "speaker": "pi", "source_sha256": snapshot.sha256, **outcome}
+    response = {"course": name, "speaker": "agentscope", "source_sha256": snapshot.sha256, **outcome}
     # A model rejection, invalid citation or textbook revision above never
     # creates a transcript. Accepted abstentions remain explicitly unverified.
     try:
@@ -385,7 +390,7 @@ async def chat(course: str, payload: ChatRequest, _: Authenticated) -> dict:
 
 
 def public_group(payload: dict) -> dict:
-    """v4 CLI simulates tutor voices; v5 HTTP executes independent Agents."""
+    """v4 CLI simulates tutor voices; v5 HTTP uses bounded AgentScope agents."""
     return {**payload, "single_agent_simulation": False, "execution_backend": "agentscope"}
 
 
@@ -435,8 +440,8 @@ async def group_next(course: str, _: Authenticated) -> dict:
     except (EvidenceError, GroundingError) as exc:
         raise HTTPException(409, str(exc)) from exc
     try:
-        raw = await generate_tutor_turn(speaker, prompt, session["turns"])
-    except TutorUnavailable as exc:
+        raw = await generate_tutor_turn(name, speaker, prompt, session["turns"])
+    except AgentUnavailable as exc:
         raise HTTPException(503, str(exc)) from exc
     if not is_current(root_dir(), snapshot):
         raise HTTPException(409, "Textbook changed during tutor generation")

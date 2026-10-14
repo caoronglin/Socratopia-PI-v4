@@ -1,6 +1,6 @@
 """Per-course durable chat transcript: accepted answers only, never model prompts.
 
-A transcript is an instructional log, not mastery, PREP, or a Pi SDK session.
+A transcript is an instructional log, not mastery, PREP, or unverified agent memory.
 Readback is bounded; the user's verified evidence snapshot may become stale.
 """
 from __future__ import annotations
@@ -53,7 +53,7 @@ def _connect(root: Path, course: str) -> sqlite3.Connection:
 
 
 def record(root: Path, course: str, question: str, response: dict) -> None:
-    """Persist only the server's already-checked output, not raw Pi messages."""
+    """Persist only the server's already-checked output, not raw model messages."""
     if not 1 <= len(question) <= 2000:
         raise HistoryError("Invalid question for transcript")
     if response.get("grounding") not in ("citation_checked", "insufficient_evidence"):
@@ -61,7 +61,7 @@ def record(root: Path, course: str, question: str, response: dict) -> None:
     if response.get("mastery_updated") is not False or response.get("fact_verified") is not False:
         raise HistoryError("Transcript must not assert verified course progress")
     payload = {
-        "speaker": "pi", "text": response["text"],
+        "speaker": response.get("speaker", "agentscope"), "text": response["text"],
         "grounding": response["grounding"],
         "citations": response["citations"],
         "source_sha256": response["source_sha256"],

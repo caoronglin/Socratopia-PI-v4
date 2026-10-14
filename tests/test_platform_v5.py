@@ -17,7 +17,7 @@ pytest.importorskip("httpx")
 
 from fastapi.testclient import TestClient
 from platform_api.app import api
-from platform_api.pi_gateway import PiUnavailable, ask_pi
+from platform_api.agentscope_runtime import AgentUnavailable, ask_agent
 from platform_api.evidence import retrieve
 
 
@@ -81,7 +81,7 @@ def test_chat_preserves_progress(client: TestClient, monkeypatch: pytest.MonkeyP
         assert "<untrusted_course_evidence>" in message
         return draft("RNA-seq用于研究表达。", quote)
 
-    monkeypatch.setattr("platform_api.app.ask_pi", fake_pi)
+    monkeypatch.setattr("platform_api.app.ask_agent", fake_pi)
     reply = client.post("/api/courses/生物信息学/chat", headers=auth(), json={"message": "什么是 RNA-seq?"})
     assert reply.status_code == 200, reply.text
     assert reply.json()["mastery_updated"] is False
@@ -105,7 +105,7 @@ def test_real_group_state_machine_with_stubbed_llm(client: TestClient, monkeypat
                           headers=auth(), json={"topic": "基因表达", "rounds": 2})
     assert started.json()["next_speaker"] == "D"
 
-    async def fake_tutor(speaker: str, topic: str, prior: list[dict]) -> str:
+    async def fake_tutor(course: str, speaker: str, topic: str, prior: list[dict]) -> str:
         assert "基因表达" in topic and "<source id=" in topic
         return draft("基因表达涉及遗传信息转化。", quote)
 
@@ -126,14 +126,15 @@ def test_real_group_state_machine_with_stubbed_llm(client: TestClient, monkeypat
     assert continued.json()["next_speaker"] == "D"
 
 
-def test_gateway_rejects_non_loopback_origin(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_agent_runtime_requires_model_credentials(monkeypatch: pytest.MonkeyPatch) -> None:
     import asyncio
 
-    monkeypatch.setenv("SOCRATOPIA_API_TOKEN", "test-only-secret-token-00001")
-    for url in ["http://127.0.0.1:8787@evil.example", "https://127.0.0.1:8787", "http://localhost:8787/move"]:
-        monkeypatch.setenv("SOCRATOPIA_PI_URL", url)
-        with pytest.raises(PiUnavailable):
-            asyncio.run(ask_pi("课程", "你好"))
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    with pytest.raises(AgentUnavailable):
+        asyncio.run(ask_agent("课程", "你好"))
+    from platform_api.pi_gateway import PiUnavailable, ask_pi
+    with pytest.raises(PiUnavailable):
+        asyncio.run(ask_pi("课程", "你好"))
 
 
 def test_missing_and_irrelevant_books_fail_closed(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -142,7 +143,7 @@ def test_missing_and_irrelevant_books_fail_closed(client: TestClient, monkeypatc
     async def forbidden(*args):
         raise AssertionError("No model calls without relevant sources")
 
-    monkeypatch.setattr("platform_api.app.ask_pi", forbidden)
+    monkeypatch.setattr("platform_api.app.ask_agent", forbidden)
     assert client.post("/api/courses/无教材/chat", headers=auth(), json={"message": "基因表达"}).status_code == 409
     overview = client.get("/api/courses/无教材/overview", headers=auth()).json()
     assert overview["grounded_chat_ready"] is False and overview["formal_lesson_ready"] is False
@@ -178,7 +179,7 @@ def test_model_invented_citations_rejected(client: TestClient, monkeypatch: pyte
     async def forged(*args):
         return malicious
 
-    monkeypatch.setattr("platform_api.app.ask_pi", forged)
+    monkeypatch.setattr("platform_api.app.ask_agent", forged)
     response = client.post("/api/courses/细胞学/chat", headers=auth(), json={"message": "细胞分裂"})
     assert response.status_code == 422, response.text
     assert progress.read_bytes() == before
@@ -189,7 +190,7 @@ def test_abstention_remains_unverified(client: TestClient, monkeypatch: pytest.M
     add_book("知识测试", "# 基因表达\n基因表达是遗传信息形成产物的过程。\n")
     async def abstain(*args):
         return '{"status":"abstain","reason":"找不到答案"}'
-    monkeypatch.setattr("platform_api.app.ask_pi", abstain)
+    monkeypatch.setattr("platform_api.app.ask_agent", abstain)
     result = client.post("/api/courses/知识测试/chat", headers=auth(), json={"message": "基因表达"})
     assert result.status_code == 200
     data = result.json()
@@ -203,7 +204,7 @@ def test_changed_textbook_blocks_response(client: TestClient, monkeypatch: pytes
     async def changed(*args):
         book.write_text("# DNA复制\nDNA复制有新的内容。\n", encoding="utf-8")
         return draft("DNA复制有模板。", "DNA复制需要模板链和DNA聚合酶。")
-    monkeypatch.setattr("platform_api.app.ask_pi", changed)
+    monkeypatch.setattr("platform_api.app.ask_agent", changed)
     result = client.post("/api/courses/分子生物学/chat", headers=auth(), json={"message": "DNA复制"})
     assert result.status_code == 409
 
