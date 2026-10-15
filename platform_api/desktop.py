@@ -182,7 +182,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"\nSocratopia Web: {url}")
         print(f"API token (paste into Web login): {token}")
         print(f"Workspace: {root}")
-        print("Model loop: native Pi SDK; collaboration: AgentScope; supervisor: Python")
+        print("Model runtime: AgentScope course agents; Pi compatibility service bundled; supervisor: Python")
         print("Close this terminal / press Ctrl+C to stop.\n", flush=True)
         pi_child = _start_pi(root, token)
         try:

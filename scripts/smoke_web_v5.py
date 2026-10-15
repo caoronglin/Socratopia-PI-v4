@@ -86,8 +86,8 @@ def smoke(archive: Path, platform: str) -> None:
                 raise RuntimeError("React HTML is missing from packaged Web")
             code, runtime = fetch(f"http://127.0.0.1:{port}/api/runtime",
                                   token=env["SOCRATOPIA_API_TOKEN"])
-            if code != 200 or '"backend":"pi"' not in runtime or '"gateway_online":true' not in runtime:
-                raise RuntimeError("Native Pi gateway failed packaged boot: " + runtime)
+            if code != 200 or '"backend":"agentscope-course"' not in runtime or '"course_agent_isolation":true' not in runtime:
+                raise RuntimeError("Course agent runtime unavailable in packaged boot: " + runtime)
             unauthorized, _ = fetch(f"http://127.0.0.1:{port}/api/courses")
             authorized, _ = fetch(f"http://127.0.0.1:{port}/api/courses", token=env["SOCRATOPIA_API_TOKEN"])
             if unauthorized != 401 or authorized != 200:
@@ -97,7 +97,7 @@ def smoke(archive: Path, platform: str) -> None:
                 raise RuntimeError("User workspace templates were not initialized")
             if any((folder / name).exists() for name in ("DATA", "TEXTBOOK")):
                 raise RuntimeError("Bundled package contains unexpected user data")
-            print(f"PASS: native Pi + AgentScope tutor + Python API + Web on {platform}", flush=True)
+            print(f"PASS: AgentScope course runtime + Python API + Web + Pi compatibility on {platform}", flush=True)
         finally:
             # PyInstaller on Windows can retain process handles briefly.
             if os.name == "nt":
