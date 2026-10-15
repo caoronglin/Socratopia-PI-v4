@@ -225,6 +225,7 @@
     "tests/test_package_release.py",
     "tests/test_pedagogical_prompt_design.py",
     "tests/test_pi_agent_constraints.py",
+    "tests/test_pi_gateway.py",
     "tests/test_platform_v5.py",
     "tests/test_platform_v5_chat_history.py",
     "tests/test_platform_v5_exercises.py",

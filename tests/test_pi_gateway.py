@@ -1,10 +1,15 @@
 """Regression gates for the thin Pi bridge: no external agent loop or tool access."""
 import asyncio
 import json
+import sys
 from pathlib import Path
 
-import httpx
 import pytest
+
+if sys.version_info < (3, 15):
+    pytest.skip("Pi gateway integration requires Python 3.15/httpx", allow_module_level=True)
+
+import httpx
 
 from platform_api import pi_gateway as pi
 
