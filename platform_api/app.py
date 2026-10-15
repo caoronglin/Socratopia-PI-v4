@@ -15,7 +15,7 @@ from scripts.lib.course_state import load_state, validate_state
 from scripts.lib.repository import course_dir, iter_course_paths, validate_course_name
 
 from platform_api.agentscope_runtime import AgentUnavailable, ask_agent, generate_tutor_turn, runtime_status as agent_runtime_status
-from platform_api import course_agents, course_graph, course_lifecycle, course_harness
+from platform_api import course_agents, course_graph, course_lifecycle, course_harness, snapshot_sync
 from platform_api.evidence import EvidenceError, retrieve, is_current
 from platform_api.grounding import GroundingError, check_response, grounded_prompt
 from platform_api import exercises, books, chat_history, prep_editor
@@ -222,6 +222,32 @@ def read_lifecycle(course: str, _: Authenticated) -> dict:
 
 class ArchiveRequest(BaseModel):
     archived: bool
+
+
+class SnapshotUploadRequest(BaseModel):
+    backend: Literal["webdav", "s3"]
+    acknowledged_private_data: Literal[True]
+
+
+@api.get("/api/courses/{course}/sync")
+def sync_capabilities(course: str, _: Authenticated) -> dict:
+    name = existing_course(course)
+    return {"course": name, "webdav_configured": bool(
+                os.getenv("SOCRATOPIA_WEBDAV_URL") and os.getenv("SOCRATOPIA_WEBDAV_USERNAME")
+                and os.getenv("SOCRATOPIA_WEBDAV_PASSWORD")),
+            "s3_configured": bool(os.getenv("SOCRATOPIA_S3_BUCKET")),
+            "automatic_restore": False, "automatic_upload": False,
+            "contains_personal_data": True, "requires_explicit_consent": True}
+
+
+@api.post("/api/courses/{course}/sync/upload")
+def sync_upload(course: str, payload: SnapshotUploadRequest, _: Authenticated) -> dict:
+    name = existing_course(course)
+    try:
+        # Never accept a remote URL, credentials, object key or paths from an AI or browser.
+        return snapshot_sync.upload(root_dir(), name, payload.backend)
+    except (snapshot_sync.SyncError, OSError, ValueError) as exc:
+        raise HTTPException(409, str(exc)) from exc
 
 
 class ModelRoleRequest(BaseModel):
