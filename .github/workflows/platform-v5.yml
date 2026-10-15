@@ -64,6 +64,7 @@ jobs:
           npm install --omit=dev --no-audit --no-fund
           npm ls --omit=dev
           node --check server.mjs
+          npm run check:sdk
       - name: Ensure Pi owns the native loop
         run: |
           grep -q 'session.prompt(prompt)' runtimes/pi/server.mjs

@@ -58,6 +58,7 @@ jobs:
           npm install --omit=dev --no-audit --no-fund
           npm ls --omit=dev
           node --check server.mjs
+          npm run check:sdk
       - name: Freeze native Web executable
         shell: bash
         run: python scripts/freeze_web_v5.py

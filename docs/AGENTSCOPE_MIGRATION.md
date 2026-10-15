@@ -49,3 +49,7 @@ Python FastAPI（课程状态机与事实监督者）
 - AgentScope 2.0.9：<https://github.com/agentscope-ai/agentscope/tree/v2.0.9>（`Agent`、`Toolkit`、`ReActConfig`）
 - GitHub Dependabot：<https://docs.github.com/en/code-security/reference/supply-chain-security/dependabot-options-reference>
 - React lazy/Suspense：<https://react.dev/reference/react/lazy>
+
+## 依赖版本陷阱（CI 实测）
+
+Pi 1.1.0 的内部依赖在上游 package.json 使用 `^1.1.0`；新装时可能混入 1.2.0 的 Pi Codemode，导致 `MCP_TYPESCRIPT_PREAMBLE` 导出缺失、Node 进程无法启动。这里用 npm overrides 将所需 Pi 内部包统一固定为 **1.1.0**，并在 Web ZIP 打包之前执行原生 ESM SDK 导入测试；今后由 Dependabot 提 PR 升级到同一版本，未经实际导入和四平台冒烟不得合并。
