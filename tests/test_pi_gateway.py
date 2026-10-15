@@ -64,5 +64,9 @@ def test_sdk_loop_is_owned_by_pi():
     assert "SessionManager.inMemory" in node_source
     assert "await session.prompt(prompt)" in node_source
     assert "noTools: 'all'" in node_source
+    for disabled in ("noExtensions: true", "noSkills: true", "noContextFiles: true",
+                     "noPromptTemplates: true", "noThemes: true"):
+        assert disabled in node_source
+    assert "agentsFilesOverride: () => ({ agentsFiles: [] })" in node_source
     assert "runNativeTurn" in node_source
     assert "continueRecent" not in node_source
