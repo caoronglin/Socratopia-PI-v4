@@ -251,3 +251,23 @@ def test_symlink_book_refused(client: TestClient, tmp_path: Path) -> None:
     outside.write_text("# RNA-seq\nRNA-seq is a transcriptome profiling assay.\n")
     (tmp_path / "TEXTBOOK" / "安全课程" / "book.md").symlink_to(outside)
     assert client.get("/api/courses/安全课程/evidence?q=RNA-seq", headers=auth()).status_code == 409
+
+def test_pi_memory_is_course_bound_and_invalidated_by_revised_book(
+        client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    from platform_api.chat_history import context_for_model
+
+    for course in ("教材甲", "教材乙"):
+        assert client.post("/api/courses", headers=auth(), json={"name": course}).status_code == 200
+    quote = "DNA双螺旋的两条链反向平行并通过碱基配对。"
+    book = add_book("教材甲", "# DNA结构\n" + quote + "\n")
+    add_book("教材乙", "# RNA结构\nRNA通常由一条多核苷酸链构成。\n")
+    async def quoted(*args):
+        return draft(quote, quote)
+    monkeypatch.setattr("platform_api.app.ask_pi", quoted)
+    result = client.post("/api/courses/教材甲/chat", headers=auth(), json={"message": "DNA双螺旋"})
+    assert result.status_code == 200, result.text
+    root = Path(os.environ["SOCRATOPIA_ROOT"])
+    assert "反向平行" in context_for_model(root, "教材甲")
+    assert "反向平行" not in context_for_model(root, "教材乙")
+    book.write_text("# DNA新版本\n原教材已修订。\n", encoding="utf-8")
+    assert context_for_model(root, "教材甲") == ""

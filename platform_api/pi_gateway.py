@@ -27,9 +27,13 @@ class PiUnavailable(RuntimeError):
 def _gateway_url() -> str:
     raw = os.environ.get("SOCRATOPIA_PI_URL", "http://127.0.0.1:8787").strip()
     parsed = urlsplit(raw)
+    try:
+        port = parsed.port
+    except ValueError as exc:
+        raise PiUnavailable("Invalid Pi gateway port") from exc
     if (parsed.scheme != "http" or parsed.hostname not in {"127.0.0.1", "localhost", "::1"}
             or parsed.username or parsed.password or parsed.fragment or parsed.query
-            or parsed.path not in ("", "/") or not parsed.port):
+            or parsed.path not in ("", "/") or not port):
         raise PiUnavailable("Pi gateway must use a loopback HTTP endpoint")
     return raw.rstrip("/")
 
@@ -56,7 +60,8 @@ async def ping_pi() -> bool:
         async with httpx.AsyncClient(timeout=httpx.Timeout(2.0, connect=1.0)) as client:
             response = await client.get(_gateway_url() + "/internal/health",
                                         headers={"Authorization": "Bearer " + token})
-        return response.status_code == 200 and response.json().get("gateway") == "pi"
+        return (response.status_code == 200 and isinstance(response.json(), dict)
+                and response.json().get("gateway") == "pi")
     except (PiUnavailable, httpx.HTTPError, OSError, ValueError):
         return False
 
