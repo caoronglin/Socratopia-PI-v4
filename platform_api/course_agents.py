@@ -10,8 +10,8 @@ from pathlib import Path
 
 from scripts.lib.repository import course_dir, read_json, validate_course_name, write_json_atomic
 
-DEFAULT_FEATURES = {"chat": True, "memory": True, "group": False}
-MUTABLE_FEATURES = {"memory", "group"}
+DEFAULT_FEATURES = {"chat": True, "memory": True, "group": False, "graph": False}
+MUTABLE_FEATURES = {"memory", "group", "graph"}
 
 
 class CourseAgentError(ValueError):
@@ -57,7 +57,7 @@ def status(root: Path, course: str) -> dict:
 
 def configure(root: Path, course: str, feature: str, enabled: bool) -> dict:
     if feature not in MUTABLE_FEATURES or not isinstance(enabled, bool):
-        raise CourseAgentError("Feature must be 'memory' or 'group'")
+        raise CourseAgentError("Unsupported feature")
     path = _settings_path(root, course)
     current = status(root, course)
     flags = current["features"]

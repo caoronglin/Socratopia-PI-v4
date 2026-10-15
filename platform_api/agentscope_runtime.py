@@ -16,6 +16,8 @@ from urllib.parse import urlsplit
 from scripts.lib.repository import validate_course_name
 from platform_api.course_agents import identity
 from platform_api.course_harness import choose
+from platform_api.course_agents import status as course_agent_status
+from platform_api.course_tools import build_toolkit
 from pathlib import Path
 
 MAX_PROMPT = 24_000
@@ -78,7 +80,8 @@ def runtime_status() -> dict:
             "provider": "openai-compatible", "configured": configured,
             "model": os.getenv("SOCRATOPIA_MODEL", "gpt-4.1-mini"),
             "max_agent_iterations": 1, "max_concurrent_turns": MAX_IN_FLIGHT,
-            "tool_access": False, "verified_history": "course-scoped-sqlite"}
+            "tool_access": "course-scoped-readonly-opt-in",
+            "verified_history": "course-scoped-sqlite"}
 
 
 async def _execute(scope: str, prompt: str, speaker: str | None) -> str:
@@ -96,12 +99,15 @@ async def _execute(scope: str, prompt: str, speaker: str | None) -> str:
     from agentscope.tool import Toolkit
 
     display_name, style = PERSONAS[speaker] if speaker else (identity(scope), "你是本课程专属导师。只讨论当前课程，严格区分事实、证据与未知。")
+    root = Path(os.getenv("SOCRATOPIA_ROOT", ".")).resolve()
+    features = course_agent_status(root, scope)["features"]
+    toolkit = build_toolkit(root, scope, graph_enabled=features["graph"])
     credential = OpenAICredential(api_key=key, **({"base_url": base_url} if base_url else {}))
     agent = Agent(
         name=display_name,
         system_prompt=PROMPT_RULES + style,
         model=OpenAIChatModel(credential=credential, model=model, stream=False),
-        toolkit=Toolkit(tools=[]),
+        toolkit=toolkit,
         react_config=ReActConfig(max_iters=choose(Path(os.getenv("SOCRATOPIA_ROOT", ".")).resolve(), scope,
                                                 "tutor" if speaker else "teach")["max_iterations"],
                                  structured_output_grace_iters=1),
