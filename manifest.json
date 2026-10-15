@@ -135,6 +135,7 @@
     "platform_api/grounding.py",
     "platform_api/pi_gateway.py",
     "platform_api/prep_editor.py",
+    "platform_api/snapshot_sync.py",
     "pyproject.toml",
     "quarantine/sources.json",
     "release/NOTES.md",
