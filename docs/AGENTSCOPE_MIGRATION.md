@@ -1,30 +1,51 @@
-# Socratopia v5 Alpha.7 — AgentScope 全运行时迁移
+# Socratopia v5 Pi/AgentScope 精简职责（PR #28）
 
-## 决定与目标
+> 目标：**小巧 · 精简 · 快速 · 精准**。本 PR 是 Alpha 预览，不等于真实模型 E2E 已通过。
 
-迁移 v5 的**所有在线导师推理**至已固定的 AgentScope Python 2.0.9 SDK。Python 3.15/FastAPI 继续作为课程事实、PREP 和计时的唯一状态来源。旧 Pi Node 子服务从 v5 运行、安装包与 CI 依赖路径中退出；旧源码保留作历史兼容，不在 v5 启动也不打包。**不影响 v4.3.2 stable Release**。本版本为 Alpha，不代表线上模型可用性已通过外部凭据验证。
+## 唯一执行链
 
-## Agent Loop：受限循环而非无限自治
+```text
+浏览器 / React（只显示服务端状态）
+    ↓ 鉴权 + 指定课程
+Python FastAPI（课程状态机与事实监督者）
+    ├─ 教材证据检索/版本快照 → 原生 Pi SDK session.prompt()
+    │      └─ 不暴露工具，单次内存会话，90 秒软中止，无外部 Agent Loop
+    ├─ 用户显式开始导师组 → AgentScope 2.0.9（D/E/F 单位发言）
+    │      └─ Python learning_group.py 验证顺序、会话 ID、轮次上限
+    └─ 回答 JSON/逐字引文/词元关联/最新教材 SHA 检查
+           → 课程独立 SQLite → 浏览器显示
+```
 
-单次学习请求：ROUTE → INSPECT（教材检索）→ ACT（AgentScope reply）→ VERIFY（服务器强制引文和来源版本验证）→ RECORD（本课程独立 SQLite，保存审核结果）→ YIELD / BLOCKED / DONE。
+- **Pi 原生**：仅 Pi SDK 负责普通课堂的模型调用、内部迭代和终止；Python 只有一次请求/响应与并发保护，不再复制其工具/推理循环。
+- **AgentScope**：仅两三位导师的独立发言，空工具包，`ReActConfig(max_iters=1)`，每次只允许指定发言人；不代理普通课堂 Pi。
+- **Python**：唯一能写入教材记录、PREP 草稿、课程状态、互动题、时长与小组游标的业务层。导师任何语句都不能创建 verified、ready、mastery 或虚构 2700 秒。
 
-- 单课程至多 **1 个在途回合**，一个进程全局至多 4 个回合；额外请求立即返回无可用，而非无限排队。
-- 模型代理上限 2 次内部迭代，最多 90 秒，禁止 shell/filesystem/toolkit 执行。模型输出 32K 字符、提示词 24K 字符上限。超时/取消不记录输出，`finally` 释放调度槽。
-- AgentScope 模型端**不共享跨课短期内存**，恢复课堂仅通过经过引文核验的 SQLite 历史，严格标注教材版本；未核验 raw LLM reply 不是课程学习事实。
-- 两到三位导师角色具有不同的语气、推理与教学侧重点；独立每位导师发言，每轮用户必须明确继续，最多三轮。由 `learning_group.py` 控制状态与落盘。
-- 不自行判断 master/ready，不允许伪造 2700 秒，答错的引文不能写进历史或授课成绩。
-- 尚未提供有认证角色和审计的 PREP 人工 ready 审批，不能由模型代替。
+## 对抗幻觉：严格区分可验证与不可证明
 
-## 性能与发布
+模型不能保证绝不出错。当前默认严格 fail-closed：没有当前课程相关教材拒答；仅接受结构化 JSON；逐条校验 source_id、真实逐字引文和有限词元关联；生成期间教材变化拒绝写入；未经校验的模型正文不进入课堂或记忆。**引文存在不证明论断蕴含、教材科学正确或模型不会逻辑反转**。全部生成事实继续标记 `fact_verified=false`，不能自动授予分数、完成时间或掌握度。
 
-1. 移除额外 Node.js/Pi 服务的启动、进程生命周期与错误链。FastAPI 调用 Python AgentScope，无回环 HTTP。
-2. AgentScope 模块推理时按需导入，读取课程列表和编辑 PREP 不需要初始化模型。禁止无边界上下文扩张：导师只接受最多六轮、每轮 900 字符的会话摘要。
-3. 单进程原生 ZIP 不包含 `runtime/node` 与 `runtime/pi`；仍包含 Web/Ant Design 资源、Python3.15+AgentScope PyInstaller 可执行文件和缺省模板。macOS/Windows/Linux 分别测试本机 ZIP 解压、启动、鉴权与哈希。
-4. 本机通过 `OPENAI_API_KEY` 提供模型认证，支持符合预期的 `OPENAI_BASE_URL` 与 `SOCRATOPIA_MODEL`。仅允许 HTTPS 远程模型地址，HTTP 限 loopback。浏览器只读取是否配置、模型名称与 loop 上限，绝不读出密钥或 base URL。
-5. 验证要求：新 Python AgentScope 运行时/并发/取消/禁用旧 Pi 桥测试；完整 legacy Python / Rust 回归、Ant Design CLI 0 issues、Chromium 桌面移动 E2E、四原生 ZIP 和 SHA-256。无实密钥 CI 不能声称完成生产模型 API 实测。
+## 记忆与课程隔离
 
-## 后续仍须独立验收
+每课在 `DATA/<course>/runtime/chat_history.sqlite3` 按事务独立保存已检查回复。Pi **每次单独的内存 SDK 会话**，不把原始模型历史写入 Pi session 文件。每轮只把同一门课、**当前 book.md SHA**、有实际引文的最多四次历史摘要作为 `<untrusted_course_memory>` 数据传递；旧版本教材、拒答、未经引文核对的回答不能复用。课程选择切换时清空浏览器草稿/上下文，后端用真实课程参数重新鉴权、定位和校验路径。SQLite 会话记录不是成绩库，不能推进 mastery。暂不支持多账户隔离：本地令牌持有者能访问该本机实例内所有课程。
 
-- 真实凭据调用、不同模型兼容（特别是非 OpenAI 协议）、代理断连恢复/用户随时取消与模型流式输出。
-- 跨进程全局并发需外置协调；当前内存调度器针对单进程 v5 桌面。生产多 Worker 需要改为共享限流。
-- 核验后才考虑清除 v4 PI/Cherry 历史工具源码，不能破坏现有稳定版发行包。
+## 资源与打包
+
+- Web: React.lazy 为互动练习、备课、教材、学习旅程和 AntV 图表分包；零新重型运行时依赖。
+- Runtime: Python/FastAPI + 按需 AgentScope + 原生 Pi Node 服务；避免再造外部 loop 和多套持久模型记忆；90 秒 Pi 软中止与 Python 95 秒请求超时，超时后不写课程权威数据。
+- 四平台 ZIP：冻结 Python、静态 Web、Pi SDK **生产依赖**和对应平台 Node 二进制；拒绝带入 DATA/TEXTBOOK、密钥、.env、symlink。解压后真实启动 Pi 子进程、验证本机授权健康端点与 Web API。体积以各平台 CI 生成实际字节数为准，不能声称已达成某个体积目标。
+- Pi 离线/缺凭据只可显示不可用，不能补造模型回复；群组需另行配置服务端 OPENAI_API_KEY，密钥永不发给 Web UI。Pi 原生认证请遵循 Pi 官方配置。
+
+## CI/CD 验收硬门槛
+
+1. Python 3.15 编译与完整严格回归，Pi 协议负向测试、真实同课记忆/旧教材失效测试、AgentScope 模拟导师组调度。
+2. Node Pi SDK `npm ls` + `node --check`，React/Ant Design 构建、Ant Design CLI doctor/lint，桌面/移动端 Chromium E2E。
+3. Linux/Windows/macOS Intel/macOS ARM 四平台 PyInstaller + native Node ZIP、解压运行、Pi 网关启动检查、鉴权、前端页面、SHA-256 全部过关。
+4. Dependabot 周更 Python/npm/Cargo/Actions **只创建 PR**；审查后合并 main 才进入全量 CI；主分支验证通过后自动生成独立 `v5.0.0-alpha.web.<run_number>` 预发布，**绝不覆写 v4 stable**。
+5. 使用真实 Provider 凭据测试 Pi 单轮和 AgentScope D/E 两导师必须单独验收；CI mock 通过不能写「真实模型已可用」。模型事实正确性仍需独立教材/人工核验。
+
+## 官方接口参照
+
+- Pi SDK：<https://github.com/earendil-works/pi-mono/tree/main/packages/coding-agent/docs>（`createAgentSession`、`SessionManager.inMemory`、`session.prompt/abort/dispose`）
+- AgentScope 2.0.9：<https://github.com/agentscope-ai/agentscope/tree/v2.0.9>（`Agent`、`Toolkit`、`ReActConfig`）
+- GitHub Dependabot：<https://docs.github.com/en/code-security/reference/supply-chain-security/dependabot-options-reference>
+- React lazy/Suspense：<https://react.dev/reference/react/lazy>
