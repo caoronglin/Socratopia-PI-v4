@@ -11,7 +11,7 @@ def test_runtime_reports_safe_config(monkeypatch):
     monkeypatch.setenv("OPENAI_API_KEY", "very-secret-token")
     monkeypatch.setenv("OPENAI_BASE_URL", "https://example.com/v1")
     r = rt.runtime_status()
-    assert r["backend"] == "agentscope-tutors" and r["configured"] is True
+    assert r["backend"] == "agentscope-course" and r["configured"] is True
     assert not any("secret" in str(v) or "example.com" in str(v) for v in r.values())
     assert r["max_agent_iterations"] == 1 and r["tool_access"] is False
 

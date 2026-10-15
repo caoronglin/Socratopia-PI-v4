@@ -14,6 +14,7 @@ from threading import Lock
 from urllib.parse import urlsplit
 
 from scripts.lib.repository import validate_course_name
+from platform_api.course_agents import identity
 
 MAX_PROMPT = 24_000
 MAX_REPLY = 32_000
@@ -72,7 +73,7 @@ def _model_config(speaker: str | None = None) -> tuple[str, str, str | None]:
 def runtime_status() -> dict:
     """Safe health information; do not return credentials or endpoints."""
     configured = bool(os.getenv("OPENAI_API_KEY"))
-    return {"backend": "agentscope-tutors", "sdk_version": "2.0.9",
+    return {"backend": "agentscope-course", "collaboration_backend": "agentscope", "sdk_version": "2.0.9",
             "provider": "openai-compatible", "configured": configured,
             "model": os.getenv("SOCRATOPIA_MODEL", "gpt-4.1-mini"),
             "max_agent_iterations": 1, "max_concurrent_turns": MAX_IN_FLIGHT,
@@ -82,8 +83,8 @@ def runtime_status() -> dict:
 async def _execute(scope: str, prompt: str, speaker: str | None) -> str:
     if not isinstance(prompt, str) or not prompt.strip() or len(prompt) > MAX_PROMPT:
         raise AgentUnavailable("Model prompt exceeds the bounded request limit")
-    if speaker not in PERSONAS:
-        raise AgentUnavailable("Only explicit tutor collaboration uses AgentScope")
+    if speaker is not None and speaker not in PERSONAS:
+        raise AgentUnavailable("Unsupported tutor role")
     key, model, base_url = _model_config(speaker)
     # Import lazily: offline browsing and course creation should not spend
     # time loading model dependencies or contact external services.
@@ -93,7 +94,7 @@ async def _execute(scope: str, prompt: str, speaker: str | None) -> str:
     from agentscope.model import OpenAIChatModel
     from agentscope.tool import Toolkit
 
-    display_name, style = PERSONAS[speaker]
+    display_name, style = PERSONAS[speaker] if speaker else (identity(scope), "你是本课程专属导师。只讨论当前课程，严格区分事实、证据与未知。")
     credential = OpenAICredential(api_key=key, **({"base_url": base_url} if base_url else {}))
     agent = Agent(
         name=display_name,
@@ -138,7 +139,8 @@ async def run_course_turn(course: str, prompt: str, *, speaker: str | None = Non
 
 
 async def ask_agent(course: str, prompt: str) -> str:
-    raise AgentUnavailable("Ordinary classroom inference belongs to Pi")
+    """One logical course agent, isolated through verified persisted context."""
+    return await run_course_turn(course, prompt)
 
 
 async def generate_tutor_turn(course: str, speaker: str, topic: str, prior: list[dict]) -> str:

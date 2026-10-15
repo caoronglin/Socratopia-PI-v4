@@ -61,7 +61,7 @@ def record(root: Path, course: str, question: str, response: dict) -> None:
     if response.get("mastery_updated") is not False or response.get("fact_verified") is not False:
         raise HistoryError("Transcript must not assert verified course progress")
     payload = {
-        "speaker": response.get("speaker", "pi"), "text": response["text"],
+        "speaker": response.get("speaker", "course_agent"), "text": response["text"],
         "grounding": response["grounding"],
         "citations": response["citations"],
         "source_sha256": response["source_sha256"],
@@ -109,7 +109,7 @@ def context_for_model(root: Path, course: str) -> str:
     turns = recent(root, validate_course_name(course), limit=4)["turns"]
     recalled: list[dict] = []
     for question, answer in zip(turns[::2], turns[1::2]):
-        if (answer.get("speaker") not in {"pi", "agentscope"}
+        if (answer.get("speaker") not in {"course_agent", "pi", "agentscope"}
                 or answer.get("grounding") != "citation_checked"
                 or answer.get("source_current") is not True):
             continue

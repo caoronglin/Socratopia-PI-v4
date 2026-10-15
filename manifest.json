@@ -124,6 +124,7 @@
     "platform_api/app.py",
     "platform_api/books.py",
     "platform_api/chat_history.py",
+    "platform_api/course_agents.py",
     "platform_api/desktop.py",
     "platform_api/evidence.py",
     "platform_api/exercises.py",

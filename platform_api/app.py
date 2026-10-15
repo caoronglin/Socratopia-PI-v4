@@ -14,8 +14,8 @@ from scripts.initialize import initialize as initialize_course
 from scripts.lib.course_state import load_state, validate_state
 from scripts.lib.repository import course_dir, iter_course_paths, validate_course_name
 
-from platform_api.agentscope_runtime import AgentUnavailable, generate_tutor_turn, runtime_status as tutor_runtime_status
-from platform_api.pi_gateway import PiUnavailable, ask_pi, ping_pi, runtime_status as pi_runtime_status
+from platform_api.agentscope_runtime import AgentUnavailable, ask_agent, generate_tutor_turn, runtime_status as agent_runtime_status
+from platform_api import course_agents
 from platform_api.evidence import EvidenceError, retrieve, is_current
 from platform_api.grounding import GroundingError, check_response, grounded_prompt
 from platform_api import exercises, books, chat_history, prep_editor
@@ -71,6 +71,11 @@ class ChatRequest(BaseModel):
     message: str = Field(min_length=1, max_length=2000)
 
 
+class AgentFeatureRequest(BaseModel):
+    feature: Literal["memory", "group"]
+    enabled: bool
+
+
 
 class BookImport(BaseModel):
     content: str = Field(min_length=1, max_length=2000000)
@@ -121,7 +126,8 @@ def health() -> dict:
 @api.get("/api/runtime")
 async def runtime_information(response: Response, _: Authenticated) -> dict:
     response.headers["Cache-Control"] = "no-store"
-    return {**pi_runtime_status(), "gateway_online": await ping_pi(), "tutors": tutor_runtime_status()}
+    return {**agent_runtime_status(), "gateway_online": False,
+            "tutors": agent_runtime_status(), "course_agent_isolation": True}
 
 
 @api.get("/api/courses")
@@ -141,6 +147,23 @@ def courses(_: Authenticated) -> dict:
 def create_course(payload: CourseCreate, _: Authenticated) -> dict:
     try:
         return initialize_course(root_dir(), payload.name, payload.tutor)
+    except (ValueError, OSError) as exc:
+        raise HTTPException(409, str(exc)) from exc
+
+
+@api.get("/api/courses/{course}/agent")
+def course_agent_status(course: str, _: Authenticated) -> dict:
+    try:
+        return course_agents.status(root_dir(), existing_course(course))
+    except (ValueError, OSError) as exc:
+        raise HTTPException(409, str(exc)) from exc
+
+
+@api.post("/api/courses/{course}/agent/features")
+def course_agent_features(course: str, payload: AgentFeatureRequest, _: Authenticated) -> dict:
+    try:
+        return course_agents.configure(root_dir(), existing_course(course),
+                                       payload.feature, payload.enabled)
     except (ValueError, OSError) as exc:
         raise HTTPException(409, str(exc)) from exc
 
@@ -369,10 +392,11 @@ async def chat(course: str, payload: ChatRequest, _: Authenticated) -> dict:
     except (EvidenceError, GroundingError) as exc:
         raise HTTPException(409, str(exc)) from exc
     try:
-        # Current-book, citation-checked history only; Pi never owns course memory.
-        prompt = chat_history.context_for_model(root_dir(), name) + prompt
-        raw = await ask_pi(name, prompt)
-    except (PiUnavailable, chat_history.HistoryError) as exc:
+        # Logical course AgentScope identity; no unverified SDK transcript survives.
+        if course_agents.status(root_dir(), name)["features"]["memory"]:
+            prompt = chat_history.context_for_model(root_dir(), name) + prompt
+        raw = await ask_agent(name, prompt)
+    except (AgentUnavailable, course_agents.CourseAgentError, chat_history.HistoryError) as exc:
         raise HTTPException(503, str(exc)) from exc
     if not is_current(root_dir(), snapshot):
         raise HTTPException(409, "Textbook changed during generation; retry against current sources")
@@ -380,7 +404,8 @@ async def chat(course: str, payload: ChatRequest, _: Authenticated) -> dict:
         outcome = check_response(raw, snapshot)
     except GroundingError as exc:
         raise HTTPException(422, str(exc)) from exc
-    response = {"course": name, "speaker": "pi", "source_sha256": snapshot.sha256, **outcome}
+    response = {"course": name, "speaker": "course_agent",
+                "agent_id": course_agents.identity(name), "source_sha256": snapshot.sha256, **outcome}
     # A model rejection, invalid citation or textbook revision above never
     # creates a transcript. Accepted abstentions remain explicitly unverified.
     try:
@@ -406,7 +431,9 @@ def group_status(course: str, _: Authenticated) -> dict:
 def group_configure(course: str, payload: GroupConfig, _: Authenticated) -> dict:
     name = existing_course(course)
     try:
-        return public_group(learning_group.configure(root_dir(), name, payload.members, payload.lead))
+        result = learning_group.configure(root_dir(), name, payload.members, payload.lead)
+        course_agents.configure(root_dir(), name, "group", True)
+        return public_group(result)
     except ValueError as exc:
         raise HTTPException(409, str(exc)) from exc
 
@@ -432,6 +459,8 @@ def group_continue(course: str, payload: GroupContinue, _: Authenticated) -> dic
 @api.post("/api/courses/{course}/group/next")
 async def group_next(course: str, _: Authenticated) -> dict:
     name = existing_course(course)
+    if not course_agents.status(root_dir(), name)["features"]["group"]:
+        raise HTTPException(409, "Tutor collaboration is not activated for this course")
     state = learning_group.status(root_dir(), name)
     speaker = state.get("next_speaker")
     session = state.get("session")

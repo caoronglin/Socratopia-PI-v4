@@ -53,7 +53,7 @@ def test_auth_fails_closed(client: TestClient) -> None:
     assert client.get("/api/health").status_code == 200
     assert client.get("/api/runtime").status_code == 401
     info = client.get("/api/runtime", headers=auth()).json()
-    assert info["backend"] == "pi"
+    assert info["backend"] == "agentscope-course"
     assert info["collaboration_backend"] == "agentscope"
     assert info["tutors"]["max_agent_iterations"] == 1
 
@@ -86,7 +86,7 @@ def test_chat_preserves_progress(client: TestClient, monkeypatch: pytest.MonkeyP
         assert "<untrusted_course_evidence>" in message
         return draft("RNA-seq用于研究表达。", quote)
 
-    monkeypatch.setattr("platform_api.app.ask_pi", fake_pi)
+    monkeypatch.setattr("platform_api.app.ask_agent", fake_pi)
     reply = client.post("/api/courses/生物信息学/chat", headers=auth(), json={"message": "什么是 RNA-seq?"})
     assert reply.status_code == 200, reply.text
     assert reply.json()["mastery_updated"] is False
@@ -149,7 +149,7 @@ def test_missing_and_irrelevant_books_fail_closed(client: TestClient, monkeypatc
     async def forbidden(*args):
         raise AssertionError("No model calls without relevant sources")
 
-    monkeypatch.setattr("platform_api.app.ask_pi", forbidden)
+    monkeypatch.setattr("platform_api.app.ask_agent", forbidden)
     assert client.post("/api/courses/无教材/chat", headers=auth(), json={"message": "基因表达"}).status_code == 409
     overview = client.get("/api/courses/无教材/overview", headers=auth()).json()
     assert overview["grounded_chat_ready"] is False and overview["formal_lesson_ready"] is False
@@ -185,7 +185,7 @@ def test_model_invented_citations_rejected(client: TestClient, monkeypatch: pyte
     async def forged(*args):
         return malicious
 
-    monkeypatch.setattr("platform_api.app.ask_pi", forged)
+    monkeypatch.setattr("platform_api.app.ask_agent", forged)
     response = client.post("/api/courses/细胞学/chat", headers=auth(), json={"message": "细胞分裂"})
     assert response.status_code == 422, response.text
     assert progress.read_bytes() == before
@@ -196,7 +196,7 @@ def test_abstention_remains_unverified(client: TestClient, monkeypatch: pytest.M
     add_book("知识测试", "# 基因表达\n基因表达是遗传信息形成产物的过程。\n")
     async def abstain(*args):
         return '{"status":"abstain","reason":"找不到答案"}'
-    monkeypatch.setattr("platform_api.app.ask_pi", abstain)
+    monkeypatch.setattr("platform_api.app.ask_agent", abstain)
     result = client.post("/api/courses/知识测试/chat", headers=auth(), json={"message": "基因表达"})
     assert result.status_code == 200
     data = result.json()
@@ -210,7 +210,7 @@ def test_changed_textbook_blocks_response(client: TestClient, monkeypatch: pytes
     async def changed(*args):
         book.write_text("# DNA复制\nDNA复制有新的内容。\n", encoding="utf-8")
         return draft("DNA复制有模板。", "DNA复制需要模板链和DNA聚合酶。")
-    monkeypatch.setattr("platform_api.app.ask_pi", changed)
+    monkeypatch.setattr("platform_api.app.ask_agent", changed)
     result = client.post("/api/courses/分子生物学/chat", headers=auth(), json={"message": "DNA复制"})
     assert result.status_code == 409
 
@@ -263,7 +263,7 @@ def test_pi_memory_is_course_bound_and_invalidated_by_revised_book(
     add_book("教材乙", "# RNA结构\nRNA通常由一条多核苷酸链构成。\n")
     async def quoted(*args):
         return draft(quote, quote)
-    monkeypatch.setattr("platform_api.app.ask_pi", quoted)
+    monkeypatch.setattr("platform_api.app.ask_agent", quoted)
     result = client.post("/api/courses/教材甲/chat", headers=auth(), json={"message": "DNA双螺旋"})
     assert result.status_code == 200, result.text
     root = Path(os.environ["SOCRATOPIA_ROOT"])
