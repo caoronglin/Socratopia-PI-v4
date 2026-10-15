@@ -13,7 +13,7 @@ def test_runtime_reports_safe_config(monkeypatch):
     r = rt.runtime_status()
     assert r["backend"] == "agentscope-course" and r["configured"] is True
     assert not any("secret" in str(v) or "example.com" in str(v) for v in r.values())
-    assert r["max_agent_iterations"] == 1 and r["tool_access"] is False
+    assert r["max_agent_iterations"] == 1 and r["tool_access"] == "course-scoped-readonly-opt-in"
 
 
 @pytest.mark.parametrize("endpoint", [

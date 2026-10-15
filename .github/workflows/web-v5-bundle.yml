@@ -132,7 +132,7 @@ jobs:
       - name: Python and architecture validation
         run: |
           python -m compileall -q platform_api scripts tests
-          python -m pytest -q tests/test_pi_gateway.py tests/test_agentscope_runtime.py tests/test_platform_v5.py tests/test_platform_v5_chat_history.py
+          python -m pytest -q tests/test_pi_gateway.py tests/test_agentscope_runtime.py tests/test_platform_v5.py tests/test_platform_v5_chat_history.py tests/test_course_harness.py tests/test_course_tools.py tests/test_snapshot_sync.py
           python scripts/check.py --strict
       - name: Browser dependencies
         working-directory: web

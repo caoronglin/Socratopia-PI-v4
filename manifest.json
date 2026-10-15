@@ -213,6 +213,7 @@
     "tests/test_claude_portability.py",
     "tests/test_context_pack.py",
     "tests/test_course_harness.py",
+    "tests/test_course_tools.py",
     "tests/test_courseware.py",
     "tests/test_dependency_ci.py",
     "tests/test_doctor_gates.py",
