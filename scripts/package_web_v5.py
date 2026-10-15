@@ -94,7 +94,7 @@ def build(platform: str, output: Path) -> dict:
         for relative, path in sorted(entries.items()):
             info = zipfile.ZipInfo("Socratopia-Web/" + relative, STAMP)
             info.compress_type = zipfile.ZIP_DEFLATED
-            is_native = relative == executable.name
+            is_native = relative == executable.name or relative == "runtime/" + node.name
             info.external_attr = ((0o100755 if is_native else 0o100644) << 16)
             archive.writestr(info, path.read_bytes(), compress_type=zipfile.ZIP_DEFLATED)
     sha = hashlib.sha256(dest.read_bytes()).hexdigest()
