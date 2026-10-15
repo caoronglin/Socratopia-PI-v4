@@ -7,13 +7,12 @@ from platform_api.course_graph import build
 
 def build_toolkit(root: Path, course: str, *, graph_enabled: bool):
     """Construct a fresh minimal AgentScope toolkit with no unapproved tools."""
-    from agentscope.tool import Toolkit, ToolResponse
-    from agentscope.message import TextBlock
-    toolkit = Toolkit(tools=[])
+    from agentscope.tool import Toolkit, FunctionTool
+    from agentscope.permission import PermissionDecision, PermissionBehavior
     if not graph_enabled:
-        return toolkit
+        return Toolkit(tools=[])
 
-    def course_outline() -> ToolResponse:
+    def course_outline() -> str:
         """Read the current textbook's verifiable chapter outline.
 
         Returns:
@@ -23,8 +22,9 @@ def build_toolkit(root: Path, course: str, *, graph_enabled: bool):
         payload = {"course": data["course"], "source_sha256": data["source_sha256"],
                    "headings": [{"label": n["label"], "line": n["line"]}
                                 for n in data["nodes"][:32]]}
-        return ToolResponse(content=[TextBlock(type="text",
-                                              text=json.dumps(payload, ensure_ascii=False))])
+        return json.dumps(payload, ensure_ascii=False)
 
-    toolkit.register_tool_function(course_outline)
-    return toolkit
+    return Toolkit(tools=[FunctionTool(
+        func=course_outline, is_read_only=True,
+        permission=PermissionDecision(behavior=PermissionBehavior.ALLOW),
+    )])

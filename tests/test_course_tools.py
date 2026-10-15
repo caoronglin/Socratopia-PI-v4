@@ -1,5 +1,6 @@
 """AgentScope 2.0 native toolkit registration must not leak tools by default."""
 import sys
+import asyncio
 import pytest
 if sys.version_info < (3, 15):
     pytest.skip("Requires AgentScope 2 and Python 3.15", allow_module_level=True)
@@ -12,9 +13,9 @@ def test_toolkit_opt_in_and_course_scope(tmp_path):
         (tmp_path/"TEXTBOOK"/course/"book.md").write_text(
             "# "+course+"\\n## 基础概念\\n教材证据\\n", encoding="utf-8")
     empty = build_toolkit(tmp_path, "课程A", graph_enabled=False)
-    assert not empty.get_json_schemas()
+    assert not asyncio.run(empty.get_tool_schemas())
     registered = build_toolkit(tmp_path, "课程A", graph_enabled=True)
-    schemas = registered.get_json_schemas()
+    schemas = asyncio.run(registered.get_tool_schemas())
     assert len(schemas) == 1
     assert "course_outline" in str(schemas)
     assert "execute_shell_command" not in str(schemas)
