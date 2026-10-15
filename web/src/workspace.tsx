@@ -5,6 +5,8 @@ const PracticePanel = React.lazy(() => import('./practice'));
 const ResourcesPanel = React.lazy(() => import('./resources'));
 const PrepPanel = React.lazy(() => import('./prep'));
 const LearningJourney = React.lazy(() => import('./learning_journey'));
+const CourseGraph = React.lazy(() => import('./course_graph'));
+const CourseSettings = React.lazy(() => import('./course_settings'));
 import type { LearningTab } from './learning_journey';
 import {
   Alert, Badge, Breadcrumb, Button, Card, Col, Divider, Empty, Flex, Input, Layout, Listy,
@@ -34,7 +36,7 @@ type Group = {
   session?: { topic: string; phase: string; round: number; max_rounds: number; turns: Turn[] } | null;
 };
 type AgentStatus = {
-  backend: 'pi'; collaboration_backend: 'agentscope'; configured: boolean; gateway_online: boolean;
+  backend: 'agentscope-course'; collaboration_backend: 'agentscope'; configured: boolean; gateway_online: boolean;
   model: string; max_concurrent_turns: number; verified_history: string;
   model_credentials_verified: false;
   tutors: { backend: string; configured: boolean; sdk_version: string; max_agent_iterations: number };
@@ -42,7 +44,7 @@ type AgentStatus = {
 type WorkspaceProps = { dark: boolean; onDarkChange: (value: boolean) => void };
 const { Sider, Header, Content } = Layout;
 const { Title, Text, Paragraph } = Typography;
-const tutorNames: Record<string, string> = { D: '三月七', E: '丹恒', F: '姬子', pi: 'Pi 课程导师', agentscope: '历史 AgentScope 导师', student: '我' };
+const tutorNames: Record<string, string> = { course_agent: '本课程导师', D: '三月七', E: '丹恒', F: '姬子', pi: 'Pi 课程导师', agentscope: '历史 AgentScope 导师', student: '我' };
 
 export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
   const [token, setToken] = useState('');
@@ -251,7 +253,7 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
             <Breadcrumb items={[{ title: 'Socratopia' }, { title: course || '选择课程' },
               { title: tab === 'prep' ? '章节备课' : tab === 'class' ? '课堂' : tab === 'group' ? '学习小组' : tab === 'evidence' ? '教材' : '课程' }]} />
             <Title level={3}>{tab === 'class' ? '课堂与对话' : tab === 'group' ? '学习小组' : tab === 'prep' ? '章节备课' : tab === 'evidence' ? '教材证据' : '课程概览'}</Title>
-            <Paragraph type="secondary">Pi 负责原生模型循环；AgentScope 只协调导师；Python 对证据和课程状态作最终核验。</Paragraph>
+            <Paragraph type="secondary">每门课程独立 AgentScope 身份；导师协作按需启用，Python 最终审核课程事实。</Paragraph>
           </div>
           <Card size="small" className="control-card" title={<Space size="small"><Badge status={course ? 'success' : 'default'} />课程连接</Space>}>
             <Flex gap="small" align="center" wrap="wrap">
@@ -265,15 +267,15 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
             </Flex>
           </Card>
           {agentStatus && <Flex wrap="wrap" align="center" gap="small" className="runtime-strip">
-            <Tag color="blue">Pi 原生课堂</Tag><Tag>AgentScope {agentStatus.tutors.sdk_version} · 协作</Tag>
-            <Tag color={agentStatus.gateway_online ? 'success' : 'warning'}>
-              {agentStatus.gateway_online ? 'Pi 桥接在线（模型凭据未校验）' : 'Pi 桥接未运行'}
+            <Tag color="blue">课程专属 AgentScope</Tag><Tag>AgentScope {agentStatus.tutors.sdk_version} · 课程 Agent</Tag>
+            <Tag color={agentStatus.configured ? 'success' : 'warning'}>
+              {agentStatus.configured ? '模型已配置（凭据未验证）' : '模型尚未配置'}
             </Tag>
-            <Text type="secondary">模型：由 Pi 选择 · 协作导师迭代 ≤ {agentStatus.tutors.max_agent_iterations} · 并发 ≤ {agentStatus.max_concurrent_turns}</Text>
+            <Text type="secondary">各课程独立模型路由 · 导师迭代 ≤ {agentStatus.tutors.max_agent_iterations} · 并发 ≤ {agentStatus.max_concurrent_turns}</Text>
           </Flex>}
           {agentStatus && !agentStatus.configured && <Alert className="feedback" type="info" showIcon
             title="当前可以导入教材、编辑教案和完成练习"
-            description="课堂模型由 Pi 配置；使用导师小组还需单独配置 OPENAI_API_KEY。密钥不会通过课程接口返回。" />}
+            description="模型凭据通过服务端 OPENAI_API_KEY 与可选 OPENAI_BASE_URL 配置；模型可按课程和任务指定，密钥不进入浏览器。" />}
           {error && <Alert className="feedback" type="error" showIcon title={error} closable={{ onClose: () => setError('') }} />}
           {!course ? <Card title="开始新的课程">
             <Empty description="选择已初始化课程，或直接在这里新建课程骨架" />
@@ -294,7 +296,7 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
                     <Button type="link" onClick={() => setTab('evidence')}>前往教材导入</Button></Space>} />}
                 {overview?.book_available && <Alert className="feedback" type="info" showIcon
                   title="引用核验已启用"
-                  description="Pi 回应仍须附本课逐字教材引文，服务器逐项核对；引用通过不等于事实已被自动审定。" />}
+                  description="课程 Agent 回应仍须附本课逐字教材引文，服务器逐项核对；引用通过不等于事实已被自动审定。" />}
 
                 <Row gutter={[16, 16]}>
                   <Col xs={24} lg={16}>
@@ -314,12 +316,12 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
                                 <Text code>{citation.source_id}</Text> {citation.section}：{citation.quote}
                               </Paragraph>)}
                             </div>
-                        </div>} /> : <Empty description="输入一个问题，开始与 Pi 导师交互" />}
+                        </div>} /> : <Empty description="输入问题，开始与本课程导师交互" />}
                       <Divider />
                       <Input.TextArea value={message} onChange={e => setMessage(e.target.value)}
                         placeholder="对课程提问，或解释你的解题思路…" rows={3} maxLength={2000} showCount />
                       <Flex justify="end" className="send-row">
-                        <Button type="primary" loading={busy} disabled={!message.trim() || !overview?.book_available || !agentStatus?.gateway_online} onClick={() => void chat()}>向导师提问</Button>
+                        <Button type="primary" loading={busy} disabled={!message.trim() || !overview?.book_available || !agentStatus?.configured} onClick={() => void chat()}>向导师提问</Button>
                       </Flex>
                     </Card>
                   </Col>
@@ -413,7 +415,8 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
                   onImported={() => { void reload().catch(err =>
                     setError(err instanceof Error ? err.message : '课程刷新失败')); }}
                   onExplore={title => { void searchEvidence(title); }} onStartPrep={() => setTab('prep')} />
-                <Card title="检索主教材证据" extra={<Tag>只读</Tag>}>
+                {overview?.book_available && <React.Suspense fallback={<Card loading title="图谱加载中" />}><CourseGraph key={course} course={course} request={request} /></React.Suspense>}
+                 <Card title="检索主教材证据" extra={<Tag>只读</Tag>}>
                 <Paragraph type="secondary">从当前课程 book.md 检索相关章节。所有引用显示原文及文件摘要，未验证来源的内容不会自动作为课堂事实。</Paragraph>
                 <Flex gap="small" wrap="wrap">
                   <Input value={evidenceQuery} maxLength={2000} onChange={e => setEvidenceQuery(e.target.value)}
@@ -433,6 +436,7 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
                 </Card>
               </>}
               {tab === 'course' && <>
+                 <React.Suspense fallback={<Card loading title="课程设置加载中" />}><CourseSettings key={course + ':' + token} course={course} request={request} /></React.Suspense>
                 <LearningJourney bookAvailable={Boolean(overview?.book_available)}
                   prepCount={Object.keys(prepLessons).length}
                   formalReady={Boolean(overview?.formal_lesson_ready)}

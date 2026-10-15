@@ -253,6 +253,8 @@
     "web/index.html",
     "web/package.json",
     "web/playwright.config.ts",
+    "web/src/course_graph.tsx",
+    "web/src/course_settings.tsx",
     "web/src/learning_journey.tsx",
     "web/src/main.tsx",
     "web/src/practice.tsx",

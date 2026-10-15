@@ -143,7 +143,7 @@ jobs:
         working-directory: web
         env:
           SOCRATOPIA_ROOT: ${{ runner.temp }}/socratopia-v5-browser
-          SOCRATOPIA_API_TOKEN: e2e-local-token-123456789
+          SOCRATOPIA_API_TOKEN: e2e-test-token-1234567890
         run: |
           mkdir -p "$SOCRATOPIA_ROOT/templates"
           cp -R ../templates/. "$SOCRATOPIA_ROOT/templates/"

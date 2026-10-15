@@ -44,7 +44,7 @@ export default function CourseSettings({ course, request }: { course: string; re
         </Space>)}
       </Flex>
     </Space>}
-    <Space direction="vertical" style={{ width: '100%', marginTop: 18 }}>
+    <Space orientation="vertical" style={{ width: '100%', marginTop: 18 }}>
       <Typography.Text strong>任务级模型路由</Typography.Text>
       <Flex wrap="wrap" gap={8}>
         <Select aria-label="选择模型任务" style={{ width: 145 }} value={role} onChange={setRole}
