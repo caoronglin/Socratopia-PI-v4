@@ -47,6 +47,20 @@ def runtime_status() -> dict:
     }
 
 
+async def ping_pi() -> bool:
+    """Check authenticated gateway liveness, not the validity of model credentials."""
+    token = os.environ.get("SOCRATOPIA_API_TOKEN", "")
+    if len(token) < 16:
+        return False
+    try:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(2.0, connect=1.0)) as client:
+            response = await client.get(_gateway_url() + "/internal/health",
+                                        headers={"Authorization": "Bearer " + token})
+        return response.status_code == 200 and response.json().get("gateway") == "pi"
+    except (PiUnavailable, httpx.HTTPError, OSError, ValueError):
+        return False
+
+
 async def ask_pi(course: str, prompt: str) -> str:
     validate_course_name(course)
     if not isinstance(prompt, str) or not prompt.strip() or len(prompt) > MAX_PROMPT:

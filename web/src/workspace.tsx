@@ -34,7 +34,7 @@ type Group = {
   session?: { topic: string; phase: string; round: number; max_rounds: number; turns: Turn[] } | null;
 };
 type AgentStatus = {
-  backend: 'pi'; collaboration_backend: 'agentscope'; configured: boolean;
+  backend: 'pi'; collaboration_backend: 'agentscope'; configured: boolean; gateway_online: boolean;
   model: string; max_concurrent_turns: number; verified_history: string;
   model_credentials_verified: false;
   tutors: { backend: string; configured: boolean; sdk_version: string; max_agent_iterations: number };
@@ -266,8 +266,8 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
           </Card>
           {agentStatus && <Flex wrap="wrap" align="center" gap="small" className="runtime-strip">
             <Tag color="blue">Pi 原生课堂</Tag><Tag>AgentScope {agentStatus.tutors.sdk_version} · 协作</Tag>
-            <Tag color={agentStatus.configured ? 'success' : 'warning'}>
-              {agentStatus.configured ? '本机桥接已配置（模型凭据待验证）' : '本机桥接未配置'}
+            <Tag color={agentStatus.gateway_online ? 'success' : 'warning'}>
+              {agentStatus.gateway_online ? 'Pi 桥接在线（模型凭据未校验）' : 'Pi 桥接未运行'}
             </Tag>
             <Text type="secondary">模型：由 Pi 选择 · 协作导师迭代 ≤ {agentStatus.tutors.max_agent_iterations} · 并发 ≤ {agentStatus.max_concurrent_turns}</Text>
           </Flex>}
@@ -319,7 +319,7 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
                       <Input.TextArea value={message} onChange={e => setMessage(e.target.value)}
                         placeholder="对课程提问，或解释你的解题思路…" rows={3} maxLength={2000} showCount />
                       <Flex justify="end" className="send-row">
-                        <Button type="primary" loading={busy} disabled={!message.trim() || !overview?.book_available || !agentStatus?.configured} onClick={() => void chat()}>向导师提问</Button>
+                        <Button type="primary" loading={busy} disabled={!message.trim() || !overview?.book_available || !agentStatus?.gateway_online} onClick={() => void chat()}>向导师提问</Button>
                       </Flex>
                     </Card>
                   </Col>

@@ -15,7 +15,7 @@ from scripts.lib.course_state import load_state, validate_state
 from scripts.lib.repository import course_dir, iter_course_paths, validate_course_name
 
 from platform_api.agentscope_runtime import AgentUnavailable, generate_tutor_turn, runtime_status as tutor_runtime_status
-from platform_api.pi_gateway import PiUnavailable, ask_pi, runtime_status as pi_runtime_status
+from platform_api.pi_gateway import PiUnavailable, ask_pi, ping_pi, runtime_status as pi_runtime_status
 from platform_api.evidence import EvidenceError, retrieve, is_current
 from platform_api.grounding import GroundingError, check_response, grounded_prompt
 from platform_api import exercises, books, chat_history, prep_editor
@@ -119,9 +119,9 @@ def health() -> dict:
 
 
 @api.get("/api/runtime")
-def runtime_information(response: Response, _: Authenticated) -> dict:
+async def runtime_information(response: Response, _: Authenticated) -> dict:
     response.headers["Cache-Control"] = "no-store"
-    return {**pi_runtime_status(), "tutors": tutor_runtime_status()}
+    return {**pi_runtime_status(), "gateway_online": await ping_pi(), "tutors": tutor_runtime_status()}
 
 
 @api.get("/api/courses")

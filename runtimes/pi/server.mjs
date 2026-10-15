@@ -115,7 +115,9 @@ const server = createServer(async (req, res) => {
   }
 });
 
-server.listen(8787, '127.0.0.1', () => console.log('Pi SDK gateway on 127.0.0.1:8787'));
+const port = Number(process.env.SOCRATOPIA_PI_PORT || 8787);
+if (!Number.isSafeInteger(port) || port < 1024 || port > 65535) throw new Error('Invalid Pi gateway port');
+server.listen(port, '127.0.0.1', () => console.log('Pi SDK gateway ready'));
 for (const signal of ['SIGTERM', 'SIGINT']) {
   process.once(signal, async () => {
     server.close();
