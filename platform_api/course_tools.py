@@ -26,5 +26,5 @@ def build_toolkit(root: Path, course: str, *, graph_enabled: bool):
 
     return Toolkit(tools=[FunctionTool(
         func=course_outline, is_read_only=True,
-        permission=PermissionDecision(behavior=PermissionBehavior.ALLOW),
+        permission=PermissionDecision(behavior=PermissionBehavior.ALLOW,\n                                      message="Read-only course outline explicitly enabled by learner"),
     )])
