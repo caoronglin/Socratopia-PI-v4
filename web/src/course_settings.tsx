@@ -1,11 +1,15 @@
 import { useEffect, useState } from 'react';
-import { Alert, Button, Card, Flex, Input, Select, Space, Switch, Tag, Typography } from 'antd';
+import { Alert, Button, Card, Flex, Input, Popconfirm, Select, Space, Switch, Tag, Typography } from 'antd';
 
 type Request = <T,>(path: string, method?: string, body?: object) => Promise<T>;
 type Agent = { agent_id: string; features: Record<string, boolean> };
 type Life = { archived: boolean; archived_at: string | null };
 type Route = { model: string; max_iterations: number; timeout_seconds: number };
 type Models = { roles: Record<string, Route> };
+type StudyTask = { id: string; kind: string; status: string; payload?: { title?: string } };
+type Tasks = { tasks: StudyTask[] };
+type SyncInfo = { webdav_configured: boolean; s3_configured: boolean };
+type UploadInfo = { backend: string; sha256: string; files: number; already_exists: boolean };
 const TASKS: Record<string, string> = { teach: '课程讲解', tutor: '导师讨论', explain_visual: '互动可视化',
   review: '审核与复习' };
 
@@ -16,11 +20,17 @@ export default function CourseSettings({ course, request }: { course: string; re
   const [role, setRole] = useState('teach');
   const [model, setModel] = useState('');
   const [busy, setBusy] = useState(false);
+  const [tasks, setTasks] = useState<StudyTask[]>([]);
+  const [taskTitle, setTaskTitle] = useState('');
+  const [taskKind, setTaskKind] = useState('study');
+  const [sync, setSync] = useState<SyncInfo | null>(null);
+  const [uploaded, setUploaded] = useState<UploadInfo | null>(null);
   const [error, setError] = useState('');
   const path = '/courses/' + encodeURIComponent(course);
   const load = async () => {
-    const [a,l,m] = await Promise.all([request<Agent>(path+'/agent'), request<Life>(path+'/lifecycle'),
-      request<Models>(path+'/models')]); setAgent(a); setLife(l); setModels(m);
+    const [a,l,m,t,remote] = await Promise.all([request<Agent>(path+'/agent'), request<Life>(path+'/lifecycle'),
+      request<Models>(path+'/models'), request<Tasks>(path+'/tasks'), request<SyncInfo>(path+'/sync')]);
+    setAgent(a); setLife(l); setModels(m); setTasks(t.tasks); setSync(remote);
   };
   useEffect(() => { setAgent(null); setLife(null); setModels(null); setError(''); void load().catch(e =>
     setError(e instanceof Error ? e.message : '加载设置失败')); }, [course, request]);
@@ -58,6 +68,45 @@ export default function CourseSettings({ course, request }: { course: string; re
         上限：{models.roles[role].max_iterations} 次迭代 / {models.roles[role].timeout_seconds} 秒。模型不得写入课程权威状态。
       </Typography.Text>}
     </Space>
+    <Card size="small" title="课程任务" style={{ marginTop: 20 }}>
+      <Flex gap={8} wrap="wrap">
+        <Input value={taskTitle} onChange={e => setTaskTitle(e.target.value)}
+          maxLength={160} placeholder="本节想完成的任务" style={{ minWidth: 180, flex: 1 }} />
+        <Select value={taskKind} onChange={setTaskKind} style={{ width: 120 }}
+          options={[{value:'study',label:'学习'}, {value:'review',label:'复习'},
+            {value:'visualize',label:'可视化'}, {value:'research',label:'资料调查'}]} />
+        <Button disabled={busy || Boolean(life?.archived) || taskTitle.trim().length < 2}
+          onClick={() => void perform(async () => {
+            await request(path+'/tasks','POST',{title:taskTitle.trim(),kind:taskKind,
+              request_id:crypto.randomUUID().replaceAll('-', '')});
+            setTaskTitle('');
+          })}>添加任务</Button>
+      </Flex>
+      <Space orientation="vertical" style={{ marginTop: 12, width: '100%' }}>
+        {tasks.slice(-6).map(t => <Typography.Text key={t.id}>
+          <Tag>{t.status}</Tag>{t.payload?.title || t.kind}
+        </Typography.Text>)}
+      </Space>
+      <Typography.Paragraph type="secondary">任务只是持久待办，不会自行启动 Agent 循环。</Typography.Paragraph>
+    </Card>
+    <Card size="small" title="远程快照（手动）" style={{ marginTop: 16 }}>
+      <Typography.Paragraph type="secondary">可能包含私人的笔记与对话。只上传可信远端，恢复需人工审核。</Typography.Paragraph>
+      <Flex wrap="wrap" gap={10}>
+        {(['webdav','s3'] as const).map(backend => <Popconfirm key={backend}
+          title="确认上传含个人学习资料的快照？" okText="确认上传" cancelText="取消"
+          onConfirm={() => void perform(async () => {
+            setUploaded(await request<UploadInfo>(path+'/sync/upload','POST',
+              {backend,acknowledged_private_data:true}));
+          })}>
+          <Button loading={busy} disabled={busy || (backend === 'webdav' ? !sync?.webdav_configured : !sync?.s3_configured)}>
+            上传 {backend === 'webdav' ? 'WebDAV' : 'S3'}
+          </Button>
+        </Popconfirm>)}
+      </Flex>
+      {uploaded && <Alert type="success" showIcon style={{ marginTop: 12 }}
+        title={uploaded.already_exists ? '已有相同快照' : '远程快照已上传'}
+        description={uploaded.backend + ' · ' + uploaded.files + ' 个文件 · SHA256 ' + uploaded.sha256.slice(0,16) + '…'}/>}
+    </Card>
     <Flex align="center" gap={10} wrap="wrap" style={{ marginTop: 22 }}>
       <Button danger={!life?.archived} loading={busy} onClick={() => void perform(async () => {
         await request(path+'/lifecycle','POST',{archived:!life?.archived});
