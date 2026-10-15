@@ -9,8 +9,9 @@ const token = process.env.SOCRATOPIA_API_TOKEN;
 if (!token || token.length < 16) {
   throw new Error('Set SOCRATOPIA_API_TOKEN (at least 16 characters) before starting Pi');
 }
-const sessions = new Map();
+const activeSessions = new Set();
 const busy = new Set();
+const maxConcurrent = 4;
 const maxBytes = 32 * 1024;
 const cwd = resolve(process.env.SOCRATOPIA_ROOT || process.cwd());
 
@@ -37,12 +38,7 @@ function courseSessionLocation(course) {
     throw new Error('Symlinked course runtime is forbidden');
   }
   mkdirSync(runtime, { recursive: true, mode: 0o700 });
-  const sessionDir = join(runtime, 'pi_sessions');
-  if (existsSync(sessionDir) && lstatSync(sessionDir).isSymbolicLink()) {
-    throw new Error('Symlinked Pi sessions directory is forbidden');
-  }
-  mkdirSync(sessionDir, { recursive: true, mode: 0o700 });
-  return { courseDir, sessionDir };
+  return { courseDir };
 }
 
 function authorized(request) {
@@ -56,25 +52,36 @@ function respond(res, status, data) {
   res.end(JSON.stringify(data));
 }
 
-async function sessionFor(course) {
-  if (!sessions.has(course)) {
-    // Empty tool set by default. A learner's prompt must not get shell or FS access.
-    const { courseDir, sessionDir } = courseSessionLocation(course);
-    const result = await createAgentSession({
-      cwd: courseDir,
-      sessionManager: SessionManager.continueRecent(courseDir, sessionDir),
-      noTools: 'all',
-    });
-    sessions.set(course, result.session);
+async function runNativeTurn(course, prompt) {
+  const { courseDir } = courseSessionLocation(course);
+  // One native Pi session per checked request. Discard unverified SDK history.
+  const { session } = await createAgentSession({
+    cwd: courseDir,
+    sessionManager: SessionManager.inMemory(courseDir),
+    noTools: 'all',
+  });
+  activeSessions.add(session);
+  const timeout = setTimeout(() => { void session.abort(); }, 90_000);
+  try {
+    await session.prompt(prompt);
+    const text = session.getLastAssistantText();
+    if (typeof text !== 'string' || !text.trim() || text.length > 32_000) {
+      throw new Error('Empty or excessive Pi reply');
+    }
+    return text;
+  } finally {
+    clearTimeout(timeout);
+    activeSessions.delete(session);
+    await session.dispose();
   }
-  return sessions.get(course);
 }
 
 const server = createServer(async (req, res) => {
+  if (!authorized(req)) return respond(res, 401, { error: 'Unauthorized' });
+  if (req.method === 'GET' && req.url === '/internal/health') return respond(res, 200, { gateway: 'pi', ready: true, model_verified: false });
   if (req.method !== 'POST' || req.url !== '/internal/reply') {
     return respond(res, 404, { error: 'Not found' });
   }
-  if (!authorized(req)) return respond(res, 401, { error: 'Unauthorized' });
   try {
     let content = '';
     for await (const chunk of req) {
@@ -82,19 +89,19 @@ const server = createServer(async (req, res) => {
       if (Buffer.byteLength(content) > maxBytes) return respond(res, 413, { error: 'Too large' });
     }
     const data = JSON.parse(content);
+    if (!data || typeof data !== 'object' || Array.isArray(data)) return respond(res, 400, { error: 'Invalid request' });
     const course = data.course;
     const prompt = data.prompt;
     if (typeof course !== 'string' || !course || course.length > 120 ||
         course.includes('/') || course.includes('\\') ||
-        typeof prompt !== 'string' || !prompt.trim() || prompt.length > 8000) {
+        typeof prompt !== 'string' || !prompt.trim() || prompt.length > 16000) {
       return respond(res, 400, { error: 'Invalid input' });
     }
     if (busy.has(course)) return respond(res, 409, { error: 'Course is busy' });
+    if (busy.size >= maxConcurrent) return respond(res, 503, { error: 'Pi gateway at capacity' });
     busy.add(course);
     try {
-      const session = await sessionFor(course);
-      await session.prompt(prompt);
-      const text = session.getLastAssistantText();
+      const text = await runNativeTurn(course, prompt);
       if (typeof text !== 'string' || !text.trim()) {
         return respond(res, 502, { error: 'Pi did not return a message' });
       }
@@ -112,6 +119,6 @@ server.listen(8787, '127.0.0.1', () => console.log('Pi SDK gateway on 127.0.0.1:
 for (const signal of ['SIGTERM', 'SIGINT']) {
   process.once(signal, async () => {
     server.close();
-    await Promise.all([...sessions.values()].map((session) => session.dispose()));
+    await Promise.all([...activeSessions].map(async session => { await session.abort(); await session.dispose(); }));
   });
 }

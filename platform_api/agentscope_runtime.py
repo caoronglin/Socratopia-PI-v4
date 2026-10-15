@@ -72,18 +72,18 @@ def _model_config(speaker: str | None = None) -> tuple[str, str, str | None]:
 def runtime_status() -> dict:
     """Safe health information; do not return credentials or endpoints."""
     configured = bool(os.getenv("OPENAI_API_KEY"))
-    return {"backend": "agentscope", "sdk_version": "2.0.9",
+    return {"backend": "agentscope-tutors", "sdk_version": "2.0.9",
             "provider": "openai-compatible", "configured": configured,
             "model": os.getenv("SOCRATOPIA_MODEL", "gpt-4.1-mini"),
-            "max_agent_iterations": 2, "max_concurrent_turns": MAX_IN_FLIGHT,
+            "max_agent_iterations": 1, "max_concurrent_turns": MAX_IN_FLIGHT,
             "tool_access": False, "verified_history": "course-scoped-sqlite"}
 
 
 async def _execute(scope: str, prompt: str, speaker: str | None) -> str:
     if not isinstance(prompt, str) or not prompt.strip() or len(prompt) > MAX_PROMPT:
         raise AgentUnavailable("Model prompt exceeds the bounded request limit")
-    if speaker is not None and speaker not in PERSONAS:
-        raise AgentUnavailable("Unknown tutor")
+    if speaker not in PERSONAS:
+        raise AgentUnavailable("Only explicit tutor collaboration uses AgentScope")
     key, model, base_url = _model_config(speaker)
     # Import lazily: offline browsing and course creation should not spend
     # time loading model dependencies or contact external services.
@@ -93,14 +93,14 @@ async def _execute(scope: str, prompt: str, speaker: str | None) -> str:
     from agentscope.model import OpenAIChatModel
     from agentscope.tool import Toolkit
 
-    display_name, style = PERSONAS[speaker] if speaker else ("Socratopia", "解释简洁、科学严谨、以本课教材为基础。")
+    display_name, style = PERSONAS[speaker]
     credential = OpenAICredential(api_key=key, **({"base_url": base_url} if base_url else {}))
     agent = Agent(
         name=display_name,
         system_prompt=PROMPT_RULES + style,
         model=OpenAIChatModel(credential=credential, model=model, stream=False),
         toolkit=Toolkit(tools=[]),
-        react_config=ReActConfig(max_iters=2),
+        react_config=ReActConfig(max_iters=1, structured_output_grace_iters=1),
     )
     try:
         response = await asyncio.wait_for(
@@ -138,7 +138,7 @@ async def run_course_turn(course: str, prompt: str, *, speaker: str | None = Non
 
 
 async def ask_agent(course: str, prompt: str) -> str:
-    return await run_course_turn(course, prompt)
+    raise AgentUnavailable("Ordinary classroom inference belongs to Pi")
 
 
 async def generate_tutor_turn(course: str, speaker: str, topic: str, prior: list[dict]) -> str:

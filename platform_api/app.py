@@ -14,7 +14,8 @@ from scripts.initialize import initialize as initialize_course
 from scripts.lib.course_state import load_state, validate_state
 from scripts.lib.repository import course_dir, iter_course_paths, validate_course_name
 
-from platform_api.agentscope_runtime import AgentUnavailable, ask_agent, generate_tutor_turn, runtime_status
+from platform_api.agentscope_runtime import AgentUnavailable, generate_tutor_turn, runtime_status as tutor_runtime_status
+from platform_api.pi_gateway import PiUnavailable, ask_pi, runtime_status as pi_runtime_status
 from platform_api.evidence import EvidenceError, retrieve, is_current
 from platform_api.grounding import GroundingError, check_response, grounded_prompt
 from platform_api import exercises, books, chat_history, prep_editor
@@ -120,7 +121,7 @@ def health() -> dict:
 @api.get("/api/runtime")
 def runtime_information(response: Response, _: Authenticated) -> dict:
     response.headers["Cache-Control"] = "no-store"
-    return runtime_status()
+    return {**pi_runtime_status(), "tutors": tutor_runtime_status()}
 
 
 @api.get("/api/courses")
@@ -368,8 +369,10 @@ async def chat(course: str, payload: ChatRequest, _: Authenticated) -> dict:
     except (EvidenceError, GroundingError) as exc:
         raise HTTPException(409, str(exc)) from exc
     try:
-        raw = await ask_agent(name, prompt)
-    except AgentUnavailable as exc:
+        # Current-book, citation-checked history only; Pi never owns course memory.
+        prompt = chat_history.context_for_model(root_dir(), name) + prompt
+        raw = await ask_pi(name, prompt)
+    except (PiUnavailable, chat_history.HistoryError) as exc:
         raise HTTPException(503, str(exc)) from exc
     if not is_current(root_dir(), snapshot):
         raise HTTPException(409, "Textbook changed during generation; retry against current sources")
@@ -377,7 +380,7 @@ async def chat(course: str, payload: ChatRequest, _: Authenticated) -> dict:
         outcome = check_response(raw, snapshot)
     except GroundingError as exc:
         raise HTTPException(422, str(exc)) from exc
-    response = {"course": name, "speaker": "agentscope", "source_sha256": snapshot.sha256, **outcome}
+    response = {"course": name, "speaker": "pi", "source_sha256": snapshot.sha256, **outcome}
     # A model rejection, invalid citation or textbook revision above never
     # creates a transcript. Accepted abstentions remain explicitly unverified.
     try:
