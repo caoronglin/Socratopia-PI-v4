@@ -271,3 +271,21 @@ def test_pi_memory_is_course_bound_and_invalidated_by_revised_book(
     assert "反向平行" not in context_for_model(root, "教材乙")
     book.write_text("# DNA新版本\n原教材已修订。\n", encoding="utf-8")
     assert context_for_model(root, "教材甲") == ""
+
+
+def test_course_lifecycle_and_grounded_graph(client, monkeypatch):
+    from pathlib import Path
+    from platform_api.course_graph import build
+    root = Path(os.environ["SOCRATOPIA_ROOT"])
+    assert client.post("/api/courses", headers=auth(), json={"name": "课程图谱"}).status_code == 200
+    add_book("课程图谱", "# 基因结构\n## DNA双螺旋\n两条链反向平行。\n## RNA\n核糖核酸。\n")
+    graph = client.get("/api/courses/课程图谱/graph", headers=auth())
+    assert graph.status_code == 200
+    assert [n["label"] for n in graph.json()["nodes"]] == ["基因结构", "DNA双螺旋", "RNA"]
+    assert len(graph.json()["edges"]) == 2
+    assert graph.json()["fact_verified"] is False
+    archive = client.post("/api/courses/课程图谱/lifecycle", headers=auth(), json={"archived": True})
+    assert archive.status_code == 200 and archive.json()["archived"]
+    assert client.post("/api/courses/课程图谱/chat", headers=auth(), json={"message": "DNA"}).status_code == 409
+    assert client.get("/api/courses/课程图谱/graph", headers=auth()).status_code == 200
+    assert client.post("/api/courses/课程图谱/lifecycle", headers=auth(), json={"archived": False}).json()["archived"] is False

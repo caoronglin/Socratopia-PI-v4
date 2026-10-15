@@ -15,7 +15,7 @@ from scripts.lib.course_state import load_state, validate_state
 from scripts.lib.repository import course_dir, iter_course_paths, validate_course_name
 
 from platform_api.agentscope_runtime import AgentUnavailable, ask_agent, generate_tutor_turn, runtime_status as agent_runtime_status
-from platform_api import course_agents
+from platform_api import course_agents, course_graph, course_lifecycle
 from platform_api.evidence import EvidenceError, retrieve, is_current
 from platform_api.grounding import GroundingError, check_response, grounded_prompt
 from platform_api import exercises, books, chat_history, prep_editor
@@ -168,6 +168,37 @@ def course_agent_features(course: str, payload: AgentFeatureRequest, _: Authenti
         raise HTTPException(409, str(exc)) from exc
 
 
+@api.get("/api/courses/{course}/graph")
+def read_knowledge_graph(course: str, _: Authenticated) -> dict:
+    try:
+        return course_graph.build(root_dir(), existing_course(course))
+    except (ValueError, OSError) as exc:
+        raise HTTPException(409, str(exc)) from exc
+
+
+@api.get("/api/courses/{course}/lifecycle")
+def read_lifecycle(course: str, _: Authenticated) -> dict:
+    return course_lifecycle.status(root_dir(), existing_course(course))
+
+
+class ArchiveRequest(BaseModel):
+    archived: bool
+
+
+@api.post("/api/courses/{course}/lifecycle")
+def update_lifecycle(course: str, payload: ArchiveRequest, _: Authenticated) -> dict:
+    return course_lifecycle.set_archive(root_dir(), existing_course(course), payload.archived)
+
+
+def active_course(course: str) -> str:
+    name = existing_course(course)
+    try:
+        course_lifecycle.require_active(root_dir(), name)
+    except course_lifecycle.ArchivedCourse as exc:
+        raise HTTPException(409, str(exc)) from exc
+    return name
+
+
 @api.get("/api/courses/{course}/state")
 def course_state(course: str, _: Authenticated) -> dict:
     state = load_state(root_dir(), existing_course(course))
@@ -259,7 +290,7 @@ def course_prep_document(course: str, lesson_id: str, response: Response, _: Aut
 @api.put("/api/courses/{course}/prep/{lesson_id}/document")
 def course_prep_save_draft(course: str, lesson_id: str, payload: DraftSaveRequest,
                            response: Response, _: Authenticated) -> dict:
-    name = existing_course(course)
+    name = active_course(course)
     response.headers["Cache-Control"] = "no-store"
     try:
         return prep_editor.save_draft(
@@ -312,7 +343,7 @@ def exercise_list(course: str, _: Authenticated) -> dict:
 
 @api.post("/api/courses/{course}/exercises")
 def exercise_create(course: str, payload: ExerciseCreate, _: Authenticated) -> dict:
-    name = existing_course(course)
+    name = active_course(course)
     try:
         return exercises.create(root_dir(), name, payload.model_dump())
     except (exercises.ExerciseError, ValueError) as exc:
@@ -322,7 +353,7 @@ def exercise_create(course: str, payload: ExerciseCreate, _: Authenticated) -> d
 @api.post("/api/courses/{course}/exercises/{exercise_id}/submit")
 def exercise_submit(course: str, exercise_id: str,
                     payload: ExerciseSubmission, _: Authenticated) -> dict:
-    name = existing_course(course)
+    name = active_course(course)
     try:
         result, inserted = exercises.submit(
             root_dir(), name, exercise_id, payload.request_id, payload.selected_indices
@@ -355,7 +386,7 @@ def timer_status(course: str, _: Authenticated) -> dict:
 
 @api.post("/api/courses/{course}/timer/start")
 def timer_start(course: str, payload: TimerStart, _: Authenticated) -> dict:
-    name = existing_course(course)
+    name = active_course(course)
     try:
         return lesson_timer.start(root_dir(), name, payload.lesson_id)
     except ValueError as exc:
@@ -364,7 +395,7 @@ def timer_start(course: str, payload: TimerStart, _: Authenticated) -> dict:
 
 @api.post("/api/courses/{course}/timer/transition")
 def timer_transition(course: str, payload: TimerTransition, _: Authenticated) -> dict:
-    name = existing_course(course)
+    name = active_course(course)
     try:
         return lesson_timer.transition(root_dir(), name, payload.action)
     except ValueError as exc:
@@ -383,7 +414,7 @@ def read_chat_history(course: str, response: Response, _: Authenticated) -> dict
 
 @api.post("/api/courses/{course}/chat")
 async def chat(course: str, payload: ChatRequest, _: Authenticated) -> dict:
-    name = existing_course(course)
+    name = active_course(course)
     # Grounded mode is the only course-chat mode. Missing sources are NOT
     # replaced with model world knowledge, and cannot tick the lesson clock.
     try:
@@ -429,7 +460,7 @@ def group_status(course: str, _: Authenticated) -> dict:
 
 @api.post("/api/courses/{course}/group/configure")
 def group_configure(course: str, payload: GroupConfig, _: Authenticated) -> dict:
-    name = existing_course(course)
+    name = active_course(course)
     try:
         result = learning_group.configure(root_dir(), name, payload.members, payload.lead)
         course_agents.configure(root_dir(), name, "group", True)
@@ -440,7 +471,7 @@ def group_configure(course: str, payload: GroupConfig, _: Authenticated) -> dict
 
 @api.post("/api/courses/{course}/group/start")
 def group_start(course: str, payload: GroupStart, _: Authenticated) -> dict:
-    name = existing_course(course)
+    name = active_course(course)
     try:
         return public_group(learning_group.start(root_dir(), name, payload.topic, payload.rounds))
     except ValueError as exc:
@@ -449,7 +480,7 @@ def group_start(course: str, payload: GroupStart, _: Authenticated) -> dict:
 
 @api.post("/api/courses/{course}/group/continue")
 def group_continue(course: str, payload: GroupContinue, _: Authenticated) -> dict:
-    name = existing_course(course)
+    name = active_course(course)
     try:
         return public_group(learning_group.continue_round(root_dir(), name, payload.question))
     except ValueError as exc:
@@ -458,7 +489,7 @@ def group_continue(course: str, payload: GroupContinue, _: Authenticated) -> dic
 
 @api.post("/api/courses/{course}/group/next")
 async def group_next(course: str, _: Authenticated) -> dict:
-    name = existing_course(course)
+    name = active_course(course)
     if not course_agents.status(root_dir(), name)["features"]["group"]:
         raise HTTPException(409, "Tutor collaboration is not activated for this course")
     state = learning_group.status(root_dir(), name)
