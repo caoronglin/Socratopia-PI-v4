@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Alert, Button, Card, Checkbox, Collapse, Empty, Flex, Form, Input, Radio, Select, Space, Statistic, Tag, Typography } from 'antd';
 import { Button as MobileButton, Checkbox as MobileCheckbox, Radio as MobileRadio } from 'antd-mobile';
-import PracticeChart from './practice_chart';
+const PracticeChart = React.lazy(() => import('./practice_chart'));
 
 const { Paragraph, Text } = Typography;
 export type CourseRequest = <T,>(path: string, method?: string, body?: object) => Promise<T>;
@@ -204,7 +204,7 @@ export default function PracticePanel({ course, request, onAnswered }: Props) {
           <Statistic title="答对次数" value={summary.correct} suffix="次" />
           <Statistic title="练习正确率" value={summary.accuracy ?? 0} suffix="%" />
         </Flex>
-        <PracticeChart data={summary.trend} />
+        <React.Suspense fallback={<div className="practice-chart" aria-label="加载练习趋势" />}><PracticeChart data={summary.trend} /></React.Suspense>
         <Text type="secondary">展示实际作答记录，不代表知识掌握度或学习能力排名。</Text>
       </Card>
     </div>

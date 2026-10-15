@@ -11,9 +11,9 @@ def test_runtime_reports_safe_config(monkeypatch):
     monkeypatch.setenv("OPENAI_API_KEY", "very-secret-token")
     monkeypatch.setenv("OPENAI_BASE_URL", "https://example.com/v1")
     r = rt.runtime_status()
-    assert r["backend"] == "agentscope" and r["configured"] is True
+    assert r["backend"] == "agentscope-tutors" and r["configured"] is True
     assert not any("secret" in str(v) or "example.com" in str(v) for v in r.values())
-    assert r["max_agent_iterations"] == 2 and r["tool_access"] is False
+    assert r["max_agent_iterations"] == 1 and r["tool_access"] is False
 
 
 @pytest.mark.parametrize("endpoint", [
@@ -44,11 +44,11 @@ def test_bounded_per_course_loop_and_cancel_cleanup(monkeypatch):
     monkeypatch.setattr(rt, "_execute", fake_execute)
 
     async def exercise():
-        a = asyncio.create_task(rt.ask_agent("遗传学", "问题一"))
+        a = asyncio.create_task(rt.run_course_turn("遗传学", "问题一", speaker="D"))
         await started.wait()
         with pytest.raises(rt.AgentUnavailable, match="already running"):
-            await rt.ask_agent("遗传学", "问题二")
-        b = asyncio.create_task(rt.ask_agent("植物学", "另一个课程"))
+            await rt.run_course_turn("遗传学", "问题二", speaker="D")
+        b = asyncio.create_task(rt.run_course_turn("植物学", "另一个课程", speaker="E"))
         await asyncio.sleep(0)
         assert len(rt._active) >= 1
         a.cancel()
@@ -57,7 +57,7 @@ def test_bounded_per_course_loop_and_cancel_cleanup(monkeypatch):
         unblock.set()
         assert await b == "ok"
         assert "遗传学" not in rt._active
-        assert await rt.ask_agent("遗传学", "再次执行") == "ok"
+        assert await rt.run_course_turn("遗传学", "再次执行", speaker="D") == "ok"
 
     asyncio.run(exercise())
 

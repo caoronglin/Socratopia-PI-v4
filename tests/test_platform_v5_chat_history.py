@@ -71,7 +71,7 @@ def test_verified_chat_survives_reload_without_updating_mastery(
     client: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     book = prepare(client, "遗传学")
-    monkeypatch.setattr("platform_api.app.ask_agent", verified_pi)
+    monkeypatch.setattr("platform_api.app.ask_pi", verified_pi)
     progress = Path(os.environ["SOCRATOPIA_ROOT"]) / "DATA" / "遗传学" / "PROGRESS.md"
     original = progress.read_bytes()
     for question in ("什么是减数分裂？", "染色体数目如何变化？"):
@@ -83,7 +83,7 @@ def test_verified_chat_survives_reload_without_updating_mastery(
     assert restored["exchanges"] == 2 and len(restored["turns"]) == 4
     assert restored["turns"][0]["speaker"] == "student"
     assert restored["turns"][0]["text"] == "什么是减数分裂？"
-    assert restored["turns"][1]["speaker"] == "agentscope"
+    assert restored["turns"][1]["speaker"] == "pi"
     assert restored["turns"][1]["citations"][0]["quote"] == QUOTE
     assert restored["turns"][1]["source_current"] is True
     assert restored["turns"][1]["fact_verified"] is False
@@ -104,7 +104,7 @@ def test_failed_generation_or_invalid_source_does_not_add_history(
     prepare(client, "细胞学")
     async def invalid(*args):
         return '{"status":"answer","claims":[{"text":"没有引文","source_id":"S404","quote":"完全杜撰的假引文证据。"}]}'
-    monkeypatch.setattr("platform_api.app.ask_agent", invalid)
+    monkeypatch.setattr("platform_api.app.ask_pi", invalid)
     denied = client.post("/api/courses/细胞学/chat", headers=auth(), json={"message": "减数分裂"})
     assert denied.status_code == 422
     assert transcript(client, "细胞学")["turns"] == []
@@ -116,7 +116,7 @@ def test_abstention_is_explicitly_unverified_and_persistent(
     prepare(client, "遗传讨论")
     async def abstain(*args):
         return '{"status":"abstain","reason":"no evidence"}'
-    monkeypatch.setattr("platform_api.app.ask_agent", abstain)
+    monkeypatch.setattr("platform_api.app.ask_pi", abstain)
     result = client.post("/api/courses/遗传讨论/chat", json={"message": "减数分裂"}, headers=auth())
     assert result.status_code == 200
     turns = transcript(client, "遗传讨论")["turns"]
@@ -130,7 +130,7 @@ def test_courses_are_isolated_and_database_symlink_refused(
 ) -> None:
     for name in ("甲课程", "乙课程"):
         prepare(client, name)
-    monkeypatch.setattr("platform_api.app.ask_agent", verified_pi)
+    monkeypatch.setattr("platform_api.app.ask_pi", verified_pi)
     response = client.post("/api/courses/甲课程/chat", json={"message": "减数分裂"}, headers=auth())
     assert response.status_code == 200
     assert transcript(client, "乙课程")["turns"] == []
