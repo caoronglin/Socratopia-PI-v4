@@ -15,6 +15,8 @@ from urllib.parse import urlsplit
 
 from scripts.lib.repository import validate_course_name
 from platform_api.course_agents import identity
+from platform_api.course_harness import choose
+from pathlib import Path
 
 MAX_PROMPT = 24_000
 MAX_REPLY = 32_000
@@ -58,13 +60,12 @@ def _base_url() -> str | None:
     return raw.rstrip("/")
 
 
-def _model_config(speaker: str | None = None) -> tuple[str, str, str | None]:
+def _model_config(scope: str, speaker: str | None = None) -> tuple[str, str, str | None]:
     key = os.getenv("OPENAI_API_KEY", "")
     if not key:
         raise AgentUnavailable("Configure OPENAI_API_KEY on the local server")
-    model = (os.getenv("SOCRATOPIA_TUTOR_MODEL") if speaker else None) or os.getenv(
-        "SOCRATOPIA_MODEL", "gpt-4.1-mini"
-    )
+    model = choose(Path(os.getenv("SOCRATOPIA_ROOT", ".")).resolve(), scope,
+                   "tutor" if speaker else "teach")["model"]
     if not re.fullmatch(r"[a-zA-Z0-9._:/-]{1,120}", model):
         raise AgentUnavailable("Invalid model name")
     return key, model, _base_url()
@@ -85,7 +86,7 @@ async def _execute(scope: str, prompt: str, speaker: str | None) -> str:
         raise AgentUnavailable("Model prompt exceeds the bounded request limit")
     if speaker is not None and speaker not in PERSONAS:
         raise AgentUnavailable("Unsupported tutor role")
-    key, model, base_url = _model_config(speaker)
+    key, model, base_url = _model_config(scope, speaker)
     # Import lazily: offline browsing and course creation should not spend
     # time loading model dependencies or contact external services.
     from agentscope.agent import Agent, ReActConfig
@@ -101,7 +102,9 @@ async def _execute(scope: str, prompt: str, speaker: str | None) -> str:
         system_prompt=PROMPT_RULES + style,
         model=OpenAIChatModel(credential=credential, model=model, stream=False),
         toolkit=Toolkit(tools=[]),
-        react_config=ReActConfig(max_iters=1, structured_output_grace_iters=1),
+        react_config=ReActConfig(max_iters=choose(Path(os.getenv("SOCRATOPIA_ROOT", ".")).resolve(), scope,
+                                                "tutor" if speaker else "teach")["max_iterations"],
+                                 structured_output_grace_iters=1),
     )
     try:
         response = await asyncio.wait_for(

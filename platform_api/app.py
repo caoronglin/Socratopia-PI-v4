@@ -15,7 +15,7 @@ from scripts.lib.course_state import load_state, validate_state
 from scripts.lib.repository import course_dir, iter_course_paths, validate_course_name
 
 from platform_api.agentscope_runtime import AgentUnavailable, ask_agent, generate_tutor_turn, runtime_status as agent_runtime_status
-from platform_api import course_agents, course_graph, course_lifecycle
+from platform_api import course_agents, course_graph, course_lifecycle, course_harness
 from platform_api.evidence import EvidenceError, retrieve, is_current
 from platform_api.grounding import GroundingError, check_response, grounded_prompt
 from platform_api import exercises, books, chat_history, prep_editor
@@ -176,6 +176,20 @@ def read_knowledge_graph(course: str, _: Authenticated) -> dict:
         raise HTTPException(409, str(exc)) from exc
 
 
+@api.get("/api/courses/{course}/models")
+def course_models(course: str, _: Authenticated) -> dict:
+    return course_harness.routes(root_dir(), existing_course(course))
+
+
+@api.post("/api/courses/{course}/models")
+def assign_course_model(course: str, payload: ModelRoleRequest, _: Authenticated) -> dict:
+    name = active_course(course)
+    try:
+        return course_harness.assign(root_dir(), name, payload.role, payload.model)
+    except (ValueError, OSError) as exc:
+        raise HTTPException(409, str(exc)) from exc
+
+
 @api.get("/api/courses/{course}/lifecycle")
 def read_lifecycle(course: str, _: Authenticated) -> dict:
     return course_lifecycle.status(root_dir(), existing_course(course))
@@ -183,6 +197,11 @@ def read_lifecycle(course: str, _: Authenticated) -> dict:
 
 class ArchiveRequest(BaseModel):
     archived: bool
+
+
+class ModelRoleRequest(BaseModel):
+    role: Literal["teach", "tutor", "explain_visual", "review"]
+    model: str = Field(min_length=1, max_length=120)
 
 
 @api.post("/api/courses/{course}/lifecycle")
