@@ -289,3 +289,14 @@ def test_course_lifecycle_and_grounded_graph(client, monkeypatch):
     assert client.post("/api/courses/课程图谱/chat", headers=auth(), json={"message": "DNA"}).status_code == 409
     assert client.get("/api/courses/课程图谱/graph", headers=auth()).status_code == 200
     assert client.post("/api/courses/课程图谱/lifecycle", headers=auth(), json={"archived": False}).json()["archived"] is False
+
+
+def test_course_study_task_idempotency(client):
+    assert client.post("/api/courses", headers=auth(), json={"name":"任务课"}).status_code == 200
+    payload = {"title": "复习显性与隐性遗传", "kind": "review", "request_id": "task-repeat-12345678"}
+    one = client.post("/api/courses/任务课/tasks", headers=auth(), json=payload)
+    two = client.post("/api/courses/任务课/tasks", headers=auth(), json=payload)
+    assert one.status_code == 200
+    assert one.json()["id"] == two.json()["id"]
+    tasks = client.get("/api/courses/任务课/tasks", headers=auth()).json()["tasks"]
+    assert len(tasks) == 1 and tasks[0]["status"] == "pending"

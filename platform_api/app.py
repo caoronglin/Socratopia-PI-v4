@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from fastapi import Depends, FastAPI, Header, HTTPException, Response
 from pydantic import BaseModel, Field
 
-from scripts.lib import learning_group, lesson_timer
+from scripts.lib import learning_group, lesson_timer, task_queue
 from scripts.initialize import initialize as initialize_course
 from scripts.lib.course_state import load_state, validate_state
 from scripts.lib.repository import course_dir, iter_course_paths, validate_course_name
@@ -102,6 +102,31 @@ class TimerStart(BaseModel):
 
 class TimerTransition(BaseModel):
     action: Literal["heartbeat", "pause", "resume", "finish", "interrupt"]
+
+
+class StudyTaskCreate(BaseModel):
+    title: str = Field(min_length=2, max_length=160)
+    kind: Literal["study", "review", "visualize", "research"]
+    request_id: str = Field(min_length=16, max_length=64, pattern=r"^[a-zA-Z0-9_-]+$")
+
+
+@api.get("/api/courses/{course}/tasks")
+def course_tasks(course: str, _: Authenticated) -> dict:
+    name = existing_course(course)
+    # This queue is a TODO register only. It does not autonomously execute code or LLMs.
+    from scripts.lib.repository import read_json
+    data = read_json(task_queue.queue_path(root_dir(), name)) or {"schema_version": 1, "tasks": []}
+    return {"course": name, "tasks": data.get("tasks", [])[-100:]}
+
+
+@api.post("/api/courses/{course}/tasks")
+def course_task_add(course: str, payload: StudyTaskCreate, _: Authenticated) -> dict:
+    name = active_course(course)
+    try:
+        return task_queue.enqueue_task(root_dir(), name, payload.kind,
+                                       payload.request_id, payload={"title": payload.title})
+    except (ValueError, OSError) as exc:
+        raise HTTPException(409, str(exc)) from exc
 
 
 class GroupConfig(BaseModel):
