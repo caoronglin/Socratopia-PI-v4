@@ -43,6 +43,16 @@ def smoke(archive: Path, platform: str) -> None:
             raise RuntimeError("Package lacks native Pi SDK and bundled Node")
         if os.name != "nt":
             node.chmod(0o755)
+        # Validate the extracted SDK's actual ESM import (not merely --check).
+        sdk_import = subprocess.run(
+            [str(node), "--input-type=module", "-e",
+             "import('@earendil-works/pi-coding-agent').then(m => {"
+             "if (!m.createAgentSession || !m.SessionManager) process.exit(3)})"],
+            cwd=pi_script.parent, capture_output=True, text=True, timeout=45,
+        )
+        if sdk_import.returncode:
+            raise RuntimeError("Pi SDK cannot import from extracted ZIP: " +
+                               sdk_import.stderr[-1800:])
         completed = subprocess.run([str(binary), "--check"], capture_output=True, text=True, timeout=100)
         if completed.returncode != 0 or "bundle: complete" not in completed.stdout:
             raise RuntimeError("Bundle self-check failed: " + completed.stderr)
