@@ -16,7 +16,7 @@ test('desktop onboarding → textbook → live classroom quiz → AntV → mobil
     r.request().method() === 'GET' && new URL(r.url()).pathname === '/api/courses');
   await page.getByRole('button', { name: '连接并刷新' }).click();
   await expect(page.getByText(/AgentScope 2\.0\.9/)).toBeVisible();
-  await expect(page.getByText('Pi 桥接未运行')).toBeVisible();
+  await expect(page.getByText(/模型(已配置|尚未配置)/)).toBeVisible();
   const available = await (await initialList).json() as { courses: string[] };
   if (available.courses.length === 0) {
     await page.getByPlaceholder('课程名称', { exact: true }).fill(courseName);

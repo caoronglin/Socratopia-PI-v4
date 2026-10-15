@@ -1,6 +1,6 @@
 # Socratopia PI v4
 
- > **主线版本：v5 Alpha；Pi 原生架构正在 PR #28 中接受验收**。普通课堂由 Pi SDK 负责原生模型生命周期，AgentScope 2 仅负责导师小组，Python 课程状态机保留最终裁决。React / Ant Design 6、Ant Design Mobile 和 AntV G2 工作台按需加载。当前仍是 Alpha，并非功能完全交付的稳定版；旧版 **v4.3.2** 的正式 Release 与 Git 标签保持不变。参见 [v5 功能说明](docs/PLATFORM_V5.md)和 [原生可执行版安装及限制](docs/WEB_V5_PACKAGE.md)。
+ > **主线版本：v5 Alpha。PR #28 继续迭代为「一门课程一个 AgentScope 逻辑智能体、Python 权威监督、Pi 兼容层保留」。该 PR 尚未合并或发布。**普通课堂由 Pi SDK 负责原生模型生命周期，AgentScope 2 仅负责导师小组，Python 课程状态机保留最终裁决。React / Ant Design 6、Ant Design Mobile 和 AntV G2 工作台按需加载。当前仍是 Alpha，并非功能完全交付的稳定版；旧版 **v4.3.2** 的正式 Release 与 Git 标签保持不变。参见 [v5 功能说明](docs/PLATFORM_V5.md)和 [原生可执行版安装及限制](docs/WEB_V5_PACKAGE.md)。
 
 面向 PI coding agent 的 Socratopia 提示词/课程状态架构重构版。
 
