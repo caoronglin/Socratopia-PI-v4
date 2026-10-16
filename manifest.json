@@ -258,6 +258,7 @@
     "tests/test_tutor_voice_quality.py",
     "tests/test_web_article_agent.py",
     "web/e2e/classroom.spec.ts",
+    "web/e2e/flashcards.spec.ts",
     "web/index.html",
     "web/package.json",
     "web/playwright.config.ts",
