@@ -9,7 +9,7 @@
     "check:sdk": "node --input-type=module -e \"import('@earendil-works/pi-coding-agent').then(m => { if (!m.createAgentSession || !m.SessionManager || !m.DefaultResourceLoader) process.exit(1); })\""
   },
   "dependencies": {
-    "@earendil-works/pi-coding-agent": "1.1.0"
+    "@earendil-works/pi-coding-agent": "1.2.0"
   },
   "overrides": {
     "@earendil-works/chord": "1.1.0",
