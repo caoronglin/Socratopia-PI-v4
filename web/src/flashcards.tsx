@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, Button, Card, Collapse, Empty, Flex, Form, Input, Select, Space, Statistic, Tag, Typography } from 'antd';
+import { Alert, Button, Card, Collapse, Empty, Flex, Form, Input, Select, Statistic, Tag, Typography } from 'antd';
 
 const { Text, Paragraph } = Typography;
 type Request = <T,>(path: string, method?: string, body?: object) => Promise<T>;
