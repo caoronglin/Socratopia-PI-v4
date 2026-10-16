@@ -18,7 +18,7 @@ from platform_api.agentscope_runtime import AgentUnavailable, ask_agent, generat
 from platform_api import course_agents, course_graph, course_lifecycle, course_harness, snapshot_sync
 from platform_api.evidence import EvidenceError, retrieve, is_current
 from platform_api.grounding import GroundingError, check_response, grounded_prompt
-from platform_api import exercises, books, chat_history, prep_editor, study_plan, flashcards
+from platform_api import exercises, books, chat_history, prep_editor, study_plan, flashcards, ontology
 from scripts.lib import chapter_prep
 from scripts.lib.prep import prep_status, check_prep, prep_path
 
@@ -108,6 +108,19 @@ class FlashcardReview(BaseModel):
     rating: Literal["again", "hard", "good", "easy"]
     reveal_token: str = Field(min_length=32, max_length=32)
     request_id: str = Field(min_length=32, max_length=32)
+
+
+class PrerequisiteCreate(BaseModel):
+    prerequisite_id: str = Field(min_length=12, max_length=12)
+    concept_id: str = Field(min_length=12, max_length=12)
+    source_quote: str = Field(min_length=8, max_length=500)
+
+
+class ConceptQuestionLink(BaseModel):
+    question_id: str = Field(min_length=32, max_length=32)
+    concept_id: str = Field(min_length=12, max_length=12)
+    role: Literal["practice", "transfer"]
+    source_quote: str = Field(min_length=8, max_length=500)
 
 
 class TimerStart(BaseModel):
@@ -203,6 +216,46 @@ def course_agent_features(course: str, payload: AgentFeatureRequest, _: Authenti
     try:
         return course_agents.configure(root_dir(), existing_course(course),
                                        payload.feature, payload.enabled)
+    except (ValueError, OSError) as exc:
+        raise HTTPException(409, str(exc)) from exc
+
+
+@api.get("/api/courses/{course}/ontology")
+def course_ontology(course: str, response: Response, _: Authenticated) -> dict:
+    response.headers["Cache-Control"] = "no-store"
+    try:
+        return ontology.graph(root_dir(), existing_course(course))
+    except (ValueError, OSError) as exc:
+        raise HTTPException(409, str(exc)) from exc
+
+
+@api.post("/api/courses/{course}/ontology/prerequisites")
+def add_course_prerequisite(course: str, payload: PrerequisiteCreate,
+                            _: Authenticated) -> dict:
+    name = active_course(course)
+    try:
+        return ontology.add_prerequisite(root_dir(), name,
+            payload.prerequisite_id, payload.concept_id, payload.source_quote)
+    except (ValueError, OSError) as exc:
+        raise HTTPException(409, str(exc)) from exc
+
+
+@api.post("/api/courses/{course}/ontology/questions")
+def link_course_question(course: str, payload: ConceptQuestionLink,
+                         _: Authenticated) -> dict:
+    name = active_course(course)
+    try:
+        return ontology.link_question(root_dir(), name,
+            payload.question_id, payload.concept_id, payload.role, payload.source_quote)
+    except (ValueError, OSError) as exc:
+        raise HTTPException(409, str(exc)) from exc
+
+
+@api.get("/api/courses/{course}/diagnosis")
+def course_concept_diagnosis(course: str, response: Response, _: Authenticated) -> dict:
+    response.headers["Cache-Control"] = "no-store"
+    try:
+        return ontology.diagnosis(root_dir(), existing_course(course))
     except (ValueError, OSError) as exc:
         raise HTTPException(409, str(exc)) from exc
 

@@ -71,7 +71,7 @@ def snapshot(root: Path, course: str) -> tuple[bytes, dict]:
             _entry(entry, content, archive)
             hashes[entry] = hashlib.sha256(content).hexdigest()
             total += len(content)
-        for database_name in ("chat_history.sqlite3", "interactive_exercises.sqlite3", "flashcards.sqlite3"):
+        for database_name in ("chat_history.sqlite3", "interactive_exercises.sqlite3", "flashcards.sqlite3", "ontology.sqlite3"):
             db = _location(root, course, "DATA", "runtime/" + database_name)
             if not db.is_file():
                 continue

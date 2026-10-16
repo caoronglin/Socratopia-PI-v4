@@ -60,7 +60,7 @@ def _connect(root: Path, course: str) -> sqlite3.Connection:
           role TEXT NOT NULL CHECK(role IN ('practice', 'transfer')),
           source_quote TEXT NOT NULL,
           created_at TEXT NOT NULL,
-          PRIMARY KEY(source_sha256, question_id, concept_id, role)
+          PRIMARY KEY(source_sha256, question_id, concept_id)
         );
         CREATE INDEX IF NOT EXISTS idx_ontology_relations
           ON prerequisite_edges(source_sha256, concept_id);
