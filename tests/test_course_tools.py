@@ -16,7 +16,8 @@ def test_toolkit_opt_in_and_course_scope(tmp_path):
     assert not asyncio.run(empty.get_tool_schemas())
     registered = build_toolkit(tmp_path, "课程A", graph_enabled=True)
     schemas = asyncio.run(registered.get_tool_schemas())
-    assert len(schemas) == 1
+    assert len(schemas) == 2
     assert "course_outline" in str(schemas)
+    assert "course_learning_evidence" in str(schemas)
     assert "execute_shell_command" not in str(schemas)
     assert "课程B" not in str(schemas)
