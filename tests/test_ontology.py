@@ -159,6 +159,11 @@ class OntologyTests(unittest.TestCase):
         self.assertTrue(proj["derived"])
         self.assertFalse(proj["authoritative"])
         self.assertEqual(proj, onto.rebuild_projection(self.root, self.course))
+        # Rebuilding an unchanged event log must never depend on the current time.
+        # This used to fail nondeterministically when the second rolled over.
+        from unittest.mock import patch
+        with patch.object(onto, "_now", return_value="2099-01-01T00:00:00+00:00"):
+            self.assertEqual(proj, onto.rebuild_projection(self.root, self.course))
         # projection node types stay within the schema enum
         schema = json.loads((ROOT / "SYSTEM/schemas/ontology.schema.json").read_text(encoding="utf-8"))
         enum = set(schema["$defs"]["node"]["properties"]["type"]["enum"])
