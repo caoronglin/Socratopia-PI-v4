@@ -270,6 +270,7 @@
     "web/src/flashcards.tsx",
     "web/src/learning_journey.tsx",
     "web/src/main.tsx",
+    "web/src/markdown_view.tsx",
     "web/src/practice.tsx",
     "web/src/practice_chart.tsx",
     "web/src/prep.tsx",
