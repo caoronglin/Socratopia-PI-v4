@@ -18,7 +18,7 @@ from platform_api.agentscope_runtime import AgentUnavailable, ask_agent, generat
 from platform_api import course_agents, course_graph, course_lifecycle, course_harness, snapshot_sync
 from platform_api.evidence import EvidenceError, retrieve, is_current
 from platform_api.grounding import GroundingError, check_response, grounded_prompt
-from platform_api import exercises, books, chat_history, prep_editor, study_plan
+from platform_api import exercises, books, chat_history, prep_editor, study_plan, flashcards
 from scripts.lib import chapter_prep
 from scripts.lib.prep import prep_status, check_prep, prep_path
 
@@ -94,6 +94,20 @@ class ExerciseCreate(BaseModel):
 class ExerciseSubmission(BaseModel):
     request_id: str = Field(min_length=32, max_length=32)
     selected_indices: list[int] = Field(min_length=1, max_length=4)
+
+
+class FlashcardCreate(BaseModel):
+    front: str = Field(min_length=3, max_length=240)
+    back: str = Field(min_length=1, max_length=800)
+    source_quote: str = Field(min_length=8, max_length=500)
+    concept_id: str | None = None
+    exercise_id: str | None = None
+
+
+class FlashcardReview(BaseModel):
+    rating: Literal["again", "hard", "good", "easy"]
+    reveal_token: str = Field(min_length=32, max_length=32)
+    request_id: str = Field(min_length=32, max_length=32)
 
 
 class TimerStart(BaseModel):
@@ -438,6 +452,47 @@ def exercise_submit(course: str, exercise_id: str,
         except ValueError:
             pass  # A quiz attempt does not grant or reset formal lesson time.
     return {**result, "replayed": not inserted}
+
+
+@api.get("/api/courses/{course}/flashcards")
+def list_course_flashcards(course: str, response: Response, _: Authenticated) -> dict:
+    response.headers["Cache-Control"] = "no-store"
+    name = existing_course(course)
+    try:
+        return flashcards.list_cards(root_dir(), name)
+    except (flashcards.FlashcardError, ValueError, OSError) as exc:
+        raise HTTPException(409, str(exc)) from exc
+
+
+@api.post("/api/courses/{course}/flashcards")
+def create_course_flashcard(course: str, payload: FlashcardCreate, _: Authenticated) -> dict:
+    name = active_course(course)
+    try:
+        return flashcards.create(root_dir(), name, **payload.model_dump())
+    except (flashcards.FlashcardError, ValueError, OSError) as exc:
+        raise HTTPException(409, str(exc)) from exc
+
+
+@api.post("/api/courses/{course}/flashcards/{card_id}/reveal")
+def reveal_course_flashcard(course: str, card_id: str, response: Response,
+                            _: Authenticated) -> dict:
+    response.headers["Cache-Control"] = "no-store"
+    name = active_course(course)
+    try:
+        return flashcards.reveal(root_dir(), name, card_id)
+    except (flashcards.FlashcardError, ValueError, OSError) as exc:
+        raise HTTPException(409, str(exc)) from exc
+
+
+@api.post("/api/courses/{course}/flashcards/{card_id}/review")
+def review_course_flashcard(course: str, card_id: str, payload: FlashcardReview,
+                            _: Authenticated) -> dict:
+    name = active_course(course)
+    try:
+        return flashcards.review(root_dir(), name, card_id, payload.rating,
+                                 payload.reveal_token, payload.request_id)
+    except (flashcards.FlashcardError, ValueError, OSError) as exc:
+        raise HTTPException(409, str(exc)) from exc
 
 
 @api.get("/api/courses/{course}/study-plan")

@@ -71,12 +71,15 @@ def snapshot(root: Path, course: str) -> tuple[bytes, dict]:
             _entry(entry, content, archive)
             hashes[entry] = hashlib.sha256(content).hexdigest()
             total += len(content)
-        db = _location(root, course, "DATA", "runtime/chat_history.sqlite3")
-        if db.is_file():
+        for database_name in ("chat_history.sqlite3", "interactive_exercises.sqlite3", "flashcards.sqlite3"):
+            db = _location(root, course, "DATA", "runtime/" + database_name)
+            if not db.is_file():
+                continue
             if db.stat().st_size + total > MAX_TOTAL:
-                raise SyncError("Course transcript exceeds snapshot limit")
+                raise SyncError("Course SQLite data exceeds snapshot limit")
             with tempfile.TemporaryDirectory(prefix="socratopia-snapshot-") as tmp:
-                target = Path(tmp) / "chat.sqlite3"
+                target = Path(tmp) / "consistent.sqlite3"
+                # sqlite backup includes WAL data without copying uncheckpointed -wal files.
                 src = sqlite3.connect(f"file:{db}?mode=ro", uri=True, timeout=5)
                 dst = sqlite3.connect(target)
                 try:
@@ -86,9 +89,11 @@ def snapshot(root: Path, course: str) -> tuple[bytes, dict]:
                     src.close()
                 content = target.read_bytes()
             if total + len(content) > MAX_TOTAL:
-                raise SyncError("Consistent transcript exceeds snapshot limit")
-            _entry("DATA/runtime/chat_history.sqlite3", content, archive)
-            hashes["DATA/runtime/chat_history.sqlite3"] = hashlib.sha256(content).hexdigest()
+                raise SyncError("Consistent course SQLite data exceeds snapshot limit")
+            entry = "DATA/runtime/" + database_name
+            _entry(entry, content, archive)
+            hashes[entry] = hashlib.sha256(content).hexdigest()
+            total += len(content)
         if not hashes:
             raise SyncError("No course data to synchronize")
         manifest = {"schema_version": 1, "course_hash": identity(course),
