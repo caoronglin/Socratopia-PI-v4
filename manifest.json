@@ -264,6 +264,7 @@
     "web/index.html",
     "web/package.json",
     "web/playwright.config.ts",
+    "web/src/concept_diagnosis.tsx",
     "web/src/course_graph.tsx",
     "web/src/course_settings.tsx",
     "web/src/flashcards.tsx",

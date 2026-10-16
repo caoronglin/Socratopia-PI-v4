@@ -6,6 +6,7 @@ const ResourcesPanel = React.lazy(() => import('./resources'));
 const PrepPanel = React.lazy(() => import('./prep'));
 const LearningJourney = React.lazy(() => import('./learning_journey'));
 const CourseGraph = React.lazy(() => import('./course_graph'));
+const ConceptDiagnosis = React.lazy(() => import('./concept_diagnosis'));
 const CourseSettings = React.lazy(() => import('./course_settings'));
 const FlashcardsPanel = React.lazy(() => import('./flashcards'));
 import type { LearningTab } from './learning_journey';
@@ -423,7 +424,15 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
                   onImported={() => { void reload().catch(err =>
                     setError(err instanceof Error ? err.message : '课程刷新失败')); }}
                   onExplore={title => { void searchEvidence(title); }} onStartPrep={() => setTab('prep')} />
-                {overview?.book_available && <React.Suspense fallback={<Card loading title="图谱加载中" />}><CourseGraph key={course} course={course} request={request} /></React.Suspense>}
+                {overview?.book_available && <>
+                  <React.Suspense fallback={<Card loading title="图谱加载中" />}>
+                    <CourseGraph key={course} course={course} request={request} />
+                  </React.Suspense>
+                  <React.Suspense fallback={<Card loading title="知识诊断加载中" />}>
+                    <ConceptDiagnosis key={course + ':' + token} course={course} request={request}
+                      onPractice={() => setTab('class')} />
+                  </React.Suspense>
+                </>}
                  <Card title="检索主教材证据" extra={<Tag>只读</Tag>}>
                 <Paragraph type="secondary">从当前课程 book.md 检索相关章节。所有引用显示原文及文件摘要，未验证来源的内容不会自动作为课堂事实。</Paragraph>
                 <Flex gap="small" wrap="wrap">

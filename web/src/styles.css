@@ -165,3 +165,10 @@ body { min-width: 320px; background: var(--ant-color-bg-layout); }
   .flashcard-back { padding: 14px; }
   .flashcard-workspace .ant-statistic { min-width: 110px; }
 }
+
+/* Read-only diagnosis plus explicit evidence review actions. */
+.concept-diagnosis { display: grid; gap: 14px; margin: 18px 0; }
+.concept-metrics { margin: 6px 0 18px; }
+.concept-diagnosis .ant-card-head-title { white-space: normal; }
+.concept-diagnosis .ant-space { min-width: 0; }
+@media (max-width: 768px) { .concept-diagnosis .ant-statistic { min-width: 100px; } }
