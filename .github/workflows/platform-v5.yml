@@ -100,7 +100,7 @@ jobs:
             const report = JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP + "/ant-design-lint.json", "utf8"));
             const problems = [...(report.issues ?? []), ...(report.skippedFiles ?? [])];
             if (report.partial || problems.length) {
-              console.error("Ant Design CLI lint gate failed:", JSON.stringify(report.summary));
+              console.error("Ant Design CLI lint gate failed:", JSON.stringify({summary: report.summary, issues: report.issues, skippedFiles: report.skippedFiles}).slice(0, 20000));
               process.exit(1);
             }
             console.log("Ant Design CLI lint: 0 issues, no skipped files");
