@@ -138,7 +138,7 @@ export default function FlashcardsPanel({ course, request }: Props) {
       </Flex>}
       {Boolean(deck?.stale_cards_excluded) && <Alert type="warning" showIcon className="feedback"
         title={String(deck?.stale_cards_excluded) + ' 张旧教材闪卡已暂停复习'} />}
-      {!deck ? <Card loading bordered={false} /> :
+      {!deck ? <Card loading variant="borderless" /> :
         deck.status === 'needs_textbook' ?
           <Empty description="请先导入本课程教材，再创建带有原文证据的闪卡" /> :
         deck.status === 'needs_cards' ?
@@ -211,12 +211,12 @@ export default function FlashcardsPanel({ course, request }: Props) {
             onChange={e => setQuote(e.target.value)} placeholder="从当前教材复制一段可核对的原文" />
         </Form.Item>
         <Form.Item label="关联章节 / 图谱节点（可选）">
-          <Select allowClear showSearch optionFilterProp="label"
+          <Select allowClear showSearch={{ optionFilterProp: "label" }}
             placeholder="选择当前教材中的章节标题" value={conceptId} onChange={setConceptId}
             options={concepts.map(node => ({ value: node.id, label: node.label }))} />
         </Form.Item>
         <Form.Item label="关联练习（可选 · 错题优先复习）">
-          <Select allowClear showSearch optionFilterProp="label"
+          <Select allowClear showSearch={{ optionFilterProp: "label" }}
             placeholder="关联一题已审核的练习" value={exerciseId} onChange={setExerciseId}
             options={quizzes.filter(q => q.source_current).map(q => ({ value: q.id, label: q.stem }))} />
         </Form.Item>
