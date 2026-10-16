@@ -7,6 +7,7 @@ const PrepPanel = React.lazy(() => import('./prep'));
 const LearningJourney = React.lazy(() => import('./learning_journey'));
 const CourseGraph = React.lazy(() => import('./course_graph'));
 const CourseSettings = React.lazy(() => import('./course_settings'));
+const FlashcardsPanel = React.lazy(() => import('./flashcards'));
 import type { LearningTab } from './learning_journey';
 import {
   Alert, Badge, Breadcrumb, Button, Card, Col, Divider, Empty, Flex, Input, Layout, Listy,
@@ -234,6 +235,7 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
         <Menu selectedKeys={[tab]} onClick={({ key }) => setTab(key as LearningTab)} mode="inline"
           items={[
             { key: 'class', label: '课堂与对话' },
+            { key: 'flashcards', label: '记忆闪卡' },
             { key: 'group', label: '导师学习小组' },
              { key: 'prep', label: '章节备课' },
             { key: 'course', label: '课程状态' },
@@ -251,8 +253,8 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
         <Content className="content" id="main-content">
           <div className="page-heading">
             <Breadcrumb items={[{ title: 'Socratopia' }, { title: course || '选择课程' },
-              { title: tab === 'prep' ? '章节备课' : tab === 'class' ? '课堂' : tab === 'group' ? '学习小组' : tab === 'evidence' ? '教材' : '课程' }]} />
-            <Title level={3}>{tab === 'class' ? '课堂与对话' : tab === 'group' ? '学习小组' : tab === 'prep' ? '章节备课' : tab === 'evidence' ? '教材证据' : '课程概览'}</Title>
+              { title: tab === 'prep' ? '章节备课' : tab === 'class' ? '课堂' : tab === 'group' ? '学习小组' : tab === 'flashcards' ? '闪卡复习' : tab === 'evidence' ? '教材' : '课程' }]} />
+            <Title level={3}>{tab === 'class' ? '课堂与对话' : tab === 'group' ? '学习小组' : tab === 'flashcards' ? '记忆闪卡复习' : tab === 'prep' ? '章节备课' : tab === 'evidence' ? '教材证据' : '课程概览'}</Title>
             <Paragraph type="secondary">每门课程独立 AgentScope 身份；导师协作按需启用，Python 最终审核课程事实。</Paragraph>
           </div>
           <Card size="small" className="control-card" title={<Space size="small"><Badge status={course ? 'success' : 'default'} />课程连接</Space>}>
@@ -351,11 +353,17 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
                   </Col>
                 </Row>
                 <section aria-label="课堂互动题与练习表现" className="classroom-practice-section">
+                  <Flex justify="end" style={{ marginBottom: 12 }}>
+                    <Button onClick={() => setTab("flashcards")}>进入记忆闪卡复习</Button>
+                  </Flex>
                   <PracticePanel key={course + ':' + token} course={course} request={request}
                     onAnswered={() => { void reload().catch(err =>
                       setError(err instanceof Error ? err.message : '课程状态刷新失败')); }} />
                 </section>
               </>}
+              {tab === 'flashcards' && <React.Suspense fallback={<Card loading title="闪卡复习加载中" />}>
+                <FlashcardsPanel key={course + ':' + token} course={course} request={request} />
+              </React.Suspense>}
               {tab === 'prep' && <PrepPanel key={course + ':' + token} course={course} request={request}
                 onSelectLesson={id => { lessonSelectionManual.current = true; setLessonId(id); setTab('class'); }}
                 onCreated={() => { void reload().catch(err =>
@@ -492,6 +500,7 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
         <nav className="mobile-tabbar" aria-label="移动端模块导航">
           <TabBar activeKey={tab} onChange={key => setTab(key as LearningTab)} safeArea>
             <TabBar.Item key="class" icon={<MessageOutline />} title="课堂" />
+            <TabBar.Item key="flashcards" icon={<UnorderedListOutline />} title="闪卡" />
             <TabBar.Item key="group" icon={<UserOutline />} title="导师" />
              <TabBar.Item key="prep" icon={<UnorderedListOutline />} title="备课" />
             <TabBar.Item key="evidence" icon={<UnorderedListOutline />} title="教材" />

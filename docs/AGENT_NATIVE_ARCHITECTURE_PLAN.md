@@ -31,6 +31,17 @@ Transitions require server-side preconditions and append-only audit events; arch
 - Practice page shows a focused queue and permits deliberate re-attempt. Course switching keeps plans isolated.
 - Remaining: teacher-controlled topic mapping, learner reflection, validated mastery rubric, and independent long-term learning-outcome evaluation.
 
+## Flashcards — opt-in active recall (implementation)
+- Course-only SQLite cards and spaced-repetition review logs; no automatic LLM calls.
+- Owner-authored front/back plus exact current-textbook quote; optional heading graph node and current-book exercise link.
+- GET lists fronts only; answers/quotes are returned only after explicit reveal.
+- Reveals create 30-minute, single-use tokens; idempotent review retries keyed by request ID.
+- Wrong linked exercise attempts promote its flashcard until a later card review.
+- Up to eight cards per session; self-ratings schedule a 10-minute retry or 1/3/7/14/30-day spacing.
+- Current textbook SHA mismatch disables stale cards; never mutate formal lesson time, grades or mastery.
+- WAL-consistent SQLite snapshots include flashcard and practice data in opt-in WebDAV/S3 exports.
+- Evaluate learning outcomes independently before describing this heuristic as optimal.
+
 ## Knowledge graph
 - Nodes: Course, Chapter, Concept, Prerequisite, Evidence, Question, LearningObjective, Misconception.
 - Typed edges with provenance, confidence, source span, textbook version, reviewed status and timestamp.
