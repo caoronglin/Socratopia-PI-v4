@@ -227,3 +227,4 @@ export default function FlashcardsPanel({ course, request }: Props) {
       </Form>,
     }]} />
   </div>;
+}
