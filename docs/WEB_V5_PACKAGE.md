@@ -1,29 +1,29 @@
-# Socratopia v5 Web · 原生可执行版打包与 CI
+# Socratopia v5 Web · 原生 ZIP 打包与 CI（PR #28）
 
-**Alpha 预览版（代码合并入 `main`）**。这是 v5 Web 运行时 ZIP，与旧 v4 CLI 正式 Release 分开；`main` 表示最新开发主线，不表示稳定发布。
+这是 **Alpha 预览**，与保留的 v4.3.2 稳定版完全分开。PR 合并之前，不视作正式交付。
 
-## 用户运行
+## 文件组成
 
-在 GitHub Actions 的 v5 Web Standalone Executables 最新**成功**运行中，下载对应平台的 web-v5-* artifact；确认对应 SHA-256：
+- `Socratopia-Web(.exe)`：PyInstaller 冻结的 Python 3.15 / FastAPI / AgentScope。
+- `runtime/node(.exe)`：**同平台** Native Node 22。
+- `runtimes/pi/server.mjs` 与 `runtimes/pi/node_modules/`：Pi SDK 生产依赖，负责普通课堂的原生模型循环。
+- `web/dist/`：Ant Design 6 / Ant Design Mobile / AntV G2 前端，代码分包。
+- `templates/`：只含初始化模板，不含任何私有课程或凭据。
 
-- Windows x86_64：解压后双击 Socratopia-Web.exe
-- Linux x86_64：解压后执行 ./Socratopia-Web
-- macOS Intel/Apple Silicon：解压后执行 ./Socratopia-Web（尚无 Apple 公证/签名）
+解压后保留完整目录运行同级 `Socratopia-Web` 或 `Socratopia-Web.exe`，不能单独移动 EXE。默认打开 `http://127.0.0.1:8765`；令牌显示在本地终端，Web 页面只在内存中持有。默认工作区是 `~/.socratopia/workspace`，可用 `SOCRATOPIA_ROOT` 改成其他位置。
 
-启动后自动打开 http://127.0.0.1:8765；控制台打印随机 API Token，输入 Web 的令牌框。数据默认保存在 ~/.socratopia/workspace，独立于安装包。SOCRATOPIA_ROOT 可设置其他工作区，不覆盖既有课程资料。`--no-browser` 禁用打开浏览器，`--no-pi` 使用离线习题功能，`--port 8888` 修改端口，`--check` 检查打包内容。
+`--no-browser` 禁止自动打开浏览器；`--port 8888` 修改端口；`--check` 检验发行包。Pi 子进程由可执行文件自动启动并在退出时终止；只使用 loopback + Bearer 鉴权和随机空闲端口。`--no-pi` 仅历史兼容占位，不会偷偷改用第二种模型循环。
 
-整个 ZIP 含一个原生 Web 启动二进制文件、冻结 Python 3.15、内置 Node 22 和 Pi SDK，以及 Web 构建产物。**不能单独移动 EXE 而丢弃同级 runtime/ 和 web/dist/**；终端用户无需额外安装 Python、Node、Rust、npm。真实在线 AI 功能仍需要有效模型凭据，缺少凭据时明确返回不可用。
+## 自动 CI/CD
 
-## 自动构建与验收
+1. Dependabot 每周创建 Python、Web/npm、Pi/npm、Rust/Cargo、GitHub Actions 依赖更新 PR。CI 验证前不得自动合并。
+2. PR/主分支运行 Python/AgentScope/Pi SDK/Ant Design UI/Chromium 双尺寸回归和负向门禁。
+3. 四平台独立安装 Python/Pi 生产依赖；冻结 Python 并复制同平台 Node；打包 ZIP+SHA256。
+4. 每个平台解压真实运行，检查 native Pi 健康端点、API token 鉴权、页面、工作区模板、用户数据不进包；汇总验证四份 SHA。
+5. `main` 的上述门禁均通过时自动发独立 `v5.0.0-alpha.web.<run_number>` GitHub **预发布**。不发 stable，不修改 v4.3.2，也不会在 PR 上发布。
 
-1. 在 Linux、Windows、macOS x86_64/arm64 原生 Actions runner 上安装 Python 3.15、Node22。
-2. 构建 React/Ant Design Mobile/AntV 资源；Pi SDK 复制生产依赖。
-3. PyInstaller 6.22.3 冻结 Python/FastAPI/AgentScope 到 Socratopia-Web(.exe)。
-4. 各平台打包完整运行时到 ZIP，打包清单只包含可信模板、AgentScope 依赖、Web 静态资源及原生二进制；禁止个人 DATA、TEXTBOOK、Token、.env、软链接。
-5. 解压 ZIP 并**真实执行原生文件**，检查 --check、AgentScope 后端、本地 API、React 静态页面、401/200 鉴权、私有工作区模板。
-6. 每个平台上传 ZIP 与 SHA-256；四平台全部通过后校验 4 个 ZIP 的校验和。
-7. `main` 的每次相关推送自动构建四平台测试包。只有从 `main` 手动执行 workflow_dispatch 后才发布带 v5.0.0-alpha.web.* 标签的 **GitHub 预发布**，不发布 stable，也不修改旧 v4.3.2 Release。
+## 重要边界
 
-## 硬性限制
+四平台测试只证明安装包和本机 API/Pi 网关可启动，不证明外部大模型凭据、实际模型推理、内容科学真实性、macOS 公证或 Windows 签名。用户须按 Pi 官方方式配置模型凭据；导师小组还需 AgentScope 的 `OPENAI_API_KEY`。引用经过服务器逐字验证并不代表事实已被自动审核。
 
-45 分钟、章节 PREP、不可虚构进度和 mastery 门禁不变。单用户 loopback Alpha 不提供多用户安全隔离。macOS 未公证、Windows 未签名，需额外设备兼容性检查；真实模型的 Pi/AgentScope 端到端验收尚未完成。构建测试通过不等于正式版本已可用。
+> 构建体积、前端 chunks 和启动耗时应由 CI 提供实际数值，未测量前不能宣称缩小了百分之多少。

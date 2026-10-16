@@ -139,3 +139,36 @@ body { min-width: 320px; background: var(--ant-color-bg-layout); }
 .runtime-strip { padding: 8px 4px 12px; min-height: 38px; }
 .runtime-strip .ant-tag { margin: 0; }
 @media (max-width: 768px) { .runtime-strip { gap: 6px; } }
+
+.course-graph-scroll { overflow: auto; max-height: 480px; margin-top: 16px; border: 1px solid var(--ant-color-border-secondary); border-radius: var(--ant-border-radius-lg); background: var(--ant-color-fill-quaternary); }
+.course-graph-scroll svg { display: block; width: 100%; min-width: 660px; }
+
+/* Active recall: responsive centered cards without distracting animations. */
+.flashcard-workspace { display: grid; gap: 18px; }
+.flashcard-stats { margin: 14px 0 20px; }
+.flashcard-queue { margin: 16px 0; }
+.flashcard-face {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 20px; min-height: 290px; margin-top: 12px; padding: 26px;
+  border: 1px solid var(--ant-color-border-secondary);
+  border-radius: var(--ant-border-radius-lg);
+  background: var(--ant-color-fill-quaternary); text-align: center;
+}
+.flashcard-question { max-width: 650px; white-space: pre-wrap; overflow-wrap: anywhere; margin: 0 !important; }
+.flashcard-back { max-width: 710px; width: 100%; padding: 18px;
+  background: var(--ant-color-bg-container); text-align: start;
+  border: 1px solid var(--ant-color-border-secondary); border-radius: var(--ant-border-radius-lg); }
+.flashcard-back p { white-space: pre-wrap; overflow-wrap: anywhere; margin-top: 10px; }
+.flashcard-source { font-size: 13px; line-height: 1.7; }
+@media (max-width: 768px) {
+  .flashcard-face { padding: 18px 12px; min-height: 270px; }
+  .flashcard-back { padding: 14px; }
+  .flashcard-workspace .ant-statistic { min-width: 110px; }
+}
+
+/* Read-only diagnosis plus explicit evidence review actions. */
+.concept-diagnosis { display: grid; gap: 14px; margin: 18px 0; }
+.concept-metrics { margin: 6px 0 18px; }
+.concept-diagnosis .ant-card-head-title { white-space: normal; }
+.concept-diagnosis .ant-space { min-width: 0; }
+@media (max-width: 768px) { .concept-diagnosis .ant-statistic { min-width: 100px; } }

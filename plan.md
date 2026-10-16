@@ -1,3 +1,11 @@
+# v5 Pi 原生 + AgentScope 导师协作 · 精简约束（PR #28）
+
+当前唯一职责：**Pi = 普通课堂模型原生 loop；AgentScope = 独立导师发言；Python = 教材/成绩/课程状态最终监督；React = 展示与交互**。拒绝 Python 或 Web 再造工具/自治循环；不允许用模型建议修改 PREP ready、mastery、45 分钟等权威事实。
+
+验收定义：同课独占与全局 4 并发；Pi 90 秒软中止、Python 95 秒请求限制；无模型工具权限；无可靠教材拒答；引用逐字校验、教材版本重核、未通过不写入；记忆只取当前课当前教材版本引文已核验的至多 4 次问答；AgentScope 仅 2–3 导师，由 Python 控制轮次和学生继续；4 平台 ZIP 实际启动 Pi + Web，Python/Node/React/Ant Design/Chromium 全过；周更依赖 PR，main 自动 alpha 预发布，stable 不动。所有「真实模型可信」、「体积下降」、「首屏加速」之类结论必须提供可复查实测证据，不能凭代码或 mock 测试宣布。
+
+---
+
 # 功能补全执行计划 · Socratopia-PI-v4
 
 > 状态：**APPROVED WITH CONDITIONS / 依据审批意见细化，待逐 Phase 实施**

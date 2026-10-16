@@ -1,6 +1,6 @@
 import { Alert, Button, Card, Flex, Steps, Tag, Typography } from 'antd';
 
-export type LearningTab = 'class' | 'group' | 'prep' | 'course' | 'evidence';
+export type LearningTab = 'class' | 'flashcards' | 'group' | 'prep' | 'course' | 'evidence';
 type Props = {
   bookAvailable: boolean;
   prepCount: number;
@@ -22,13 +22,14 @@ export default function LearningJourney({ bookAvailable, prepCount, formalReady,
   return <Card title="学习路径" className="journey-card"
     extra={<Tag color={formalReady ? 'success' : 'processing'}>{formalReady ? '课堂初步就绪' : '按步骤准备'}</Tag>}>
     <Steps size="small" responsive current={current}
-      items={[{ title: '教材' }, { title: '章节备课' }, { title: '正式课堂' }, { title: '练习与复盘' }]} />
+      items={[{ title: '教材' }, { title: '章节备课' }, { title: '正式课堂' }, { title: '练习与复盘' }, { title: '记忆闪卡' }]} />
     <Paragraph type="secondary" className="journey-guidance">这些步骤用于导航，不代表自动完成课堂或判定知识掌握。</Paragraph>
     <Alert type={formalReady ? 'success' : 'info'} showIcon title="下一步" description={next} />
     <Flex gap="small" wrap="wrap" className="journey-actions">
       <Button onClick={() => onNavigate('evidence')}>打开教材</Button>
       <Button onClick={() => onNavigate('prep')} disabled={!bookAvailable}>章节备课</Button>
       <Button type={formalReady ? 'primary' : 'default'} onClick={() => onNavigate('class')}>进入课堂</Button>
+      <Button onClick={() => onNavigate('flashcards')} disabled={!bookAvailable}>记忆闪卡</Button>
       <Button onClick={() => onNavigate('group')} disabled={!bookAvailable}>导师讨论</Button>
     </Flex>
   </Card>;

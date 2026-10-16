@@ -53,9 +53,9 @@ def test_auth_fails_closed(client: TestClient) -> None:
     assert client.get("/api/health").status_code == 200
     assert client.get("/api/runtime").status_code == 401
     info = client.get("/api/runtime", headers=auth()).json()
-    assert info["backend"] == "agentscope"
-    assert info["tool_access"] is False
-    assert info["max_agent_iterations"] == 2
+    assert info["backend"] == "agentscope-course"
+    assert info["collaboration_backend"] == "agentscope"
+    assert info["tutors"]["max_agent_iterations"] == 1
 
 
 def test_create_and_read_course_without_mastery(client: TestClient) -> None:
@@ -138,6 +138,7 @@ def test_agent_runtime_requires_model_credentials(monkeypatch: pytest.MonkeyPatc
     with pytest.raises(AgentUnavailable):
         asyncio.run(ask_agent("课程", "你好"))
     from platform_api.pi_gateway import PiUnavailable, ask_pi
+    monkeypatch.delenv("SOCRATOPIA_API_TOKEN", raising=False)
     with pytest.raises(PiUnavailable):
         asyncio.run(ask_pi("课程", "你好"))
 
@@ -250,3 +251,52 @@ def test_symlink_book_refused(client: TestClient, tmp_path: Path) -> None:
     outside.write_text("# RNA-seq\nRNA-seq is a transcriptome profiling assay.\n")
     (tmp_path / "TEXTBOOK" / "安全课程" / "book.md").symlink_to(outside)
     assert client.get("/api/courses/安全课程/evidence?q=RNA-seq", headers=auth()).status_code == 409
+
+def test_pi_memory_is_course_bound_and_invalidated_by_revised_book(
+        client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    from platform_api.chat_history import context_for_model
+
+    for course in ("教材甲", "教材乙"):
+        assert client.post("/api/courses", headers=auth(), json={"name": course}).status_code == 200
+    quote = "DNA双螺旋的两条链反向平行并通过碱基配对。"
+    book = add_book("教材甲", "# DNA结构\n" + quote + "\n")
+    add_book("教材乙", "# RNA结构\nRNA通常由一条多核苷酸链构成。\n")
+    async def quoted(*args):
+        return draft(quote, quote)
+    monkeypatch.setattr("platform_api.app.ask_agent", quoted)
+    result = client.post("/api/courses/教材甲/chat", headers=auth(), json={"message": "DNA双螺旋"})
+    assert result.status_code == 200, result.text
+    root = Path(os.environ["SOCRATOPIA_ROOT"])
+    assert "反向平行" in context_for_model(root, "教材甲")
+    assert "反向平行" not in context_for_model(root, "教材乙")
+    book.write_text("# DNA新版本\n原教材已修订。\n", encoding="utf-8")
+    assert context_for_model(root, "教材甲") == ""
+
+
+def test_course_lifecycle_and_grounded_graph(client, monkeypatch):
+    from pathlib import Path
+    from platform_api.course_graph import build
+    root = Path(os.environ["SOCRATOPIA_ROOT"])
+    assert client.post("/api/courses", headers=auth(), json={"name": "课程图谱"}).status_code == 200
+    add_book("课程图谱", "# 基因结构\n## DNA双螺旋\n两条链反向平行。\n## RNA\n核糖核酸。\n")
+    graph = client.get("/api/courses/课程图谱/graph", headers=auth())
+    assert graph.status_code == 200
+    assert [n["label"] for n in graph.json()["nodes"]] == ["基因结构", "DNA双螺旋", "RNA"]
+    assert len(graph.json()["edges"]) == 2
+    assert graph.json()["fact_verified"] is False
+    archive = client.post("/api/courses/课程图谱/lifecycle", headers=auth(), json={"archived": True})
+    assert archive.status_code == 200 and archive.json()["archived"]
+    assert client.post("/api/courses/课程图谱/chat", headers=auth(), json={"message": "DNA"}).status_code == 409
+    assert client.get("/api/courses/课程图谱/graph", headers=auth()).status_code == 200
+    assert client.post("/api/courses/课程图谱/lifecycle", headers=auth(), json={"archived": False}).json()["archived"] is False
+
+
+def test_course_study_task_idempotency(client):
+    assert client.post("/api/courses", headers=auth(), json={"name":"任务课"}).status_code == 200
+    payload = {"title": "复习显性与隐性遗传", "kind": "review", "request_id": "task-repeat-12345678"}
+    one = client.post("/api/courses/任务课/tasks", headers=auth(), json=payload)
+    two = client.post("/api/courses/任务课/tasks", headers=auth(), json=payload)
+    assert one.status_code == 200
+    assert one.json()["id"] == two.json()["id"]
+    tasks = client.get("/api/courses/任务课/tasks", headers=auth()).json()["tasks"]
+    assert len(tasks) == 1 and tasks[0]["status"] == "pending"

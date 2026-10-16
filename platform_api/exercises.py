@@ -57,6 +57,10 @@ def _connect(root: Path, course: str) -> sqlite3.Connection:
             is_correct INTEGER NOT NULL,
             created_at TEXT NOT NULL
         );
+        CREATE INDEX IF NOT EXISTS idx_exercise_course_source
+          ON exercises (course, source_sha256, created_at);
+        CREATE INDEX IF NOT EXISTS idx_attempt_exercise_recent
+          ON attempts (exercise_id, created_at DESC);
     """)
     return connection
 

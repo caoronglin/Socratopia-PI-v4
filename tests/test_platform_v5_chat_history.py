@@ -83,7 +83,7 @@ def test_verified_chat_survives_reload_without_updating_mastery(
     assert restored["exchanges"] == 2 and len(restored["turns"]) == 4
     assert restored["turns"][0]["speaker"] == "student"
     assert restored["turns"][0]["text"] == "什么是减数分裂？"
-    assert restored["turns"][1]["speaker"] == "agentscope"
+    assert restored["turns"][1]["speaker"] == "course_agent"
     assert restored["turns"][1]["citations"][0]["quote"] == QUOTE
     assert restored["turns"][1]["source_current"] is True
     assert restored["turns"][1]["fact_verified"] is False

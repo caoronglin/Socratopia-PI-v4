@@ -37,8 +37,22 @@ def smoke(archive: Path, platform: str) -> None:
         binary = folder / ("Socratopia-Web.exe" if platform.startswith("windows") else "Socratopia-Web")
         if os.name != "nt":
             binary.chmod(0o755)
-        if (folder / "runtime" / "pi").exists() or (folder / "runtime" / "node").exists():
-            raise RuntimeError("Legacy Node/Pi runtime must not be bundled")
+        node = folder / "runtime" / ("node.exe" if os.name == "nt" else "node")
+        pi_script = folder / "runtimes" / "pi" / "server.mjs"
+        if not node.is_file() or not pi_script.is_file():
+            raise RuntimeError("Package lacks native Pi SDK and bundled Node")
+        if os.name != "nt":
+            node.chmod(0o755)
+        # Validate the extracted SDK's actual ESM import (not merely --check).
+        sdk_import = subprocess.run(
+            [str(node), "--input-type=module", "-e",
+             "import('@earendil-works/pi-coding-agent').then(m => {"
+             "if (!m.createAgentSession || !m.SessionManager) process.exit(3)})"],
+            cwd=pi_script.parent, capture_output=True, text=True, timeout=45,
+        )
+        if sdk_import.returncode:
+            raise RuntimeError("Pi SDK cannot import from extracted ZIP: " +
+                               sdk_import.stderr[-1800:])
         completed = subprocess.run([str(binary), "--check"], capture_output=True, text=True, timeout=100)
         if completed.returncode != 0 or "bundle: complete" not in completed.stdout:
             raise RuntimeError("Bundle self-check failed: " + completed.stderr)
@@ -70,6 +84,10 @@ def smoke(archive: Path, platform: str) -> None:
             code, html = fetch(f"http://127.0.0.1:{port}/")
             if code != 200 or "<div id=\"root\">" not in html:
                 raise RuntimeError("React HTML is missing from packaged Web")
+            code, runtime = fetch(f"http://127.0.0.1:{port}/api/runtime",
+                                  token=env["SOCRATOPIA_API_TOKEN"])
+            if code != 200 or '"backend":"agentscope-course"' not in runtime or '"course_agent_isolation":true' not in runtime:
+                raise RuntimeError("Course agent runtime unavailable in packaged boot: " + runtime)
             unauthorized, _ = fetch(f"http://127.0.0.1:{port}/api/courses")
             authorized, _ = fetch(f"http://127.0.0.1:{port}/api/courses", token=env["SOCRATOPIA_API_TOKEN"])
             if unauthorized != 401 or authorized != 200:
@@ -79,7 +97,7 @@ def smoke(archive: Path, platform: str) -> None:
                 raise RuntimeError("User workspace templates were not initialized")
             if any((folder / name).exists() for name in ("DATA", "TEXTBOOK")):
                 raise RuntimeError("Bundled package contains unexpected user data")
-            print(f"PASS: single-process AgentScope Web + UI + API auth on {platform}", flush=True)
+            print(f"PASS: AgentScope course runtime + Python API + Web + Pi compatibility on {platform}", flush=True)
         finally:
             # PyInstaller on Windows can retain process handles briefly.
             if os.name == "nt":

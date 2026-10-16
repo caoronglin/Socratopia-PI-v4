@@ -39,7 +39,7 @@ FastAPI (platform_api/app.py, Python 3.15)
 - 课程 Pi 对话。Pi 运行时真实调用官方 SDK；会话按课程隔离，但**重启后会话消失**。
 - 正式课堂由原有后端计时器开课/暂停/继续/心跳/完成/中断；严格遵守 PREP ready 与至少 2700 秒规则。
 - 学习小组导师配置、讨论开始、下一位独立 AgentScope 导师发言、学生确认后进入下一轮。
-- 本地令牌保护全部课程 API；Pi 网关仅监听 loopback，固定端口 8787；UI 使用原生 Ant Design 6 组件和 token。
+- 本地令牌保护全部课程 API；Pi 网关仅监听 loopback，开发态默认端口 8787，桌面自动选择空闲端口；UI 使用原生 Ant Design 6 组件和 token。
 - Python API 回归测试与前端构建 CI（运行结果以 GitHub Actions 为准，提交代码本身不代表通过）。
 
 ### 安全边界
@@ -101,4 +101,4 @@ P6：交付。为 Windows/Linux/macOS 分别制定可重复安装、升级、回
 
 ## v5 Alpha.7 运行时迁移
 
-现有 v5 模型请求全部由同进程 AgentScope 2.0.9 负责，Node/Pi gateway 不再启用。课程引文核验、PREP、真实授课计时与成绩仍由 Python 原有状态机控制，详见 [迁移报告](AGENTSCOPE_MIGRATION.md)。
+PR #28 恢复：普通课堂通过原生 Pi SDK（本机 Node）执行，AgentScope 2.0.9 仅用于多导师协作；Python 课程状态机是教材引文核验、PREP、计时、成绩和记忆写入的唯一监督者。Pi 临时内存会话，记忆从同课 SQLite 的当前教材版本引文记录有界恢复。详见 [迁移报告](AGENTSCOPE_MIGRATION.md)。

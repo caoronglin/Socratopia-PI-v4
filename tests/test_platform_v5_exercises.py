@@ -231,3 +231,67 @@ def test_textbook_symlink_never_overwritten(client: TestClient, tmp_path: Path) 
                          json={"content": "# 教材\n" + QUOTE + "\n"})
     assert result.status_code == 409
     assert outside.read_text(encoding="utf-8").startswith("# 外部教材")
+
+
+def test_study_plan_retrieval_and_spaced_review_are_not_mastery(
+    client: TestClient,
+) -> None:
+    from datetime import UTC, datetime, timedelta
+    from platform_api.study_plan import plan
+
+    create_course(client).write_text(BOOK, encoding="utf-8")
+    question_id = create_exercise(client)
+    url = "/api/courses/遗传学/study-plan"
+
+    assert client.get(url).status_code == 401
+    first = client.get(url, headers=AUTH)
+    assert first.status_code == 200
+    body = first.json()
+    assert body["status"] == "ready"
+    assert body["new_questions"] == 1 and body["review_due"] == 0
+    assert body["suggested_minutes"] == 3
+    assert body["items"][0]["exercise_id"] == question_id
+    assert "correct_indices" not in str(body)
+    assert "explanation" not in str(body)
+    assert body["mastery_updated"] is False
+
+    assert submit(client, question_id, [1]).status_code == 200
+    wrong = client.get(url, headers=AUTH).json()
+    assert wrong["review_due"] == 1
+    assert wrong["items"][0]["status"] == "retry"
+
+    assert submit(client, question_id, [0]).status_code == 200
+    correct = client.get(url, headers=AUTH).json()
+    assert correct["review_due"] == 0
+    assert correct["items"] == []
+    assert correct["upcoming"][0]["status"] == "upcoming"
+    tomorrow = plan(
+        Path(os.environ["SOCRATOPIA_ROOT"]), "遗传学",
+        now=datetime.now(UTC) + timedelta(days=2),
+    )
+    assert tomorrow["review_due"] == 1
+    assert tomorrow["items"][0]["status"] == "due"
+    assert tomorrow["mastery_updated"] is False
+
+    assert client.get("/api/courses/遗传学/timer", headers=AUTH).json()["phase"] == "not_started"
+
+
+def test_study_plan_isolates_courses_and_rejects_stale_book(
+    client: TestClient,
+) -> None:
+    first = create_course(client)
+    first.write_text(BOOK, encoding="utf-8")
+    qid = create_exercise(client)
+    second = create_course(client, "独立遗传学")
+    second.write_text(BOOK, encoding="utf-8")
+
+    assert client.get("/api/courses/独立遗传学/study-plan", headers=AUTH).json()["items"] == []
+    assert submit(client, qid, [1]).json()["is_correct"] is False
+    assert client.get("/api/courses/独立遗传学/study-plan", headers=AUTH).json()["review_due"] == 0
+
+    first.write_text(BOOK + "教材新版说明。", encoding="utf-8")
+    stale = client.get("/api/courses/遗传学/study-plan", headers=AUTH).json()
+    assert stale["status"] == "needs_questions"
+    assert stale["items"] == []
+    assert stale["stale_questions_excluded"] == 1
+    assert stale["mastery_updated"] is False

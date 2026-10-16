@@ -179,11 +179,21 @@ def validate(root: Path, course: str) -> list[str]:
 
 
 def rebuild_projection(root: Path, course: str) -> dict[str, Any]:
-    nodes, edges = fold(load_events(root, course))
+    events = load_events(root, course)
+    nodes, edges = fold(events)
+    # A derived projection must be identical for identical append-only events.
+    # Wall-clock generation times made compact/rebuild disagree across seconds.
+    # Retain the last recorded source timestamp for provenance and use a stable
+    # sentinel when there are no events yet (the schema requires a string).
+    source_at = next(
+        (event["ts"] for event in reversed(events)
+         if isinstance(event.get("ts"), str) and event["ts"]),
+        "1970-01-01T00:00:00+00:00",
+    )
     return {
         "schema_version": 1,
         "course": course,
-        "generated_at": _now(),
+        "generated_at": source_at,
         "derived": True,
         "authoritative": False,
         "nodes": nodes,

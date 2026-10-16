@@ -14,7 +14,7 @@ function Root() {
       token: { colorPrimary: '#3764a8', borderRadius: 10, fontFamily: 'system-ui, sans-serif' },
     }}>
       <App>
-        <Workspace dark={dark} onDarkChange={setDark} />
+        <React.Suspense fallback={<div style={{ padding: 24 }}>正在加载学习工作台…</div>}><Workspace dark={dark} onDarkChange={setDark} /></React.Suspense>
       </App>
     </ConfigProvider>
   );

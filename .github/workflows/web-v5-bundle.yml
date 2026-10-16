@@ -50,9 +50,29 @@ jobs:
           set -euo pipefail
           npm install --ignore-scripts --no-audit --no-fund
           npm run build
+      - name: Install production Pi SDK
+        shell: bash
+        working-directory: runtimes/pi
+        run: |
+          set -euo pipefail
+          npm install --omit=dev --no-audit --no-fund
+          npm ls --omit=dev
+          node --check server.mjs
+          npm run check:sdk
       - name: Freeze native Web executable
         shell: bash
         run: python scripts/freeze_web_v5.py
+      - name: Copy platform-native Node executable into release workspace
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import subprocess, shutil, os
+          native = Path(subprocess.check_output(["node", "-p", "process.execPath"], text=True).strip())
+          target = Path("build/standalone-v5") / ("node.exe" if os.name == "nt" else "node")
+          target.parent.mkdir(parents=True, exist_ok=True)
+          shutil.copy2(native, target)
+          PY
       - name: Package native Web application
         shell: bash
         env:
@@ -94,9 +114,45 @@ jobs:
           test "$(find artifacts -maxdepth 1 -name '*.sha256' | wc -l)" -eq 4
           cd artifacts
           sha256sum --check *.sha256
+  quality-gate:
+    name: Python regressions and browser confidence gate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.15'
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - run: python -m pip install -e '.[dev]'
+      - name: Python and architecture validation
+        run: |
+          python -m compileall -q platform_api scripts tests
+          python -m pytest -q tests/test_pi_gateway.py tests/test_agentscope_runtime.py tests/test_platform_v5.py tests/test_platform_v5_chat_history.py tests/test_platform_v5_flashcards.py tests/test_platform_v5_ontology.py tests/test_course_harness.py tests/test_course_tools.py tests/test_snapshot_sync.py
+          python scripts/check.py --strict
+      - name: Browser dependencies
+        working-directory: web
+        run: |
+          npm install --ignore-scripts --no-audit --no-fund
+          npx playwright install --with-deps chromium
+      - name: Browser smoke (desktop and mobile)
+        working-directory: web
+        env:
+          SOCRATOPIA_ROOT: ${{ runner.temp }}/socratopia-v5-browser
+          SOCRATOPIA_API_TOKEN: e2e-test-token-1234567890
+        run: |
+          mkdir -p "$SOCRATOPIA_ROOT/templates"
+          cp -R ../templates/. "$SOCRATOPIA_ROOT/templates/"
+          npm run build
+          npm run test:e2e
+
   publish-alpha:
-    needs: verify-artifacts
-    if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch'
+    needs: [verify-artifacts, quality-gate]
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -125,4 +181,4 @@ jobs:
           gh release create "$TAG" dist/*.zip dist/*.sha256 \
             --target "$GITHUB_SHA" --prerelease \
             --title "Socratopia v5 Web Alpha (native executables)" \
-            --notes "Preview only. Frozen Python 3.15, Ant Design 6 UI, single-process AgentScope runtime. No Node/Pi, no user data. Four-platform extracted binary checks passed."
+            --notes "Alpha preview only: Pi native SDK for classroom, AgentScope for tutors, Python for course authority, React UI. Bundled Node; no user data or secrets. Four-platform extracted binary smoke checks passed; live external models not tested."
