@@ -16,6 +16,17 @@ type Attempt = {
   correct_indices: number[]; is_correct: boolean; explanation: string;
   source_quote: string; source_sha256: string; replayed: boolean; mastery_updated: false;
 };
+type StudyItem = {
+  exercise_id: string; stem: string; lesson_id: string | null;
+  status: 'retry' | 'due' | 'new' | 'upcoming'; reason: string;
+  next_review_at: string; recent_correct_streak: number;
+};
+type StudyPlan = {
+  status: 'needs_textbook' | 'needs_questions' | 'ready';
+  review_due: number; new_questions: number; stale_questions_excluded: number;
+  suggested_minutes: number; items: StudyItem[]; upcoming: StudyItem[];
+  mastery_updated: false; note: string;
+};
 export type PracticeSummary = {
   attempts: number; correct: number; accuracy: number | null;
   question_count: number; mastery_updated: false;
@@ -64,7 +75,7 @@ function AnswerCard({ item, request, course, onAnswered }: {
       setSubmitting(false);
     }
   };
-  return <Card type="inner" className="practice-question" title={
+  return <Card id={"practice-" + item.id} type="inner" className="practice-question" title={
     <Flex align="center" gap="small" wrap="wrap">
       <Text>{item.stem}</Text>
       <Tag>{multi ? '多选' : '单选'}</Tag>
@@ -115,6 +126,7 @@ function AnswerCard({ item, request, course, onAnswered }: {
       <Paragraph>{result.explanation}</Paragraph>
       <Paragraph type="secondary"><Text strong>教材原文：</Text>{result.source_quote}</Paragraph>
       <Text type="secondary">来源 SHA-256：{result.source_sha256.slice(0, 16)}… · 练习结果不自动认定知识掌握</Text>
+      <div className="answer-actions"><Button size="small" onClick={() => { setResult(null); setSelected([]); setPendingId(''); }}>重新练习</Button></div>
     </div> : <div className="answer-actions">
       <Button type="primary" disabled={!selected.length || !item.source_current}
         loading={submitting} onClick={() => void submit()} className="desktop-submit">提交答案</Button>
@@ -128,6 +140,7 @@ function AnswerCard({ item, request, course, onAnswered }: {
 export default function PracticePanel({ course, request, onAnswered }: Props) {
   const [items, setItems] = useState<Question[]>([]);
   const [summary, setSummary] = useState<PracticeSummary>(emptySummary);
+  const [studyPlan, setStudyPlan] = useState<StudyPlan | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [stem, setStem] = useState('');
@@ -140,12 +153,14 @@ export default function PracticePanel({ course, request, onAnswered }: Props) {
 
   const reload = useCallback(async () => {
     const prefix = '/courses/' + encodeURIComponent(course);
-    const [list, stats] = await Promise.all([
+    const [list, stats, plan] = await Promise.all([
       request<{questions: Question[]}>(prefix + '/exercises'),
       request<PracticeSummary>(prefix + '/exercise-summary'),
+      request<StudyPlan>(prefix + '/study-plan'),
     ]);
     setItems(list.questions);
     setSummary(stats);
+    setStudyPlan(plan);
   }, [course, request]);
 
   useEffect(() => {
@@ -153,11 +168,12 @@ export default function PracticePanel({ course, request, onAnswered }: Props) {
     void (async () => {
       try {
         const prefix = '/courses/' + encodeURIComponent(course);
-        const [list, stats] = await Promise.all([
+        const [list, stats, plan] = await Promise.all([
           request<{questions: Question[]}>(prefix + '/exercises'),
           request<PracticeSummary>(prefix + '/exercise-summary'),
+          request<StudyPlan>(prefix + '/study-plan'),
         ]);
-        if (current) { setItems(list.questions); setSummary(stats); }
+        if (current) { setItems(list.questions); setSummary(stats); setStudyPlan(plan); }
       } catch (err) {
         if (current) setError(err instanceof Error ? err.message : '题库读取失败');
       }
@@ -183,6 +199,45 @@ export default function PracticePanel({ course, request, onAnswered }: Props) {
   const valid = stem.trim() && options.every(s => s.trim()) && explanation.trim()
     && quote.trim().length >= 8 && keys.length && (!lessonId || /^lesson_[0-9]{3,}$/.test(lessonId));
   return <div className="class-practice">
+    <Card title="今日高效学习" size="small" extra={<Tag>本地智能排序 · 无模型调用</Tag>}>
+      {studyPlan?.status === 'needs_textbook'
+        ? <Alert type="info" showIcon title="请先导入本课程的主教材，建立可核对的练习。" />
+        : studyPlan?.status === 'needs_questions'
+          ? <Alert type="info" showIcon title="还没有适用当前教材的练习题，可在下方录入。" />
+          : studyPlan ? <>
+            <Flex align="center" gap="large" wrap="wrap">
+              <Statistic title="需要回顾" value={studyPlan.review_due} suffix="题" />
+              <Statistic title="尚未尝试" value={studyPlan.new_questions} suffix="题" />
+              <Statistic title="本次建议用时" value={studyPlan.suggested_minutes} suffix="分钟" />
+            </Flex>
+            <Paragraph type="secondary">
+              先回顾上次错题，再做已到期的间隔练习，最后尝试新题。
+              每次先自行回忆，再查看答案和教材证据。
+            </Paragraph>
+            {studyPlan.stale_questions_excluded > 0 &&
+              <Alert type="warning" showIcon className="feedback"
+                title={studyPlan.stale_questions_excluded + ' 道旧教材题目不参与本次计划'} />}
+            <Space orientation="vertical" style={{ width: '100%' }}>
+              {studyPlan.items.map((item, index) => <Flex key={item.exercise_id}
+                align="center" justify="space-between" gap="small" wrap="wrap">
+                <Space size="small" wrap>
+                  <Tag color={item.status === 'retry' ? 'warning' : item.status === 'due' ? 'processing' : 'default'}>
+                    {item.status === 'retry' ? '优先纠错' : item.status === 'due' ? '到期复习' : '新题'}
+                  </Tag>
+                  <Text>{index + 1}. {item.stem}</Text>
+                  <Text type="secondary">{item.reason}</Text>
+                </Space>
+                <Button size="small" onClick={() =>
+                  document.getElementById('practice-' + item.exercise_id)?.scrollIntoView({
+                    behavior: 'smooth', block: 'center',
+                  })}>前往作答</Button>
+              </Flex>)}
+              {!studyPlan.items.length &&
+                <Text type="secondary">当前没有需要立即复习的题目，可以按自己的节奏休息或学习新章节。</Text>}
+            </Space>
+            <Paragraph type="secondary" className="section-note">{studyPlan.note}</Paragraph>
+          </> : <Text type="secondary">正在读取本课程的学习建议…</Text>}
+    </Card>
     <Card title="课堂互动练习" extra={<Tag color="blue">后端确定性判分</Tag>}>
       <Paragraph type="secondary">
         练习直接在课堂内完成，答后展示标准答案与教材原文。题目由课程使用者审核并录入，

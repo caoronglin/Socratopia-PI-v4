@@ -22,6 +22,15 @@ DRAFT -> PREPARING -> READY -> ACTIVE -> PAUSED -> COMPLETED -> ARCHIVED.
 RESTORED creates a new version/cycle referencing the archived snapshot. No rewriting historical grades.
 Transitions require server-side preconditions and append-only audit events; archival freezes a manifest of all included assets, source versions and SHA256 checksums.
 
+## Efficient learning loop (implemented baseline)
+- Deterministic GET /api/courses/{course}/study-plan, no model invocation or mastery writes.
+- Only questions from current textbook SHA are recommended; stale questions never enter the queue.
+- Prioritize latest incorrect attempts, then due spaced reviews, then new questions.
+- Conservative heuristic review intervals after consecutive correct answers: 1/3/7/14/30 days; NOT an assessment of mastery.
+- Maximum 5 questions and 15 suggested minutes per session; responses never reveal the answer key.
+- Practice page shows a focused queue and permits deliberate re-attempt. Course switching keeps plans isolated.
+- Remaining: teacher-controlled topic mapping, learner reflection, validated mastery rubric, and independent long-term learning-outcome evaluation.
+
 ## Knowledge graph
 - Nodes: Course, Chapter, Concept, Prerequisite, Evidence, Question, LearningObjective, Misconception.
 - Typed edges with provenance, confidence, source span, textbook version, reviewed status and timestamp.

@@ -18,7 +18,7 @@ from platform_api.agentscope_runtime import AgentUnavailable, ask_agent, generat
 from platform_api import course_agents, course_graph, course_lifecycle, course_harness, snapshot_sync
 from platform_api.evidence import EvidenceError, retrieve, is_current
 from platform_api.grounding import GroundingError, check_response, grounded_prompt
-from platform_api import exercises, books, chat_history, prep_editor
+from platform_api import exercises, books, chat_history, prep_editor, study_plan
 from scripts.lib import chapter_prep
 from scripts.lib.prep import prep_status, check_prep, prep_path
 
@@ -438,6 +438,16 @@ def exercise_submit(course: str, exercise_id: str,
         except ValueError:
             pass  # A quiz attempt does not grant or reset formal lesson time.
     return {**result, "replayed": not inserted}
+
+
+@api.get("/api/courses/{course}/study-plan")
+def read_study_plan(course: str, response: Response, _: Authenticated) -> dict:
+    response.headers["Cache-Control"] = "no-store"
+    name = existing_course(course)
+    try:
+        return study_plan.plan(root_dir(), name)
+    except (exercises.ExerciseError, ValueError, OSError) as exc:
+        raise HTTPException(409, str(exc)) from exc
 
 
 @api.get("/api/courses/{course}/exercise-summary")

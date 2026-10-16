@@ -63,6 +63,7 @@ test('desktop onboarding → textbook → live classroom quiz → AntV → mobil
   await expect(draftEditor).toHaveValue(/课堂备注：对比有丝分裂与减数分裂。/);
   await expect(page.getByText('尚未通过 ready 门禁')).toBeVisible();
   await page.getByRole('button', { name: /将 lesson_001 带入课堂/ }).click();
+  await expect(page.getByText('今日高效学习')).toBeVisible();
   await expect(page.getByText('课堂互动练习')).toBeVisible();
   await expect(page.getByPlaceholder('lesson_001')).toHaveValue('lesson_001');
   await expect(page.getByText('课堂尚未通过就绪检查')).toBeVisible();
