@@ -1,3 +1,7 @@
+# HISTORICAL DESIGN NOTE — superseded on 2026-10-18
+
+This page preserves the old dual-runtime v5 Alpha design for archival reference. It is **not current operating guidance**. See [AgentScope-only migration](AGENTSCOPE_MIGRATION.md) and [current runtime](AGENTSCOPE_ONLY.md).
+
 # Socratopia v5 平台重构 · 架构、运行与验收
 
 状态：**v5.0.0-alpha.2 迭代候选**（不是正式版本）。主线 main，功能 PR 分支 feat/v5-alpha2-chat-history。
