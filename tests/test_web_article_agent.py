@@ -136,7 +136,7 @@ class CherryAgentContracts(unittest.TestCase):
             self.assertIn(term, docs)
 
     def test_learning_route_and_prompt_catalog_are_synced(self):
-        skill = (self.ROOT / ".pi/skills/socratopia-learning/SKILL.md").read_text(encoding="utf-8")
+        skill = (self.ROOT / "education/skills/socratopia-learning/SKILL.md").read_text(encoding="utf-8")
         catalog = (self.ROOT / "docs/PROMPTS.md").read_text(encoding="utf-8")
         route = "| 网页文章、知乎/博客、URL 学习（用户提供链接或正文） | `references/web-article.md` + `references/external-research.md` |"
         self.assertIn(route, skill)

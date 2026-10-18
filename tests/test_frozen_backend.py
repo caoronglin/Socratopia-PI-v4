@@ -17,7 +17,7 @@ class FrozenBackendTests(unittest.TestCase):
                      "prep.py", "cherry_preflight.py", "web_article.py"):
             self.assertIn(name, ALLOWED)
         self.assertNotIn("check.py", ALLOWED)
-        self.assertNotIn("pi_arch_doctor.py", ALLOWED)
+        self.assertNotIn("architecture_doctor.py", ALLOWED)
 
     def test_unrecognized_executable_never_runs(self):
         for args in ([], ["../other.py"], ["../../SECRET"], ["no.py"], ["check.py"]):

@@ -1,4 +1,4 @@
-"""Negative tests for pi_arch_doctor.py itself.
+"""Negative tests for architecture_doctor.py itself.
 
 plan.md §13 promised ERROR on `canonical state missing/invalid`, but the check
 lived only in the per-course CLIs, so `/health` (which runs the doctor) missed
@@ -31,7 +31,7 @@ def make_repo() -> Path:
 
 def run_doctor(root: Path, course: str | None = None) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
-        [sys.executable, str(root / "scripts/pi_arch_doctor.py"), "--root", str(root)]
+        [sys.executable, str(root / "scripts/architecture_doctor.py"), "--root", str(root)]
         + (["--course", course] if course is not None else []),
         cwd=root,
         text=True,
@@ -221,18 +221,18 @@ class DoctorGateTests(unittest.TestCase):
 
     def test_oversized_control_file_only_warns(self):
         """plan §10 soft thresholds are WARN, never a hard failure."""
-        profile = self.work / ".pi/skills/socratopia-tutor/profiles/TUTOR_D.md"
+        profile = self.work / "education/skills/socratopia-tutor/profiles/TUTOR_D.md"
         profile.write_text(profile.read_text(encoding="utf-8") + "填充内容。" * 400, encoding="utf-8")
         result = run_doctor(self.work)
         self.assertEqual(result.returncode, 0, result.stdout)
         self.assertIn("token soft cap exceeded (profile)", result.stdout)
 
-    def test_pi_system_override_is_error(self):
-        """ADR-002 / plan §13: .pi/SYSTEM.md is forbidden, not just discouraged."""
-        (self.work / ".pi/SYSTEM.md").write_text("override", encoding="utf-8")
+    def test_education_system_override_is_error(self):
+        """ADR-002 / plan §13: education/SYSTEM.md is forbidden, not just discouraged."""
+        (self.work / "education/SYSTEM.md").write_text("override", encoding="utf-8")
         result = run_doctor(self.work)
         self.assertEqual(result.returncode, 1)
-        self.assertIn("forbidden override: .pi/SYSTEM.md", result.stdout)
+        self.assertIn("forbidden override: education/SYSTEM.md", result.stdout)
 
     def test_machine_specific_paths_in_control_files_are_errors(self):
         for snippet, label in (("C:\\Users\\alice\\x", "Windows user path"), ("/Users/alice/proj", "macOS user path")):
@@ -247,7 +247,7 @@ class DoctorGateTests(unittest.TestCase):
 
     # --- preserved gates ----------------------------------------------
     def test_fourth_active_skill_still_fails(self):
-        rogue = self.work / ".pi/skills/socratopia-rogue"
+        rogue = self.work / "education/skills/socratopia-rogue"
         rogue.mkdir(parents=True, exist_ok=True)
         (rogue / "SKILL.md").write_text("---\nname: rogue\ndescription: x\n---\n", encoding="utf-8")
         result = run_doctor(self.work)
