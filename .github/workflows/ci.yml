@@ -41,8 +41,8 @@ jobs:
         run: python -m pip check
       - name: Compile Python sources
         run: python -m compileall -q scripts tests
-      - name: Cherry Pi workspace smoke check (offline)
-        run: python scripts/cherry_preflight.py
+      - name: AgentScope architecture doctor (offline)
+        run: python scripts/architecture_doctor.py
       - name: Doctor and complete regression suite
         run: python scripts/check.py --strict
 
