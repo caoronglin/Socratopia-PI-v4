@@ -1,7 +1,7 @@
 {
   "name": "socratopia-web",
   "private": true,
-  "version": "5.0.0-alpha.7",
+  "version": "5.0.0-alpha.8",
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
@@ -13,7 +13,7 @@
     "antd:usage": "antd usage ./src --format json"
   },
   "dependencies": {
-    "antd": "^6.6.5",
+    "antd": "^6.6.6",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "@antv/g2": "^5.4.8",

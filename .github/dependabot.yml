@@ -23,7 +23,7 @@ updates:
         patterns:
           - "*"
 
-  # Split browser, Pi SDK, and Rust dependency update PRs by ecosystem.
+  # Split browser and Rust dependency update PRs by ecosystem.
   - package-ecosystem: npm
     directory: /web
     schedule:
@@ -35,12 +35,6 @@ updates:
         patterns:
           - "*"
         update-types: [minor, patch]
-  - package-ecosystem: npm
-    directory: /runtimes/pi
-    schedule:
-      interval: weekly
-      day: monday
-    open-pull-requests-limit: 3
   - package-ecosystem: cargo
     directory: /rust
     schedule:

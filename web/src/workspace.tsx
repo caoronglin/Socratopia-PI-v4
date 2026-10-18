@@ -38,7 +38,7 @@ type Group = {
   session?: { topic: string; phase: string; round: number; max_rounds: number; turns: Turn[] } | null;
 };
 type AgentStatus = {
-  backend: 'agentscope-course'; collaboration_backend: 'agentscope'; configured: boolean; gateway_online: boolean;
+  backend: 'agentscope-course'; collaboration_backend: 'agentscope'; configured: boolean;
   model: string; max_concurrent_turns: number; verified_history: string;
   model_credentials_verified: false;
   tutors: { backend: string; configured: boolean; sdk_version: string; max_agent_iterations: number };
@@ -46,7 +46,7 @@ type AgentStatus = {
 type WorkspaceProps = { dark: boolean; onDarkChange: (value: boolean) => void };
 const { Sider, Header, Content } = Layout;
 const { Title, Text, Paragraph } = Typography;
-const tutorNames: Record<string, string> = { course_agent: '本课程导师', D: '三月七', E: '丹恒', F: '姬子', pi: 'Pi 课程导师', agentscope: '历史 AgentScope 导师', student: '我' };
+const tutorNames: Record<string, string> = { course_agent: '本课程导师', D: '三月七', E: '丹恒', F: '姬子', agentscope: '历史 AgentScope 导师', student: '我' };
 
 export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
   const [token, setToken] = useState('');
@@ -231,7 +231,7 @@ export default function Workspace({ dark, onDarkChange }: WorkspaceProps) {
     <Layout className="shell">
       <a className="skip-link" href="#main-content">跳到主要内容</a>
       <Sider breakpoint="lg" collapsedWidth="0" width={232} theme={dark ? 'dark' : 'light'} className="sidebar desktop-sidebar">
-        <div className="brand">Socratopia <span>v5 Alpha.7</span></div>
+        <div className="brand">Socratopia <span>v5 Alpha.8</span></div>
         <Text type="secondary" className="brand-note">你的课程学习空间</Text>
         <Menu selectedKeys={[tab]} onClick={({ key }) => setTab(key as LearningTab)} mode="inline"
           items={[

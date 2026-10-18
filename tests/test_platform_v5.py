@@ -137,10 +137,6 @@ def test_agent_runtime_requires_model_credentials(monkeypatch: pytest.MonkeyPatc
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     with pytest.raises(AgentUnavailable):
         asyncio.run(ask_agent("课程", "你好"))
-    from platform_api.pi_gateway import PiUnavailable, ask_pi
-    monkeypatch.delenv("SOCRATOPIA_API_TOKEN", raising=False)
-    with pytest.raises(PiUnavailable):
-        asyncio.run(ask_pi("课程", "你好"))
 
 
 def test_missing_and_irrelevant_books_fail_closed(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
