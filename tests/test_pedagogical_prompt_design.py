@@ -8,8 +8,8 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-LEARNING = ROOT / ".pi/skills/socratopia-learning/references"
-TUTOR = ROOT / ".pi/skills/socratopia-tutor/references"
+LEARNING = ROOT / "education/skills/socratopia-learning/references"
+TUTOR = ROOT / "education/skills/socratopia-tutor/references"
 
 
 def read(path: Path) -> str:
@@ -23,7 +23,7 @@ class AdaptivePedagogyContracts(unittest.TestCase):
         self.classroom = read(LEARNING / "classroom.md")
         self.persona = read(TUTOR / "persona.md")
         self.style = read(TUTOR / "style.md")
-        self.start = read(ROOT / ".pi/prompts/start-class.md")
+        self.start = read(ROOT / "education/prompts/start-class.md")
 
     def test_response_sensitive_not_question_count_driven(self):
         for signal in ("独立正确", "部分正确", "自信但错误", "卡住", "只说“懂了”"):

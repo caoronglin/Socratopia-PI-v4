@@ -15,14 +15,14 @@ class PackageReleaseTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory(prefix="socrat-zip-")
         self.root = Path(self.tmp.name)
-        (self.root / ".pi/prompts").mkdir(parents=True)
-        (self.root / ".pi/prompts/start-class.md").write_text("lesson", encoding="utf-8")
+        (self.root / "education/prompts").mkdir(parents=True)
+        (self.root / "education/prompts/start-class.md").write_text("lesson", encoding="utf-8")
         (self.root / "AGENTS.md").write_text("project rules", encoding="utf-8")
         (self.root / "release").mkdir()
         (self.root / "release/VERSION").write_text("v4.1.0-rc.1\n", encoding="utf-8")
         (self.root / "release/NOTES.md").write_text("release note", encoding="utf-8")
         (self.root / "manifest.json").write_text(
-            json.dumps({"files": ["AGENTS.md", ".pi/prompts/start-class.md"]}), encoding="utf-8")
+            json.dumps({"files": ["AGENTS.md", "education/prompts/start-class.md"]}), encoding="utf-8")
         (self.root / "DATA/私有课堂").mkdir(parents=True)
         (self.root / "DATA/私有课堂/PROGRESS.md").write_text("secret academic record", encoding="utf-8")
         (self.root / "TEXTBOOK/私人教材").mkdir(parents=True)

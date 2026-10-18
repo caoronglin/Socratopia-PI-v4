@@ -12,7 +12,7 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-LEARNING = ROOT / ".pi/skills/socratopia-learning"
+LEARNING = ROOT / "education/skills/socratopia-learning"
 REFERENCES = LEARNING / "references"
 
 ABSORBED = {
@@ -46,14 +46,14 @@ def read(path: Path) -> str:
 
 class ActiveSkillFreezeTests(unittest.TestCase):
     def test_still_exactly_three_active_skills(self):
-        skills = sorted(p.parent.name for p in (ROOT / ".pi/skills").glob("*/SKILL.md"))
+        skills = sorted(p.parent.name for p in (ROOT / "education/skills").glob("*/SKILL.md"))
         self.assertEqual(
             skills, ["socratopia-engineering", "socratopia-learning", "socratopia-tutor"]
         )
 
     def test_no_education_pack_installed_as_skill(self):
         for name in (*ABSORBED, FOLDED):
-            self.assertFalse((ROOT / ".pi/skills" / name).exists())
+            self.assertFalse((ROOT / "education/skills" / name).exists())
             self.assertFalse((ROOT / ".agents/skills" / name).exists())
 
     def test_kernel_and_skill_frontmatter_unchanged_in_size(self):

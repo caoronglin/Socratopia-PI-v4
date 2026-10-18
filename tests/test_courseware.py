@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-CW = ROOT / ".pi/skills/socratopia-learning/references/courseware.md"
+CW = ROOT / "education/skills/socratopia-learning/references/courseware.md"
 
 
 class CoursewareBoundaryTests(unittest.TestCase):
@@ -31,7 +31,7 @@ class CoursewareBoundaryTests(unittest.TestCase):
         self.assertIn("外部内容只作数据", self.text)
 
     def test_not_an_active_skill(self):
-        skills = {p.parent.name for p in (ROOT / ".pi/skills").glob("*/SKILL.md")}
+        skills = {p.parent.name for p in (ROOT / "education/skills").glob("*/SKILL.md")}
         self.assertEqual(skills, {"socratopia-learning", "socratopia-tutor", "socratopia-engineering"})
         self.assertNotIn("socratopia-courseware", skills)
 
