@@ -1,4 +1,4 @@
-"""Single-process AgentScope 2.0.9 inference backend for Socratopia v5.
+"""Single-process AgentScope 2.0.10 inference backend for Socratopia v5.
 
 Only the Python API owns this runtime. Responses and course session history are
 saved by the existing deterministic, citation-checked FastAPI pipeline.
@@ -80,7 +80,7 @@ def _model_config(scope: str, speaker: str | None = None) -> tuple[str, str, str
 def runtime_status() -> dict:
     """Safe health information; do not return credentials or endpoints."""
     configured = bool(os.getenv("OPENAI_API_KEY"))
-    return {"backend": "agentscope-course", "collaboration_backend": "agentscope", "sdk_version": "2.0.9",
+    return {"backend": "agentscope-course", "collaboration_backend": "agentscope", "sdk_version": "2.0.10",
             "provider": "openai-compatible", "configured": configured,
             "model": os.getenv("SOCRATOPIA_MODEL", "gpt-4.1-mini"),
             "max_agent_iterations": 1, "max_concurrent_turns": MAX_IN_FLIGHT,
@@ -100,7 +100,6 @@ async def _execute(scope: str, prompt: str, speaker: str | None) -> str:
     from agentscope.credential import OpenAICredential
     from agentscope.message import UserMsg
     from agentscope.model import OpenAIChatModel
-    from agentscope.tool import Toolkit
 
     display_name, style = PERSONAS[speaker] if speaker else (identity(scope), "你是本课程专属导师。只讨论当前课程，严格区分事实、证据与未知。")
     root = Path(os.getenv("SOCRATOPIA_ROOT", ".")).resolve()

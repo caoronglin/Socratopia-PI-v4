@@ -1,6 +1,6 @@
 """Create explicit, platform-verified v5 Web runtime ZIP + SHA-256.
 
-Bundles Pi, Python API and Web assets; excludes user data, secrets and workspace.
+Bundles AgentScope and Web assets; excludes private data and secrets.
 """
 from __future__ import annotations
 
@@ -71,19 +71,9 @@ def build(platform: str, output: Path) -> dict:
     web = ROOT / "web" / "dist"
     if not (web / "index.html").is_file() or not list((web / "assets").glob("*.js")):
         raise ValueError("Web UI has not been built")
-    node = _readable(ROOT / "build" / "standalone-v5" /
-                     ("node.exe" if win else "node"), ROOT)
-    _magic(node, platform)
-    pi_root = ROOT / "runtimes" / "pi"
-    _readable(pi_root / "node_modules" / "@earendil-works" / "pi-coding-agent" / "package.json", ROOT)
-    entries: dict[str, Path] = {executable.name: executable, "runtime/" + node.name: node}
+    entries: dict[str, Path] = {executable.name: executable}
     for name in TEMPLATES:
         entries["templates/" + name] = _readable(ROOT / "templates" / name, ROOT)
-    for required in ("server.mjs", "package.json"):
-        entries["runtimes/pi/" + required] = _readable(pi_root / required, ROOT)
-    for candidate in _walk_files(pi_root / "node_modules"):
-        entries["runtimes/pi/node_modules/" +
-                candidate.relative_to(pi_root / "node_modules").as_posix()] = candidate
     for candidate in _walk_files(web):
         entries["web/dist/" + candidate.relative_to(web).as_posix()] = candidate
     output.mkdir(parents=True, exist_ok=True)
@@ -94,7 +84,7 @@ def build(platform: str, output: Path) -> dict:
         for relative, path in sorted(entries.items()):
             info = zipfile.ZipInfo("Socratopia-Web/" + relative, STAMP)
             info.compress_type = zipfile.ZIP_DEFLATED
-            is_native = relative == executable.name or relative == "runtime/" + node.name
+            is_native = relative == executable.name
             info.external_attr = ((0o100755 if is_native else 0o100644) << 16)
             archive.writestr(info, path.read_bytes(), compress_type=zipfile.ZIP_DEFLATED)
     sha = hashlib.sha256(dest.read_bytes()).hexdigest()
