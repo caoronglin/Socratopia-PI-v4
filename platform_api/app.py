@@ -72,7 +72,7 @@ class ChatRequest(BaseModel):
 
 
 class AgentFeatureRequest(BaseModel):
-    feature: Literal["memory", "group"]
+    feature: Literal["memory", "group", "graph"]
     enabled: bool
 
 

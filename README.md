@@ -1,128 +1,39 @@
-# Socratopia PI v4
+# Socratopia · AgentScope Learning Platform (v5 Alpha.8)
 
- > **主线版本：v5 Alpha。PR #28 继续迭代为「一门课程一个 AgentScope 逻辑智能体、Python 权威监督、Pi 兼容层保留」。该 PR 尚未合并或发布。**普通课堂由 Pi SDK 负责原生模型生命周期，AgentScope 2 仅负责导师小组，Python 课程状态机保留最终裁决。React / Ant Design 6、Ant Design Mobile 和 AntV G2 工作台按需加载。当前仍是 Alpha，并非功能完全交付的稳定版；旧版 **v4.3.2** 的正式 Release 与 Git 标签保持不变。参见 [v5 功能说明](docs/PLATFORM_V5.md)和 [原生可执行版安装及限制](docs/WEB_V5_PACKAGE.md)。
+本地优先、单课程隔离的 AI 学习平台：教材 → 章节备课 → 课堂 → 客观练习 → 闪卡/知识诊断 → 复盘。
 
-面向 PI coding agent 的 Socratopia 提示词/课程状态架构重构版。
+**唯一在线模型执行框架：AgentScope 2.0.10。** Python FastAPI 管理课程状态、权限、引用审核、计时及成绩；React 19 + Ant Design 6 / Ant Design Mobile / AntV 负责前端。没有独立的第二模型 SDK 或 Node AI 网关。
 
-## v5 Alpha 学习工作台
+## 真实可用功能
+- Markdown 教材导入（只创建、不覆盖）、章节目录与来源 SHA-256 验证
+- 章节 PREP 草稿/编辑/校验；正式课堂至少 45 分钟的可核验活动时长
+- 单门课程独立教学 Agent、按需启用的 AgentScope D/E/F 导师小组
+- 按课程隔离的 SQLite 问答、互动题、闪卡、学习计划与基础知识图谱
+- 远程快照手动上传 WebDAV/S3（不提供自动覆盖式恢复）
+- 浏览器桌面/移动端交互，跨平台单进程 Python/AgentScope Web ZIP
 
-课程数据在本地隔离：**教材 → 章节 PREP 草稿 → 正式课堂 → 互动练习与复盘**。网页按真实 API 状态导航，既不代替人工备课批准，也不自动计入 45 分钟或掌握度。请参见 [Alpha.4 学习流与提示词契约](docs/ALPHA4.md)、[Alpha.5 PREP 草稿 Web 编辑与验收](docs/ALPHA5.md)。
-
-## v5 Alpha Web 可执行版
-
-`main` 提交后自动运行 v5 Python API、React / Ant Design、Chromium 桌面/移动端测试，以及 Windows、Linux、macOS Intel/ARM 原生可执行包 CI。**只有 CI 全绿的 Actions Artifacts 可以作为测试版使用**；四平台 ZIP 和 SHA-256 校验文件见 [Web 打包工作流](https://github.com/caoronglin/Socratopia-PI-v4/actions/workflows/web-v5-bundle.yml)。PR #28 合并后，`main` 的四平台 ZIP 冒烟和完整回归门禁通过才自动发布 **Alpha 预发布**；失败不发布，也不会自动修改 stable。Dependabot 每周提出 Python、Pi/npm、Web/npm、Rust/Cargo、Actions 升级 PR，**不自动合并未验收的依赖**。
-
-旧版 v4.3.2 独立保留在 [正式 Release](https://github.com/caoronglin/Socratopia-PI-v4/releases/tag/v4.3.2)，原有 `release/VERSION` 和 Rust CLI Release 工作流保持兼容，不会因合并 v5 自动触发重发 v4 安装包。
-
-## 核心思想
-
-```text
-AGENTS.md          = always-on kernel
-.pi/skills/        = on-demand workflows
-SYSTEM/SPEC/       = canonical contracts
-DATA/<course>/     = learning facts + runtime
-TEXTBOOK/<course>/ = content + sources + PREP
-scripts/           = deterministic validation/scaffolding
-Tutor              = presentation layer only
-```
-
-## 安装到现有项目
-
-1. 先备份现有项目。
-2. 将本包内容合并到项目根目录。
-3. 把旧根级 `CLAUDE.md`、`AGENT_SYSTEM_PROMPT.md` 移到归档，不要让它们与 `AGENTS.md` 同时承担等价规则。
-4. 旧 `.claude/skills/` 可保留作历史，但 active Socratopia skills 使用 `.pi/skills/`。
-5. 不要默认创建 `.pi/SYSTEM.md`；让 PI 保留自己的系统提示。
-6. 运行：
+## 源码运行
+依赖 Python 3.15、Node.js 22+（仅用来构建前端）、模型提供者凭据。
 
 ```bash
-python scripts/check.py --strict          # doctor + 全部测试（CI 同款）
-python scripts/pi_arch_doctor.py --budget # 上下文 token 预算报告
+python3.15 -m pip install -e ".[dev]"
+export SOCRATOPIA_ROOT="$(pwd)"
+export SOCRATOPIA_API_TOKEN="your-random-local-token-of-at-least-16-characters"
+export OPENAI_API_KEY="your-server-side-credential"
+python3.15 -m uvicorn platform_api.app:app --host 127.0.0.1 --port 8000
+
+# 第二个终端：仅用于前端开发
+cd web
+npm install --ignore-scripts
+npm run dev
 ```
 
-**v4.3.2：** 四平台完整安装包已内置 Rust CLI 与冻结 Python 运行时；业务命令无需安装 Python。CLI 的 `--root` 可正确切换工作区，后端丢失会直接报错。CI/CD 使用更新的 SHA 固定 GitHub Actions，依赖更新由 Dependabot 提交审查 PR。
+默认禁止向外网暴露本地令牌服务。开发环境前端代理 FastAPI；浏览器不保存凭据到 localStorage。模型凭据保留在服务器环境。
 
-## 已编译 CLI 安装包（无需安装 Rust）
+## 可执行包
+见 [原生 ZIP / Alpha 验证范围](docs/WEB_V5_PACKAGE.md) 和 [AgentScope-only 迁移说明](docs/AGENTSCOPE_ONLY.md)。GitHub Actions 的四平台 ZIP 须完全通过打包与解压冒烟后才能用于测试；**Alpha 不表示真实模型教学已验收**。
 
-前往 [v4.3.2 Release](https://github.com/caoronglin/Socratopia-PI-v4/releases/tag/v4.3.2)，选择 Linux x86_64、Windows x86_64、macOS Intel 或 Apple Silicon 的对应 ZIP。每个完整安装包都内置 `bin/socratopia` 和 `bin/socratopia-backend`（Windows 均为 `.exe`），包含 Pi Skills/脚本，不需要从源码编译 Rust。
+## 业务边界
+回答引文通过逐字核对 **不等于** 科学真实性已验证；练习正确率不是权威掌握度。课程原始 `DATA/`、`TEXTBOOK/` 不包含在安装包中，更新前自行备份。
 
-解压后在根目录运行 `./bin/socratopia --version`，并按需运行 `./bin/socratopia init plan --course '遗传学'`。**正式安装包已包含可执行的 Python 后端，日常业务命令无需安装 Python**；个人 `DATA/`、`TEXTBOOK/` 不包含在 ZIP 中，更新前请备份，勿删除已有课程数据。每个 ZIP 附 SHA-256 校验文件。具体见 [release/NOTES.md](release/NOTES.md)。
-
-## 直接运行完整业务 CLI
-
-```bash
-./bin/socratopia init plan --course '遗传学'
-./bin/socratopia group status --course '遗传学'
-./bin/socratopia timer status --course '遗传学'
-./bin/socratopia preflight
-```
-
-这些命令默认调用随包的冻结后端，无需系统 Python。开发者的 `doctor` / `package` 仍使用 Python；源码安装也可用原有 `python scripts/*.py`。CI 通过 `SOCRATOPIA_REQUIRE_BUNDLED=1` 强制校验独立运行。
-
-## 可选 Rust CLI（统一命令入口）
-
-无需重写现有 Python 业务逻辑。安装 Rust 工具链后：
-
-```bash
-cargo build --release --locked --manifest-path rust/Cargo.toml
-rust/target/release/socratopia init plan --course '遗传学'
-rust/target/release/socratopia timer status --course '遗传学'
-rust/target/release/socratopia doctor
-```
-
-CLI 按当前工作目录发现项目，也支持 `--root`；不使用 shell 转发参数。未编译 Rust 时原来的 Python 命令**完全保留**，状态和课程隔离规则不变。完整用法见 [docs/RUST_CLI.md](docs/RUST_CLI.md)。
-
-## 首次引导与学习小组
-
-`python scripts/initialize.py wizard` 逐步选择课程与主导师（最后需确认），或使用 `initialize.py plan/apply` 无交互初始化。小组允许 D/E/F 中 2–3 位顺序讨论，入口 `scripts/learning_group.py`；轮次受限、每轮等待用户，不自动改变 PROGRESS 或 45 分钟计时。完整操作见 [引导与小组手册](docs/ONBOARDING_AND_GROUP.md)。
-
-## 省 token 工具
-
-```bash
-python scripts/context_pack.py --course "课程名" [--budget 3000]   # 只读：开课所需最小热上下文
-```
-
-## 新建课程骨架
-
-```bash
-python scripts/scaffold_course.py "课程名"
-```
-
-脚本只创建缺失文件，不覆盖已有课程数据。
-
-## 推荐使用
-
-- `/start-class [课程/lesson]`
-- `/end-class`
-- `/materials-ready [课程]`
-- `/switch-course <课程>`
-- `/health [课程]`
-
-也可以直接自然语言触发对应 Skill。
-
-## 45 分钟课堂（完成时长硬门禁）
-
-正式课堂至少累计 **2700 秒**可核验活动时间；不足时不得标记完成。Pi/Cherry Agent 每轮教学互动使用 `scripts/lesson_timer.py heartbeat`，超 5 分钟无心跳自动暂停，休息用 pause/resume，不把后台空闲算成有效课时。可提前结束并标记 interrupted；课堂事实照实保存。见 [计时使用说明](docs/LESSON_TIMER.md)。
-
-```bash
-python scripts/lesson_timer.py start --course "课程名" --lesson-id lesson_001
-python scripts/lesson_timer.py heartbeat --course "课程名"
-python scripts/lesson_timer.py status --course "课程名"
-python scripts/lesson_timer.py finish --course "课程名"  # 不足45分钟返回非零
-```
-
-## ZIP 安装包与校验
-
-发布版本见 [GitHub Releases](https://github.com/caoronglin/Socratopia-PI-v4/releases)，可在本地运行 `python scripts/package_release.py` 重建 ZIP 和 SHA-256 文件。打包仅包含 `manifest.json` 明确列出的项目文件，**不包含 DATA/、TEXTBOOK/ 或用户密钥**。安装前备份当前项目，不覆盖个人课堂数据。
-
-## 与 v3 的关键区别
-
-- 不再用一个大型 `CLAUDE.md` 承担路由 + 工具 +教学 + 工程全部规则。
-- 不把导师人格常驻到工程任务。
-- 不把完整 SOCIAL 当跨导师承接事实源。
-- 不把“整章完整覆盖”误写成“一次教学单元的最低容量”。
-- runtime 从单一线性状态改为 `phase + readiness + blockers`。
-- task queue 明确只是持久待办，不假设存在后台 worker。
-- GC 不再按固定条数搬走 canonical PROGRESS。
-
-详细迁移见 `MIGRATION_PI.md`。
+历史 v4.3.2 Git 标签与 Release 只作为兼容归档，不代表 v5 运行时的一部分。
