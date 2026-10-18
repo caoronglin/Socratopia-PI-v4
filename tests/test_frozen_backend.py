@@ -14,7 +14,7 @@ from scripts.frozen_backend import ALLOWED, main
 class FrozenBackendTests(unittest.TestCase):
     def test_known_entrypoints_and_no_doctor_side_effects(self):
         for name in ("initialize.py", "learning_group.py", "lesson_timer.py",
-                     "prep.py", "cherry_preflight.py", "web_article.py"):
+                     "prep.py", "workspace_preflight.py", "web_article.py"):
             self.assertIn(name, ALLOWED)
         self.assertNotIn("check.py", ALLOWED)
         self.assertNotIn("architecture_doctor.py", ALLOWED)
