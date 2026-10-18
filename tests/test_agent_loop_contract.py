@@ -28,7 +28,7 @@ class AgentLoopPromptContracts(unittest.TestCase):
         for term in ("2700", "PROGRESS.md", "SHA", "课程隔离"):
             self.assertIn(term, self.kernel)
         self.assertIn("禁止第二套模型循环", self.kernel)
-        self.assertIn("不自行下课", self.spec)
+        self.assertIn("YIELD", self.spec)
 
 if __name__ == "__main__":
     unittest.main()
