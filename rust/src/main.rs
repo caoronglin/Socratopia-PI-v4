@@ -10,7 +10,7 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
 
 const HELP: &str = "\
-Socratopia · Pi/Cherry local CLI
+Socratopia · deterministic local CLI
 
 Usage:
   socratopia [--root PATH] status --course NAME  # read-only file snapshot
@@ -38,7 +38,7 @@ fn script_for(command: &str) -> Option<&'static str> {
         "article" => Some("web_article.py"),
         "context" => Some("context_pack.py"),
         "course" => Some("course_runtime.py"),
-        "preflight" => Some("cherry_preflight.py"),
+        "preflight" => Some("workspace_preflight.py"),
         "doctor" => Some("check.py"),
         "search" => Some("local_search.py"),
         "review" => Some("review.py"),
@@ -141,7 +141,7 @@ fn status_command(root: &Path, args: &[OsString]) -> Result<(), String> {
         println!("{key}: {}", if present { "present" } else { "missing" });
     }
     println!("ready_to_teach: unverified");
-    println!("cherry_tool_access: unverified");
+    println!("model_execution: AgentScope (via FastAPI, not Rust CLI)");
     println!(
         "note: file presence is not runtime/PREP validation; run preflight and the Python gates"
     );

@@ -19,11 +19,11 @@ TOLERANCE_SECONDS = 2.0  # scaffold writes sibling files milliseconds apart
 
 CONTROL_GLOBS = (
     "AGENTS.md",
-    ".pi/skills/*/SKILL.md",
-    ".pi/skills/*/references/*.md",
-    ".pi/skills/*/profiles/TUTOR_*.md",
-    ".pi/skills/*/moe/TUTOR_*.md",
-    ".pi/prompts/*.md",
+    "education/skills/*/SKILL.md",
+    "education/skills/*/references/*.md",
+    "education/skills/*/profiles/TUTOR_*.md",
+    "education/skills/*/moe/TUTOR_*.md",
+    "education/prompts/*.md",
     "SYSTEM/SPEC/*.md",
 )
 

@@ -13,8 +13,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DOC = ROOT / "docs/PROMPTS.md"
-PROMPTS = ROOT / ".pi/prompts"
-SKILLS = ROOT / ".pi/skills"
+PROMPTS = ROOT / "education/prompts"
+SKILLS = ROOT / "education/skills"
 
 NORMALIZE = lambda s: re.sub(r"\s+", " ", s).strip()  # noqa: E731
 

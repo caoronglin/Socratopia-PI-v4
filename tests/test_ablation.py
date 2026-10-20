@@ -63,7 +63,7 @@ def clone() -> Path:
 
 def doctor(work: Path) -> subprocess.CompletedProcess:
     return subprocess.run(
-        [sys.executable, str(work / "scripts/pi_arch_doctor.py"), "--root", str(work)],
+        [sys.executable, str(work / "scripts/architecture_doctor.py"), "--root", str(work)],
         cwd=work, text=True, capture_output=True,
     )
 
@@ -98,17 +98,17 @@ class AblationBase(unittest.TestCase):
 
 
 class DoctorGateAblations(AblationBase):
-    """Each guard in scripts/pi_arch_doctor.py, removed one at a time."""
+    """Each guard in scripts/architecture_doctor.py, removed one at a time."""
 
     def test_ablate_active_skill_freeze(self):
-        self.patch("scripts/pi_arch_doctor.py",
+        self.patch("scripts/architecture_doctor.py",
                    "if len(active_skills) != 3:", "if False:")
-        rogue = self.work / ".pi/skills/socratopia-rogue"
+        rogue = self.work / "education/skills/socratopia-rogue"
         rogue.mkdir(parents=True)
         (rogue / "SKILL.md").write_text("---\nname: rogue\ndescription: x\n---\n", encoding="utf-8")
         # Register the rogue skill so the ONLY possible failure is the freeze.
         manifest = json.loads((self.work / "manifest.json").read_text(encoding="utf-8"))
-        manifest["files"] = sorted(set(manifest["files"]) | {".pi/skills/socratopia-rogue/SKILL.md"})
+        manifest["files"] = sorted(set(manifest["files"]) | {"education/skills/socratopia-rogue/SKILL.md"})
         (self.work / "manifest.json").write_text(
             json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
         result = doctor(self.work)
@@ -122,7 +122,7 @@ class DoctorGateAblations(AblationBase):
         self.assertIn("test_fourth_active_skill_still_fails", tests.stdout + tests.stderr)
 
     def test_ablate_canonical_state_check(self):
-        self.patch("scripts/pi_arch_doctor.py",
+        self.patch("scripts/architecture_doctor.py",
                    "    check_canonical_state(root, errors, warnings)",
                    "    pass  # ablated")
         (self.work / f"DATA/{COURSE}/runtime/course_state.json").write_text(
@@ -131,7 +131,7 @@ class DoctorGateAblations(AblationBase):
                          "expected doctor to pass silently once canonical check was ablated")
 
     def test_ablate_manifest_check(self):
-        self.patch("scripts/pi_arch_doctor.py",
+        self.patch("scripts/architecture_doctor.py",
                    "    check_manifest(root, errors, warnings)", "    pass  # ablated")
         (self.work / "UNLISTED.md").write_text("drift", encoding="utf-8")
         self.assertEqual(doctor(self.work).returncode, 0,
@@ -201,7 +201,7 @@ class OntologyMasteryAblation(AblationBase):
 class QuarantineAblation(AblationBase):
     def test_ablate_quarantine_requirement(self):
         # Both branches must go: the existence check AND the else that parses it.
-        self.patch("scripts/pi_arch_doctor.py",
+        self.patch("scripts/architecture_doctor.py",
                    '    if not quarantine.exists():\n        fail("missing quarantine manifest: quarantine/sources.json", errors)\n    else:\n        try:\n            json.loads(quarantine.read_text(encoding="utf-8"))\n        except Exception as exc:\n            fail(f"invalid json quarantine/sources.json: {exc}", errors)',
                    "    pass  # ablated")
         (self.work / "quarantine/sources.json").unlink()
@@ -344,7 +344,7 @@ class IngestAblation(AblationBase):
 
 class ReferenceBoundaryAblation(AblationBase):
     def test_ablate_tutor_evidence_floor(self):
-        path = self.work / ".pi/skills/socratopia-tutor/profiles/TUTOR_D.md"
+        path = self.work / "education/skills/socratopia-tutor/profiles/TUTOR_D.md"
         text = path.read_text(encoding="utf-8")
         text = text.replace("**元气不等于降低门槛。**", "（护栏已删除）")
         path.write_text(text, encoding="utf-8")
@@ -353,7 +353,7 @@ class ReferenceBoundaryAblation(AblationBase):
                             "ABLATION SILENT: deleting the energetic-persona guardrail broke nothing")
 
     def test_ablate_skillhub_rejection_domain(self):
-        path = self.work / ".pi/skills/socratopia-learning/references/quiz-generation.md"
+        path = self.work / "education/skills/socratopia-learning/references/quiz-generation.md"
         text = path.read_text(encoding="utf-8")
         text = text.replace("- ❌ 掌握度图谱 / 掌握度打分", "- 可以使用掌握度图谱")
         path.write_text(text, encoding="utf-8")
@@ -383,14 +383,14 @@ class ReviewGateAblations(AblationBase):
 
     def test_ablate_backstage_tier_marking(self):
         """If a member stops declaring its tier, the boundary check must fire."""
-        self.patch(".pi/skills/socratopia-tutor/moe/TUTOR_B.md",
+        self.patch("education/skills/socratopia-tutor/moe/TUTOR_B.md",
                    "（内部教研组 · 镜头：边界与反例）", "（镜头：边界与反例）")
         result = run_tests(self.work, "test_tutor_profiles.py")
         self.assertDetected(result, "test_members_declare_their_tier_in_the_title")
 
     def test_ablate_escalation_counter(self):
         """The depth counter is prose; dropping it must be noticed, not silently lost."""
-        self.patch(".pi/skills/socratopia-learning/references/classroom.md",
+        self.patch("education/skills/socratopia-learning/references/classroom.md",
                    "数连续无进展轮数", "看情况升级")
         result = run_tests(self.work, "test_prompt_catalog.py")
         self.assertDetected(result, "test_review_gates_are_explicit")

@@ -12,9 +12,9 @@ from typing import Any
 DEFAULT_ROOT = Path(__file__).resolve().parents[1]
 REQUIRED = [
     "AGENTS.md",
-    ".pi/skills/socratopia-learning/SKILL.md",
-    ".pi/skills/socratopia-tutor/SKILL.md",
-    ".pi/skills/socratopia-engineering/SKILL.md",
+    "education/skills/socratopia-learning/SKILL.md",
+    "education/skills/socratopia-tutor/SKILL.md",
+    "education/skills/socratopia-engineering/SKILL.md",
     "SYSTEM/SPEC/ARCHITECTURE.md",
     "SYSTEM/SPEC/RUNTIME_CONTRACT.md",
     "SYSTEM/SPEC/TRUST_EFFECTS.md",
@@ -41,7 +41,7 @@ REQUIRED = [
 
 CONTROL_FILES = [
     "AGENTS.md",
-    ".pi/skills/*/SKILL.md",
+    "education/skills/*/SKILL.md",
     "SYSTEM/SPEC/*.md",
 ]
 
@@ -200,7 +200,7 @@ def main(argv: list[str] | None = None) -> int:
             fail(f"missing required file: {rel}", errors)
 
     # Phase 0 freeze: exactly three active skills (approval §1.2 / §22).
-    active_skills = sorted(p.parent.name for p in (root / ".pi/skills").glob("*/SKILL.md"))
+    active_skills = sorted(p.parent.name for p in (root / "education/skills").glob("*/SKILL.md"))
     if len(active_skills) != 3:
         fail(f"active skill count must be 3, found {len(active_skills)}: {active_skills}", errors)
 
@@ -214,16 +214,16 @@ def main(argv: list[str] | None = None) -> int:
         except Exception as exc:
             fail(f"invalid json quarantine/sources.json: {exc}", errors)
 
-    # Root duplicates raise always-loaded token cost / ambiguity in Pi.
+    # Root duplicate prompts create conflicts and context waste.
     for rel in ["CLAUDE.md", "AGENT_SYSTEM_PROMPT.md"]:
         if (root / rel).exists():
             warnings.append(f"avoid active duplicate/override: {rel}")
-    # ADR-002: replacing PI's system prompt is forbidden, not merely discouraged (plan §13 ERROR).
-    if (root / ".pi/SYSTEM.md").exists():
-        fail("forbidden override: .pi/SYSTEM.md (ADR-002)", errors)
+    # ADR-002: replacing the AgentScope system prompt is forbidden, not merely discouraged (plan §13 ERROR).
+    if (root / "education/SYSTEM.md").exists():
+        fail("forbidden override: education/SYSTEM.md (ADR-002)", errors)
 
     # Validate skill frontmatter.
-    for p in (root / ".pi/skills").glob("*/SKILL.md"):
+    for p in (root / "education/skills").glob("*/SKILL.md"):
         text = p.read_text(encoding="utf-8")
         if not text.startswith("---\n") or "\nname:" not in text or "\ndescription:" not in text:
             fail(f"invalid skill frontmatter: {p.relative_to(root)}", errors)
@@ -302,7 +302,7 @@ def main(argv: list[str] | None = None) -> int:
                 if re.search(rule, text, flags=re.I):
                     fail(f"{p.relative_to(root)} contains {label}", errors)
 
-    print("Socratopia PI architecture doctor")
+    print("Socratopia AgentScope architecture doctor")
     if args.budget:
         print(render_report(root, args.window))
     for w in warnings:

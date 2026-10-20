@@ -31,36 +31,36 @@ DEFAULT_WINDOW = 128_000
 
 SCENARIOS: dict[str, tuple[str, ...]] = {
     "classroom": (
-        ".pi/skills/socratopia-learning/SKILL.md",
-        ".pi/skills/socratopia-learning/references/classroom.md",
-        ".pi/skills/socratopia-learning/references/memory.md",
-        ".pi/skills/socratopia-tutor/SKILL.md",
-        ".pi/skills/socratopia-tutor/references/persona.md",
+        "education/skills/socratopia-learning/SKILL.md",
+        "education/skills/socratopia-learning/references/classroom.md",
+        "education/skills/socratopia-learning/references/memory.md",
+        "education/skills/socratopia-tutor/SKILL.md",
+        "education/skills/socratopia-tutor/references/persona.md",
         "profile:max",
     ),
     "assessment": (
-        ".pi/skills/socratopia-learning/SKILL.md",
-        ".pi/skills/socratopia-learning/references/assessment.md",
-        ".pi/skills/socratopia-learning/references/quiz-generation.md",
+        "education/skills/socratopia-learning/SKILL.md",
+        "education/skills/socratopia-learning/references/assessment.md",
+        "education/skills/socratopia-learning/references/quiz-generation.md",
     ),
     "prep": (
-        ".pi/skills/socratopia-learning/SKILL.md",
-        ".pi/skills/socratopia-learning/references/lesson-planning.md",
-        ".pi/skills/socratopia-learning/references/content.md",
+        "education/skills/socratopia-learning/SKILL.md",
+        "education/skills/socratopia-learning/references/lesson-planning.md",
+        "education/skills/socratopia-learning/references/content.md",
     ),
     "tutor-style": (
-        ".pi/skills/socratopia-tutor/SKILL.md",
-        ".pi/skills/socratopia-tutor/references/persona.md",
-        ".pi/skills/socratopia-tutor/references/style.md",
+        "education/skills/socratopia-tutor/SKILL.md",
+        "education/skills/socratopia-tutor/references/persona.md",
+        "education/skills/socratopia-tutor/references/style.md",
         "profile:max",
     ),
     "onboarding": (
-        ".pi/skills/socratopia-learning/SKILL.md",
-        ".pi/skills/socratopia-learning/references/onboarding.md",
+        "education/skills/socratopia-learning/SKILL.md",
+        "education/skills/socratopia-learning/references/onboarding.md",
     ),
     "study-group": (
-        ".pi/skills/socratopia-tutor/SKILL.md",
-        ".pi/skills/socratopia-tutor/references/study-group.md",
+        "education/skills/socratopia-tutor/SKILL.md",
+        "education/skills/socratopia-tutor/references/study-group.md",
         "profile:max",
     ),
 }
@@ -80,7 +80,7 @@ def file_tokens(path: Path) -> int:
 def routing_tokens(root: Path) -> int:
     """Kernel plus the frontmatter descriptions every skill pays at startup."""
     total = file_tokens(root / "AGENTS.md") if (root / "AGENTS.md").exists() else 0
-    for skill in sorted((root / ".pi/skills").glob("*/SKILL.md")):
+    for skill in sorted((root / "education/skills").glob("*/SKILL.md")):
         match = _FRONTMATTER_DESC.search(skill.read_text(encoding="utf-8", errors="replace"))
         total += estimate_tokens(match.group(1)) if match else 0
     return total
@@ -104,10 +104,10 @@ def soft_threshold_warnings(root: Path) -> list[str]:
     """One WARN per control file whose estimated tokens exceed its soft cap."""
     candidates: Iterable[Path] = [
         root / "AGENTS.md",
-        *sorted(root.glob(".pi/skills/*/SKILL.md")),
-        *sorted(root.glob(".pi/skills/*/references/*.md")),
-        *sorted(root.glob(".pi/skills/*/profiles/TUTOR_*.md")),
-        *sorted(root.glob(".pi/skills/*/moe/TUTOR_*.md")),
+        *sorted(root.glob("education/skills/*/SKILL.md")),
+        *sorted(root.glob("education/skills/*/references/*.md")),
+        *sorted(root.glob("education/skills/*/profiles/TUTOR_*.md")),
+        *sorted(root.glob("education/skills/*/moe/TUTOR_*.md")),
     ]
     warnings: list[str] = []
     for path in candidates:
@@ -126,7 +126,7 @@ def soft_threshold_warnings(root: Path) -> list[str]:
 
 def scenario_costs(root: Path) -> dict[str, int]:
     """Estimated on-demand reference tokens per common task (excludes kernel)."""
-    profiles = sorted(root.glob(".pi/skills/socratopia-tutor/profiles/TUTOR_*.md"))
+    profiles = sorted(root.glob("education/skills/socratopia-tutor/profiles/TUTOR_*.md"))
     largest = max((file_tokens(p) for p in profiles), default=0)
     costs: dict[str, int] = {}
     for name, parts in SCENARIOS.items():

@@ -1,26 +1,17 @@
-# Architecture Contract
+# Socratopia AgentScope Architecture Contract
 
-## 分层
+## Layers
+1. Contract: `AGENTS.md` and `SYSTEM/SPEC/` describe immutable safety and learning truth boundaries.
+2. Pedagogy: `education/skills/` and `education/prompts/` hold reusable, framework-agnostic teaching reference material.
+3. Model runtime: `platform_api/agentscope_runtime.py` creates bounded, course-scoped AgentScope calls; tutor roles are explicit.
+4. Server: `platform_api/app.py` handles authentication, state gates, evidence, transactions, lessons and learning records.
+5. State: `DATA/<course>/` and `TEXTBOOK/<course>/` are the authority. Models cannot mark mastery or completion.
+6. Client: React / Ant Design Web shows server truth, never submits provider secrets.
+7. CLI: `scripts/` and optional Rust CLI execute deterministic local routines, not an alternative model runtime.
 
-1. **Kernel** — `AGENTS.md`：永远成立的最小规则。
-2. **Workflow** — `.pi/skills/`：按意图加载的流程。
-3. **Contract** — `SYSTEM/SPEC/`：数据/状态/安全事实源。
-4. **State** — `DATA/<course>/`：课堂事实、证据与 runtime。
-5. **Content** — `TEXTBOOK/<course>/`：主课本、来源、PREP。
-6. **Execution** — `scripts/`：确定性检查/迁移/生成。
-7. **Presentation** — tutor profile/social：只控制可见表达。
-
-## 设计约束
-
-- 同一规则只有一个权威文件；其他位置用链接/文件名引用，不复制完整规则。
-- 宿主特定规则只放宿主层；SPEC 不出现 Claude/Cherry/PI 专属工具细节。
-- 课堂事实与机器状态分离；PREP 与完成事实分离；social 与 handoff 分离。
-- 功能缺失时允许降级，但不得伪造成功。
-
-## PI 适配
-
-- `AGENTS.md` 为项目常驻上下文。
-- `.pi/skills/` 利用 progressive disclosure。
-- `.pi/prompts/` 保存显式重复工作流。
-- 不默认提供 `.pi/SYSTEM.md`。
-- Extensions/subagents 可增强，但不进入正确性前提。
+## Invariants
+- One online agent SDK (AgentScope); no parallel model tools, hidden model loop or external sidecar.
+- A course must not read another course's user data.
+- PREP readiness, verified progress and elapsed lesson time are server authority.
+- References are on-demand; do not put entire textbooks or tutor profiles in always-on context.
+- No claim of real-model scientific correctness without independent evidence.

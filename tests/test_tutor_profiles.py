@@ -16,7 +16,7 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-PROFILES = ROOT / ".pi/skills/socratopia-tutor/profiles"
+PROFILES = ROOT / "education/skills/socratopia-tutor/profiles"
 
 REQUIRED_SECTIONS = ("教学角色", "声音", "追问方式", "典型动作", "强项", "盲区护栏", "承接偏好")
 

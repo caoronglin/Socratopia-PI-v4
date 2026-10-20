@@ -22,7 +22,7 @@ from platform_api import exercises, books, chat_history, prep_editor, study_plan
 from scripts.lib import chapter_prep
 from scripts.lib.prep import prep_status, check_prep, prep_path
 
-api = FastAPI(title="Socratopia API", version="5.0.0-alpha.7", docs_url=None, redoc_url=None)
+api = FastAPI(title="Socratopia API", version="5.0.0-alpha.8", docs_url=None, redoc_url=None)
 
 
 def root_dir() -> Path:
@@ -72,7 +72,7 @@ class ChatRequest(BaseModel):
 
 
 class AgentFeatureRequest(BaseModel):
-    feature: Literal["memory", "group"]
+    feature: Literal["memory", "group", "graph"]
     enabled: bool
 
 
@@ -178,8 +178,9 @@ def health() -> dict:
 @api.get("/api/runtime")
 async def runtime_information(response: Response, _: Authenticated) -> dict:
     response.headers["Cache-Control"] = "no-store"
-    return {**agent_runtime_status(), "gateway_online": False,
-            "tutors": agent_runtime_status(), "course_agent_isolation": True}
+    state = agent_runtime_status()
+    return {**state, "tutors": state, "course_agent_isolation": True,
+            "model_credentials_verified": False}
 
 
 @api.get("/api/courses")

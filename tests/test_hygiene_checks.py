@@ -23,7 +23,7 @@ SENTENCE = "所有导师共用的卡点处理规则必须只在一个文件里�
 class DuplicateRuleTests(unittest.TestCase):
     def setUp(self):
         self.root = Path(tempfile.mkdtemp(prefix="socrat-dup-"))
-        (self.root / ".pi/skills/a/references").mkdir(parents=True)
+        (self.root / "education/skills/a/references").mkdir(parents=True)
 
     def tearDown(self):
         shutil.rmtree(self.root, ignore_errors=True)
@@ -35,26 +35,26 @@ class DuplicateRuleTests(unittest.TestCase):
         self.assertEqual(duplicates.duplicate_rule_warnings(ROOT), [])
 
     def test_verbatim_sentence_in_two_files_warns(self):
-        self.put(".pi/skills/a/references/x.md", f"# X\n\n- {SENTENCE}。\n")
-        self.put(".pi/skills/a/references/y.md", f"# Y\n\n{SENTENCE}；其他。\n")
+        self.put("education/skills/a/references/x.md", f"# X\n\n- {SENTENCE}。\n")
+        self.put("education/skills/a/references/y.md", f"# Y\n\n{SENTENCE}；其他。\n")
         warnings = duplicates.duplicate_rule_warnings(self.root)
         self.assertEqual(len(warnings), 1, warnings)
         self.assertIn("x.md", warnings[0])
         self.assertIn("y.md", warnings[0])
 
     def test_same_sentence_twice_in_one_file_is_fine(self):
-        self.put(".pi/skills/a/references/x.md", f"{SENTENCE}。\n{SENTENCE}。\n")
+        self.put("education/skills/a/references/x.md", f"{SENTENCE}。\n{SENTENCE}。\n")
         self.assertEqual(duplicates.duplicate_rule_warnings(self.root), [])
 
     def test_short_generic_sentences_ignored(self):
-        self.put(".pi/skills/a/references/x.md", "先读再改。\n")
-        self.put(".pi/skills/a/references/y.md", "先读再改。\n")
+        self.put("education/skills/a/references/x.md", "先读再改。\n")
+        self.put("education/skills/a/references/y.md", "先读再改。\n")
         self.assertEqual(duplicates.duplicate_rule_warnings(self.root), [])
 
     def test_code_fences_tables_and_frontmatter_ignored(self):
         body = f"---\ndescription: {SENTENCE}\n---\n\n```\n{SENTENCE}\n```\n| {SENTENCE} | x |\n"
-        self.put(".pi/skills/a/references/x.md", body)
-        self.put(".pi/skills/a/references/y.md", body)
+        self.put("education/skills/a/references/x.md", body)
+        self.put("education/skills/a/references/y.md", body)
         self.assertEqual(duplicates.duplicate_rule_warnings(self.root), [])
 
 

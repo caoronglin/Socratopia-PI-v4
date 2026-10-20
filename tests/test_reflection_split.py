@@ -4,8 +4,8 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-TUTOR = ROOT / ".pi/skills/socratopia-tutor/references"
-LEARNING = ROOT / ".pi/skills/socratopia-learning/references"
+TUTOR = ROOT / "education/skills/socratopia-tutor/references"
+LEARNING = ROOT / "education/skills/socratopia-learning/references"
 
 
 class ReflectionSplitTests(unittest.TestCase):

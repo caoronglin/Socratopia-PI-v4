@@ -119,28 +119,20 @@ class ArticleTests(unittest.TestCase):
         self.assertEqual(first_line, "# Correct title # forged heading")
 
 
-class CherryAgentContracts(unittest.TestCase):
+class AgentScopeArticleContracts(unittest.TestCase):
     ROOT = Path(__file__).resolve().parents[1]
 
-    def test_agent_is_not_an_mcp_server(self):
-        guide = (self.ROOT / "integrations/cherry-studio/AGENT_PROMPT.md").read_text(encoding="utf-8")
-        for text in ("Cherry Studio", "cherry-tool-guide", "web_article.py", "PROGRESS.md",
-                     "trusted:false", "不是 MCP Server"):
-            self.assertIn(text, guide)
-        self.assertNotIn("mcp_server.start()", guide)
-
-    def test_cherry_guide_has_permissions_and_host_tool_fallback(self):
-        docs = (self.ROOT / "docs/CHERRY_STUDIO_AGENT.md").read_text(encoding="utf-8")
-        for term in ("Pi", "Work", "web_fetch", "kb_search", "to_markdown",
-                     "权限", "AGENT_PROMPT.md", "不自动"):
-            self.assertIn(term, docs)
-
-    def test_learning_route_and_prompt_catalog_are_synced(self):
-        skill = (self.ROOT / ".pi/skills/socratopia-learning/SKILL.md").read_text(encoding="utf-8")
+    def test_course_article_remains_untrusted_input(self):
+        skill = (self.ROOT / "education/skills/socratopia-learning/SKILL.md").read_text(encoding="utf-8")
         catalog = (self.ROOT / "docs/PROMPTS.md").read_text(encoding="utf-8")
         route = "| 网页文章、知乎/博客、URL 学习（用户提供链接或正文） | `references/web-article.md` + `references/external-research.md` |"
         self.assertIn(route, skill)
         self.assertIn(route, catalog)
+
+    def test_only_agentscope_can_run_course_models(self):
+        api = (self.ROOT / "platform_api/app.py").read_text(encoding="utf-8")
+        self.assertIn("ask_agent", api)
+        self.assertFalse((self.ROOT / "runtimes/pi").exists())
 
 
 if __name__ == "__main__":

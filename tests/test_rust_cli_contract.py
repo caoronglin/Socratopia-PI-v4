@@ -15,7 +15,7 @@ class RustLauncherContracts(unittest.TestCase):
     def setUpClass(cls):
         cls.rust = (ROOT / "rust/src/main.rs").read_text(encoding="utf-8")
         cls.cargo = (ROOT / "rust/Cargo.toml").read_text(encoding="utf-8")
-        cls.prompt = (ROOT / "integrations/cherry-studio/AGENT_PROMPT.md").read_text(encoding="utf-8")
+        cls.prompt = (ROOT / "AGENTS.md").read_text(encoding="utf-8")
         cls.doc = (ROOT / "docs/RUST_CLI.md").read_text(encoding="utf-8")
 
     def test_zero_crate_deps_and_single_binary(self):
@@ -63,14 +63,11 @@ class RustLauncherContracts(unittest.TestCase):
                      "docs/RUST_CLI.md", "tests/test_rust_cli_contract.py"):
             self.assertIn(path, files)
 
-    def test_prompt_is_more_concise_and_keeps_non_bypass(self):
-        self.assertLess(len(self.prompt), 1200)
-        for phrase in ("按任务加载", "AGENTS.md", "不是 MCP Server", "当前一位",
-                       "socratopia-tutor", "active_tutor", "cherry-tool-guide",
-                       "trusted:false", "45 分钟", "verified", "等待回答",
-                       "SYSTEM/SPEC/AGENT_LOOP.md"):
-            self.assertIn(phrase, self.prompt)
-        self.assertIn("不凭空声称 Rust 已安装", self.prompt)
+    def test_cli_is_deterministic_not_a_second_model_loop(self):
+        self.assertIn("AgentScope", self.prompt)
+        self.assertIn("课程", self.prompt)
+        self.assertIn("FastAPI", self.prompt)
+        self.assertNotIn("createAgentSession", self.rust)
 
     def test_context_budget_for_new_entrypoints(self):
         costs = scenario_costs(ROOT)

@@ -49,7 +49,7 @@ class RepositoryBudgetTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "AGENTS.md").write_text("规" * 3000, encoding="utf-8")
-            skill = root / ".pi/skills/s"
+            skill = root / "education/skills/s"
             (skill / "references").mkdir(parents=True)
             (skill / "SKILL.md").write_text("---\nname: s\ndescription: d\n---\n" + "技" * 1500, encoding="utf-8")
             (skill / "references/r.md").write_text("参" * 1500, encoding="utf-8")

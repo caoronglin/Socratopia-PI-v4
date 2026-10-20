@@ -43,36 +43,12 @@ jobs:
       - name: Compile app and existing scripts
         run: python -m compileall -q platform_api scripts tests
       - name: Run API tests
-        run: python -m pytest -q tests/test_platform_v5.py tests/test_platform_v5_exercises.py tests/test_platform_v5_flashcards.py tests/test_platform_v5_ontology.py tests/test_platform_v5_chat_history.py tests/test_platform_v5_prep_web.py tests/test_platform_v5_prompt_contract.py tests/test_platform_v5_prep_editor.py tests/test_agentscope_runtime.py tests/test_pi_gateway.py tests/test_course_harness.py tests/test_course_tools.py tests/test_snapshot_sync.py
+        run: python -m pytest -q tests/test_platform_v5.py tests/test_platform_v5_exercises.py tests/test_platform_v5_flashcards.py tests/test_platform_v5_ontology.py tests/test_platform_v5_chat_history.py tests/test_platform_v5_prep_web.py tests/test_platform_v5_prompt_contract.py tests/test_platform_v5_prep_editor.py tests/test_agentscope_runtime.py tests/test_course_harness.py tests/test_course_tools.py tests/test_snapshot_sync.py
       - name: Run original smoke
         run: python scripts/check.py --strict
 
-  pi-native:
-    name: Native Pi SDK install and contract
-    runs-on: ubuntu-24.04
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-        with:
-          persist-credentials: false
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
-        with:
-          node-version: '22'
-      - name: Install and verify Pi SDK
-        working-directory: runtimes/pi
-        run: |
-          npm install --omit=dev --no-audit --no-fund
-          npm ls --omit=dev
-          node --check server.mjs
-          npm run check:sdk
-      - name: Ensure Pi owns the native loop
-        run: |
-          grep -q 'session.prompt(prompt)' runtimes/pi/server.mjs
-          grep -q 'SessionManager.inMemory' runtimes/pi/server.mjs
-          grep -q "noTools: 'all'" runtimes/pi/server.mjs
-
   node-web:
-    name: Pi-backed React / Ant Design build
+    name: React / Ant Design build
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:

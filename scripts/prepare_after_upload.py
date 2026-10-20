@@ -44,7 +44,7 @@ def main() -> int:
     stages = (
         ("补讲候选刷新", [sys.executable, "scripts/build_reteach_queue.py", "--course", args.course]),
         ("runtime 迁移与投影", [sys.executable, "scripts/course_runtime.py", "migrate", "--course", args.course]),
-        ("单课健康检查", [sys.executable, "scripts/pi_arch_doctor.py", "--course", args.course]),
+        ("单课健康检查", [sys.executable, "scripts/architecture_doctor.py", "--course", args.course]),
     )
     completed: list[str] = []
     for label, command in stages:

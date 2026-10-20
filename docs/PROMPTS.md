@@ -6,13 +6,13 @@
 | 层 | 位置 | 加载方式 | 何时读 |
 |---|---|---|---|
 | **Kernel** | `AGENTS.md` | 永远常驻 | 每次都成立的不变量 |
-| **Skill** | `.pi/skills/*/SKILL.md` | 名字+描述进系统提示，正文按需 | 任务匹配时读正文 |
-| **Prompt** | `.pi/prompts/*.md` | 用户显式 `/命令` | 重复工作流 |
-| **Reference** | `.pi/skills/*/references/*.md` | 由 Skill 路由指派 | 需要具体规则时 |
+| **Skill** | `education/skills/*/SKILL.md` | 名字+描述进系统提示，正文按需 | 任务匹配时读正文 |
+| **Prompt** | `education/prompts/*.md` | 用户显式 `/命令` | 重复工作流 |
+| **Reference** | `education/skills/*/references/*.md` | 由 Skill 路由指派 | 需要具体规则时 |
 
 **反重复原则**：同一条规则只有一个权威位置，其他地方只写「见 X」。
 
-Pi/Cherry 实际对话的停止、授权与教学场景验收见 [Pi Agent 手动验收矩阵](PI_AGENT_ACCEPTANCE.md)；CI 不等于模型实测。
+Pi/Cherry 实际对话的停止、授权与教学场景验收见 [AgentScope 真实模型验收矩阵](AGENTSCOPE_ACCEPTANCE.md)；CI 不等于模型实测。
 详见 `SYSTEM/SPEC/ARCHITECTURE.md` 的「设计约束」。
 
 ---
@@ -37,7 +37,7 @@ Pi/Cherry 实际对话的停止、授权与教学场景验收见 [Pi Agent 手�
 | 10 | 完成标准 | 只有存在证据才声明完成 |
 
 **新增内容该去哪**：教学细则 → `learning/references/`；数据契约 → `SYSTEM/SPEC/`；
-重复命令 → `.pi/prompts/`。写进 Kernel 一律是错的（doctor 会因体积告警）。
+重复命令 → `education/prompts/`。写进 Kernel 一律是错的（doctor 会因体积告警）。
 
 ---
 
@@ -117,8 +117,8 @@ reference 或 script」，而不是新增 skill。
 > description：用于 Socratopia 的多文件架构优化、迁移、脚本修改、系统化调试、提示词重构、测试与完成前验证。普通课堂问答不要使用。
 
 5 步流程：`Inventory → Plan → Change → Verify → Report`。
-PI 约束：根入口用 `AGENTS.md`；项目 skill 在 `.pi/skills/`；可重复命令优先放 `.pi/prompts/`；
-**默认不创建 `.pi/SYSTEM.md`**；delegation 无扩展时必须可顺序完成。
+PI 约束：根入口用 `AGENTS.md`；项目 skill 在 `education/skills/`；可重复命令优先放 `education/prompts/`；
+**默认不创建 `education/SYSTEM.md`**；delegation 无扩展时必须可顺序完成。
 
 ---
 
@@ -152,7 +152,7 @@ PI 约束：根入口用 `AGENTS.md`；项目 skill 在 `.pi/skills/`；可重�
 ```
 学习小组请求参数：$@。使用 socratopia-tutor，按 `references/study-group.md` 在唯一课程内执行。
 
-用户选 2–3 位可见导师 D/E/F 和主持人。先通过 `python scripts/learning_group.py status --course "课程"` 核对现状；需要时明确配置 `configure`，再以具体主题 `start`。逐位只读当前导师 profile 后，生成一段实际展示给学习者的有依据发言，用 `record` 经 stdin 记录，不伪造其他发言；每轮结束只提出一个问题并等待，用户说继续才运行 `continue`，最多三轮。用户随时可停止；不修改 active_tutor/PROGRESS/正式课堂计时。单一 Pi Agent 模拟多个导师视角，不宣称已经启动多独立模型。
+用户选 2–3 位可见导师 D/E/F 和主持人。先通过 `python scripts/learning_group.py status --course "课程"` 核对现状；需要时明确配置 `configure`，再以具体主题 `start`。逐位只读当前导师 profile 后，生成一段实际展示给学习者的有依据发言，用 `record` 经 stdin 记录，不伪造其他发言；每轮结束只提出一个问题并等待，用户说继续才运行 `continue`，最多三轮。用户随时可停止；不修改 active_tutor/PROGRESS/正式课堂计时。Web 的导师组由 AgentScope 独立模型发言，轮次由 Python 控制；本地文本模板不得伪称已调用模型。
 ```
 
 ### `/start-class [课程/lesson]`
@@ -215,13 +215,13 @@ PI 约束：根入口用 `AGENTS.md`；项目 skill 在 `.pi/skills/`；可重�
 
 使用 socratopia-learning，按 `references/course-binding.md` 确定本次范围，不改变当前课程指针。只读检查项目控制文件及目标课程 runtime、PREP、评估/队列状态，报告 blockers、缺失文件与未检查项。
 
-`python scripts/course_runtime.py validate --course "<课程>"` 可辅助 runtime 校验，但须先确认原始文件存在；缺失时不能把默认投影当作有效状态。默认运行 `python scripts/pi_arch_doctor.py --course "<课程>"`，仅检查目标课程数据与项目控制层。省略 `--course` 会扫描所有课程，仅在用户明确要求全仓检查时运行；doctor PASS 不等于已具备开课条件，仍须报告 readiness/blockers。
+`python scripts/course_runtime.py validate --course "<课程>"` 可辅助 runtime 校验，但须先确认原始文件存在；缺失时不能把默认投影当作有效状态。默认运行 `python scripts/architecture_doctor.py --course "<课程>"`，仅检查目标课程数据与项目控制层。省略 `--course` 会扫描所有课程，仅在用户明确要求全仓检查时运行；doctor PASS 不等于已具备开课条件，仍须报告 readiness/blockers。
 
 不要自动修复、创建文件、重建投影或执行队列；不要写课堂进度。工具不可用或检查失败时如实报告，不宣称健康检查通过。
 ```
 
 要点：只读；**不自动修复**；不写课堂进度。实际检查由
-`python scripts/pi_arch_doctor.py --course "<课程>"` 检查目标课程，runtime 原文件与开课 gate 另行核对；全仓 doctor 仅在显式全仓检查时运行。
+`python scripts/architecture_doctor.py --course "<课程>"` 检查目标课程，runtime 原文件与开课 gate 另行核对；全仓 doctor 仅在显式全仓检查时运行。
 
 ---
 
@@ -265,7 +265,7 @@ PI 约束：根入口用 `AGENTS.md`；项目 skill 在 `.pi/skills/`；可重�
 
 ```bash
 python scripts/check.py --strict          # doctor（frontmatter / skill=3 / 路径 / token 软阈值）+ 全部测试
-python scripts/pi_arch_doctor.py --budget # 上下文 token 预算报告
+python scripts/architecture_doctor.py --budget # 上下文 token 预算报告
 python -m unittest discover -s tests      # test_skillhub_education / test_tutor_profiles
                                        # test_reflection_split 会断言路由与拒绝域
 ```

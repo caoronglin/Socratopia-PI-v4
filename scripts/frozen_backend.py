@@ -14,7 +14,7 @@ from pathlib import Path
 ALLOWED = frozenset({
     "initialize.py", "learning_group.py", "lesson_timer.py",
     "prep.py", "web_article.py", "context_pack.py",
-    "course_runtime.py", "cherry_preflight.py", "local_search.py",
+    "course_runtime.py", "workspace_preflight.py", "local_search.py",
     "review.py", "handoff.py", "task_queue.py", "memory.py",
     "package_release.py",
 })

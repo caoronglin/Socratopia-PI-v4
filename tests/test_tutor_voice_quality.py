@@ -11,7 +11,7 @@ from pathlib import Path
 from scripts.lib.budget import soft_threshold_warnings
 
 ROOT = Path(__file__).resolve().parents[1]
-TUTOR = ROOT / ".pi/skills/socratopia-tutor"
+TUTOR = ROOT / "education/skills/socratopia-tutor"
 PROFILES = TUTOR / "profiles"
 REFERENCES = TUTOR / "references"
 
@@ -27,7 +27,7 @@ class TutorVoiceQualityContracts(unittest.TestCase):
         cls.style = read(REFERENCES / "style.md")
         cls.examples = read(REFERENCES / "voice-examples.md")
         cls.profiles = {code: read(PROFILES / f"TUTOR_{code}.md") for code in "DEF"}
-        cls.cherry = read(ROOT / "integrations/cherry-studio/AGENT_PROMPT.md")
+        cls.runtime = read(ROOT / "platform_api/agentscope_runtime.py")
 
     def test_each_tutor_is_distinct_without_conflicting_fact_rules(self):
         cues = {
@@ -79,9 +79,9 @@ class TutorVoiceQualityContracts(unittest.TestCase):
         self.assertIn("原创", self.examples)
         self.assertIn("不是已通过", self.examples)
 
-    def test_cherry_agent_routes_to_active_single_profile(self):
-        for phrase in ("active_tutor", "socratopia-tutor", "persona.md", "当前一位"):
-            self.assertIn(phrase, self.cherry)
+    def test_agentscope_runtime_has_three_independent_tutor_roles(self):
+        for phrase in ('"D":', '"E":', '"F":', "PERSONAS", "generate_tutor_turn"):
+            self.assertIn(phrase, self.runtime)
         tutor_skill = read(TUTOR / "SKILL.md")
         self.assertIn("voice-examples.md", tutor_skill)
         self.assertIn("只有当前导师", tutor_skill)

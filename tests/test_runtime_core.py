@@ -31,7 +31,7 @@ class PrepareAfterUploadTests(unittest.TestCase):
         self.commands = [
             [sys.executable, "scripts/build_reteach_queue.py", "--course", self.course],
             [sys.executable, "scripts/course_runtime.py", "migrate", "--course", self.course],
-            [sys.executable, "scripts/pi_arch_doctor.py", "--course", self.course],
+            [sys.executable, "scripts/architecture_doctor.py", "--course", self.course],
         ]
 
     def invoke(self, course, side_effect=None):

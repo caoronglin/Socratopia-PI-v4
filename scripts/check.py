@@ -31,7 +31,7 @@ def main(argv: list[str] | None = None) -> int:
 
     failed = False
 
-    doctor = _run("doctor", [sys.executable, "scripts/pi_arch_doctor.py"])
+    doctor = _run("doctor", [sys.executable, "scripts/architecture_doctor.py"])
     if doctor.returncode != 0:
         failed = True
     elif args.strict and "WARN:" in doctor.stdout:

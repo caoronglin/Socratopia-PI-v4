@@ -1,3 +1,7 @@
+# Current runtime note (2026-10-18)
+
+The Rust CLI is a deterministic course-state adapter only; `preflight` calls `scripts/workspace_preflight.py`. It is not a Pi or alternative model runtime. AgentScope is the only live model runtime via the Python FastAPI service.
+
 # Rust CLI · Socratopia
 
 Rust CLI 是**可选的轻量前端**，不是第二套课程引擎。状态写入继续由经过回归测试的 Python 实现负责。无需外部 Rust crates，单二进制仅依赖标准库；正式安装包同时提供冻结的 CPython 后端；初始化、计时、备课等业务命令无需另装 Python，项目脚本仍是唯一业务逻辑源。

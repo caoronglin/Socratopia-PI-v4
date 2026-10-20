@@ -256,7 +256,7 @@ def build_pack(
         if truncated:
             pack.pointers.append(f"{source}（已截断，需要更多时再读该文件）")
 
-    pack.pointers.append("当前导师 compact profile：.pi/skills/socratopia-tutor/profiles/（只读当前一位；内部教研组在 moe/，备课与下课时读）")
+    pack.pointers.append("当前导师 compact profile：education/skills/socratopia-tutor/profiles/（只读当前一位；内部教研组在 moe/，备课与下课时读）")
     pack.pointers.append("教材锚点：按 PREP 指向的 book.md 片段读取；不要加载完整教材")
     return pack
 
