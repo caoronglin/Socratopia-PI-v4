@@ -39,6 +39,7 @@ def save(root: Path, course: str, lesson_id: str,
     if document["sha256"] != expected_sha256:
         raise prep_editor.DraftEditorError("PREP 已更新，请刷新后重试")
     body = document["body"]
+    sections(body)  # reject ambiguous duplicate editable headings before any write
     matches = list(HEADING.finditer(body))
     found: set[str] = set()
     for index in range(len(matches) - 1, -1, -1):
