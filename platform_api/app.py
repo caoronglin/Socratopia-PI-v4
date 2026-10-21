@@ -18,7 +18,7 @@ from platform_api.agentscope_runtime import AgentUnavailable, ask_agent, generat
 from platform_api import course_agents, course_graph, course_lifecycle, course_harness, snapshot_sync
 from platform_api.evidence import EvidenceError, retrieve, is_current
 from platform_api.grounding import GroundingError, check_response, grounded_prompt
-from platform_api import exercises, books, chat_history, prep_editor, study_plan, flashcards, ontology
+from platform_api import exercises, books, chat_history, prep_editor, study_plan, flashcards, ontology, prep_sections
 from scripts.lib import chapter_prep
 from scripts.lib.prep import prep_status, check_prep, prep_path
 
@@ -65,6 +65,11 @@ class ChapterPrepRequest(BaseModel):
 class DraftSaveRequest(BaseModel):
     body: str = Field(min_length=1, max_length=262144)
     expected_sha256: str = Field(min_length=64, max_length=64)
+
+
+class StructuredPrepSave(BaseModel):
+    expected_sha256: str = Field(min_length=64, max_length=64)
+    updates: dict[str, str] = Field(min_length=1, max_length=3)
 
 
 class ChatRequest(BaseModel):
@@ -434,6 +439,18 @@ def course_prep_save_draft(course: str, lesson_id: str, payload: DraftSaveReques
         return prep_editor.save_draft(
             root_dir(), name, lesson_id, payload.body, payload.expected_sha256
         )
+    except (ValueError, OSError) as exc:
+        raise HTTPException(409, str(exc)) from exc
+
+
+@api.put("/api/courses/{course}/prep/{lesson_id}/sections")
+def course_prep_save_sections(course: str, lesson_id: str, payload: StructuredPrepSave,
+                              response: Response, _: Authenticated) -> dict:
+    name = active_course(course)
+    response.headers["Cache-Control"] = "no-store"
+    try:
+        return prep_sections.save(root_dir(), name, lesson_id,
+                                  payload.updates, payload.expected_sha256)
     except (ValueError, OSError) as exc:
         raise HTTPException(409, str(exc)) from exc
 
