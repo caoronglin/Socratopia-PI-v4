@@ -61,6 +61,21 @@ test('desktop onboarding → textbook → live classroom quiz → AntV → mobil
   await expect(page.getByText('教案已保存')).toBeVisible();
   await page.getByRole('button', { name: '重新读取' }).click();
   await expect(draftEditor).toHaveValue(/课堂备注：对比有丝分裂与减数分裂。/);
+
+  // Structured PREP editing must persist through the same CAS-safe API.
+  await page.getByRole('button', { name: '结构化编辑' }).click();
+  const misconceptionField = page.getByRole('textbox', { name: '编辑预期误概念' });
+  await expect(misconceptionField).toBeVisible();
+  const priorMisconceptions = await misconceptionField.inputValue();
+  await misconceptionField.fill(priorMisconceptions + '\n课堂重点：区分同源染色体与姐妹染色单体。');
+  await expect(page.getByText('有未保存更改')).toBeVisible();
+  await page.getByRole('button', { name: '保存结构化字段' }).click();
+  await expect(page.getByText('教案已保存')).toBeVisible();
+  await page.getByRole('button', { name: '重新读取' }).click();
+  await page.getByRole('button', { name: '结构化编辑' }).click();
+  await expect(page.getByRole('textbox', { name: '编辑预期误概念' }))
+    .toHaveValue(/课堂重点：区分同源染色体与姐妹染色单体。/);
+  await expect(page.getByText('有未保存更改')).toHaveCount(0);
   await expect(page.getByText('尚未通过 ready 门禁')).toBeVisible();
   await page.getByRole('button', { name: /将 lesson_001 带入课堂/ }).click();
   await expect(page.getByText('今日高效学习')).toBeVisible();
