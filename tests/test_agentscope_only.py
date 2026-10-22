@@ -30,3 +30,12 @@ def test_agent_scope_version_and_course_isolation():
     assert 'sdk_version": "2.0.10"' in runtime
     assert "if scope in _active:" in runtime
     assert "MAX_IN_FLIGHT = 4" in runtime
+
+
+def test_v5_alpha_release_description_does_not_reintroduce_pi_runtime_claims():
+    workflow = (ROOT / ".github/workflows/web-v5-bundle.yml").read_text(encoding="utf-8")
+    publish = workflow.split("  publish-alpha:", 1)[1]
+    assert "AgentScope-only for classroom and tutor turns" in publish
+    assert "No Pi SDK or bundled Node runtime" in publish
+    assert "Pi native SDK for classroom" not in publish
+    assert "Bundled Node;" not in publish

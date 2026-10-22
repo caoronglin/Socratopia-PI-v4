@@ -1,3 +1,27 @@
+# Socratopia AgentScope-only · 当前执行入口（2026-10-22）
+
+**注意：以下旧版 Pi / 双运行时方案仅作历史存档，不能作为当前实现或新功能开发依据。** 当前权威文档：[AGENTS.md](AGENTS.md)、[AgentScope-only](docs/AGENTSCOPE_ONLY.md)、[验收矩阵](docs/AGENTSCOPE_ACCEPTANCE.md)。
+
+## 当前基线
+
+- 唯一模型执行框架：AgentScope 2.0.10；FastAPI 负责确定性门禁、引用校验、课程隔离与存储；React 19 + Ant Design 6 负责界面。
+- 普通课堂及 D/E/F 导师使用有界 AgentScope 调用，不提供 Pi SDK、Node 模型网关或不受限 Agent loop。
+- PREP 编辑采用 SHA-256 并发检查和原子文件写入；不会授予 ready、有效课时或掌握度。
+- 四平台 Web 独立程序通过 CI 冒烟不代表真实模型教学质量已经验收。
+- release/VERSION 与原 Rust CLI 仍属于历史 v4.3.2，不能作为 v5 Web 正式发布依据。
+
+## 下一阶段优先级
+
+1. P0：结构化 PREP 正向流程、并发冲突、只读限制、桌面和移动端回归。
+2. P0：保证自动 Release 描述与 AgentScope-only 架构一致；v5 Beta 使用独立版本与正确资产。
+3. P1：真实凭据运行普通课堂及两位独立导师，保留脱敏验证证据；失败不写入权威学习记录。
+4. P1：独立升级 TypeScript / Vite / 插件主版本，解决冲突后完整执行浏览器与跨平台验证。
+5. P2：完善知识图谱、闪卡、教材摄入、课程归档与模型路由，不修改权威学习证据。
+
+---
+
+# 历史规划存档：v4 Pi 与早期双运行时（已废弃）
+
 # v5 Pi 原生 + AgentScope 导师协作 · 精简约束（PR #28）
 
 当前唯一职责：**Pi = 普通课堂模型原生 loop；AgentScope = 独立导师发言；Python = 教材/成绩/课程状态最终监督；React = 展示与交互**。拒绝 Python 或 Web 再造工具/自治循环；不允许用模型建议修改 PREP ready、mastery、45 分钟等权威事实。

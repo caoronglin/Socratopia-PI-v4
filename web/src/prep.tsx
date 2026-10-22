@@ -53,7 +53,7 @@ export default function PrepPanel({ course, request, onSelectLesson, onCreated, 
   const [structured, setStructured] = useState(false);
   const [fields, setFields] = useState<Record<string, string>>({});
   const sectionNames = ['教学评一致性', '预期误概念', '教研会决议'];
-  const structuredDirty = document !== null && structured && sectionNames.some(name => fields[name] !== (parseSections(document.body)[name] ?? ''));
+  const structuredDirty = document !== null && structured && sectionNames.some(name => (fields[name] ?? '') !== (parseSections(document.body)[name] ?? ''));
 
   const refresh = useCallback(async () => {
     const base = '/courses/' + encodeURIComponent(course);
