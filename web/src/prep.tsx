@@ -1,3 +1,16 @@
+function parseSections(body: string): Record<string, string> {
+  const headings = [...body.matchAll(/^## ([^\n]+)\n/gm)];
+  const values: Record<string, string> = {};
+  headings.forEach((match, index) => {
+    const name = match[1].trim();
+    if (!['问题链', '预期证据', '教研会决议'].includes(name)) return;
+    const start = (match.index ?? 0) + match[0].length;
+    const end = index + 1 < headings.length ? headings[index + 1].index ?? body.length : body.length;
+    values[name] = body.slice(start, end).replace(/\n+$/, '');
+  });
+  return values;
+}
+
 import { useCallback, useEffect, useState } from 'react';
 import { Alert, Button, Card, Col, Collapse, Empty, Flex, Input, Listy, Modal, Row, Select, Space, Steps, Tag, Typography } from 'antd';
 import type { CourseRequest } from './practice';
@@ -37,6 +50,10 @@ export default function PrepPanel({ course, request, onSelectLesson, onCreated, 
   const [saved, setSaved] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const dirty = document !== null && editedBody !== document.body;
+  const [structured, setStructured] = useState(false);
+  const [fields, setFields] = useState<Record<string, string>>({});
+  const sectionNames = ['问题链', '预期证据', '教研会决议'];
+  const structuredDirty = document !== null && structured && sectionNames.some(name => fields[name] !== (parseSections(document.body)[name] ?? ''));
 
   const refresh = useCallback(async () => {
     const base = '/courses/' + encodeURIComponent(course);
@@ -89,12 +106,12 @@ export default function PrepPanel({ course, request, onSelectLesson, onCreated, 
 
   const openEditor = (lesson: string) => void action(async () => {
     const latest = await request<PrepDocument>(editorPath(lesson));
-    setDocument(latest); setEditedBody(latest.body);
+    setDocument(latest); setEditedBody(latest.body); setFields(parseSections(latest.body)); setStructured(false);
     setSelectedLesson(lesson); setSaved(false); setShowPreview(false);
   });
 
   const confirmOpenEditor = (lesson: string) => {
-    if (!dirty) { openEditor(lesson); return; }
+    if (!dirty && !structuredDirty) { openEditor(lesson); return; }
     modal.confirm({
       title: '放弃尚未保存的修改？',
       content: '本地编辑内容尚未保存。打开另一份教案会丢弃这些修改。',
@@ -115,9 +132,19 @@ export default function PrepPanel({ course, request, onSelectLesson, onCreated, 
     onCreated();
   });
 
+  const saveStructured = () => void action(async () => {
+    if (!document?.editable || !structuredDirty || dirty) return;
+    const original = parseSections(document.body);
+    const updates = Object.fromEntries(sectionNames.filter(name => name in original && fields[name] !== original[name]).map(name => [name, fields[name]]));
+    const path = '/courses/' + encodeURIComponent(course) + '/prep/' + encodeURIComponent(document.lesson_id) + '/sections';
+    const updated = await request<PrepDocument>(path, 'PUT', { updates, expected_sha256: document.sha256 });
+    setDocument(updated); setEditedBody(updated.body); setFields(parseSections(updated.body)); setSaved(true);
+    await refresh(); onCreated();
+  });
+
   const discard = () => {
     if (!document) return;
-    if (!dirty) { openEditor(document.lesson_id); return; }
+    if (!dirty && !structuredDirty) { openEditor(document.lesson_id); return; }
     modal.confirm({
       title: '重新读取会丢弃当前修改',
       content: '如果其他窗口已经保存了内容，重新读取后可继续编辑最新版本。',
@@ -203,7 +230,7 @@ export default function PrepPanel({ course, request, onSelectLesson, onCreated, 
       <Tag color={document.editable ? 'processing' : 'default'}>
         {document.editable ? '仅编辑 draft' : '只读'}
       </Tag>
-      {dirty && <Tag color="warning">有未保存更改</Tag>}
+      {(dirty || structuredDirty) && <Tag color="warning">有未保存更改</Tag>}
     </Space>} extra={<Button onClick={discard} disabled={loading}>重新读取</Button>}>
       <Paragraph type="secondary">
         教材版本、课号、章节范围与 PREP 状态由服务器保留。修改正文不会自动批准备课、解锁课堂或改变掌握度。
@@ -213,12 +240,14 @@ export default function PrepPanel({ course, request, onSelectLesson, onCreated, 
       {saved && !dirty && <Alert type="success" showIcon className="feedback"
         title="教案已保存" description="保存结果已同步到本课程，下面的检查结果已按最新文件重新计算。" />}
       <Space wrap className="prep-editor-actions">
-        <Button type={!showPreview ? 'primary' : 'default'} onClick={() => setShowPreview(false)}>编辑 Markdown</Button>
-        <Button type={showPreview ? 'primary' : 'default'} onClick={() => setShowPreview(true)}>文本预览</Button>
+        <Button type={structured ? 'primary' : 'default'} disabled={dirty} onClick={() => setStructured(true)}>结构化编辑</Button>
+        <Button type={!structured && !showPreview ? 'primary' : 'default'} disabled={structuredDirty} onClick={() => { setStructured(false); setShowPreview(false); }}>编辑 Markdown</Button>
+        <Button type={showPreview ? 'primary' : 'default'} disabled={structuredDirty} onClick={() => { setStructured(false); setShowPreview(true); }}>文本预览</Button>
+        {structured && <Button type="primary" loading={loading} onClick={saveStructured} disabled={!document.editable || !structuredDirty || dirty}>保存结构化字段</Button>}
         <Button type="primary" loading={loading} onClick={save}
-          disabled={!document.editable || !dirty || !editedBody.trim()}>保存草稿</Button>
+          disabled={structured || !document.editable || !dirty || !editedBody.trim()}>保存草稿</Button>
       </Space>
-      {showPreview ? <pre className="prep-markdown prep-editor-preview">{editedBody}</pre> :
+      {structured ? <Space orientation="vertical" style={{ width: '100%' }}>{sectionNames.filter(name => name in parseSections(document.body)).map(name => <div key={name}><Text strong>{name}</Text><Input.TextArea aria-label={'编辑' + name} rows={5} value={fields[name] ?? ''} readOnly={!document.editable} onChange={event => { setFields(previous => ({ ...previous, [name]: event.target.value })); setSaved(false); }} /></div>)}</Space> : showPreview ? <pre className="prep-markdown prep-editor-preview">{editedBody}</pre> :
         <Input.TextArea aria-label="编辑 PREP 教案正文" rows={18} autoSize={false}
           placeholder="在此编辑教案正文" value={editedBody} maxLength={170000}
           readOnly={!document.editable} onChange={event => {
