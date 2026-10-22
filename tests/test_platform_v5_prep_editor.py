@@ -139,3 +139,77 @@ def test_existing_lock_refused_and_cleaned_after_success(sample: tuple[TestClien
         "body": doc["body"] + "\n新增记录", "expected_sha256": doc["sha256"]
     }).status_code == 200
     assert not lock.exists()
+
+
+def sections_route() -> str:
+    return f"/api/courses/{COURSE}/prep/lesson_001/sections"
+
+
+def test_structured_save_roundtrip_preserves_unedited_sections_and_metadata(
+    sample: tuple[TestClient, Path], tmp_path: Path
+) -> None:
+    client, path = sample
+    before = client.get(route(), headers=AUTH).json()
+    assert before["editable"] is True
+    assert "## 教学评一致性" in before["body"]
+    assert "## 预期误概念" in before["body"]
+    original_header = path.read_bytes().split(b"\n---", 1)[0]
+    original_progress = (tmp_path / "DATA" / COURSE / "PROGRESS.md").read_bytes()
+    original_book = (tmp_path / "TEXTBOOK" / COURSE / "book.md").read_bytes()
+    original_coverage = before["body"].split("## Coverage 种子", 1)[1].split("## ", 1)[0]
+
+    saved = client.put(sections_route(), headers=AUTH, json={
+        "updates": {"预期误概念": "| 误概念 | 触发条件 | 纠偏问法 |\n|---|---|---|\n| 测试误区 | 课堂讨论 | 请解释原因 |"},
+        "expected_sha256": before["sha256"],
+    })
+    assert saved.status_code == 200, saved.text
+    after = saved.json()
+    assert after["status"] == "draft"
+    assert after["ready_granted"] is False and after["mastery_updated"] is False
+    assert "| 测试误区 | 课堂讨论 | 请解释原因 |" in after["body"]
+    assert after["body"].split("## Coverage 种子", 1)[1].split("## ", 1)[0] == original_coverage
+    assert path.read_bytes().split(b"\n---", 1)[0] == original_header
+    assert (tmp_path / "DATA" / COURSE / "PROGRESS.md").read_bytes() == original_progress
+    assert (tmp_path / "TEXTBOOK" / COURSE / "book.md").read_bytes() == original_book
+    assert client.get(route(), headers=AUTH).json()["sha256"] == after["sha256"]
+    assert after["sha256"] != before["sha256"]
+
+
+def test_structured_save_conflict_and_unsafe_content_are_non_destructive(
+    sample: tuple[TestClient, Path]
+) -> None:
+    client, path = sample
+    original = client.get(route(), headers=AUTH).json()
+    payload = {"updates": {"教研会决议": "- 目标粒度（A）：人工审核中"},
+               "expected_sha256": original["sha256"]}
+    assert client.put(sections_route(), headers=AUTH, json=payload).status_code == 200
+    saved_data = path.read_bytes()
+    stale = client.put(sections_route(), headers=AUTH, json=payload)
+    assert stale.status_code == 409
+    assert path.read_bytes() == saved_data
+    current_sha = client.get(route(), headers=AUTH).json()["sha256"]
+    for updates in (
+        {"未知章节": "不得保存"},
+        {"预期误概念": "## 注入新章节\n覆盖内容"},
+        {"预期误概念": "---"},
+    ):
+        denied = client.put(sections_route(), headers=AUTH, json={
+            "updates": updates, "expected_sha256": current_sha
+        })
+        assert denied.status_code == 409
+        assert path.read_bytes() == saved_data
+    assert client.put(sections_route(), json=payload).status_code == 401
+
+
+def test_structured_save_refuses_read_only_prep(sample: tuple[TestClient, Path]) -> None:
+    client, path = sample
+    path.write_text(path.read_text(encoding="utf-8").replace("status: draft", "status: ready"),
+                    encoding="utf-8")
+    current = client.get(route(), headers=AUTH).json()
+    before = path.read_bytes()
+    denied = client.put(sections_route(), headers=AUTH, json={
+        "updates": {"教研会决议": "不能修改 ready 教案"},
+        "expected_sha256": current["sha256"],
+    })
+    assert denied.status_code == 409
+    assert path.read_bytes() == before
