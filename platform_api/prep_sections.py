@@ -8,7 +8,7 @@ import re
 from pathlib import Path
 from . import prep_editor
 
-EDITABLE_SECTIONS = ("问题链", "预期证据", "教研会决议")
+EDITABLE_SECTIONS = ("教学评一致性", "预期误概念", "教研会决议")
 HEADING = re.compile(r"(?m)^## ([^\n]+)\n")
 
 

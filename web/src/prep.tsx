@@ -3,7 +3,7 @@ function parseSections(body: string): Record<string, string> {
   const values: Record<string, string> = {};
   headings.forEach((match, index) => {
     const name = match[1].trim();
-    if (!['问题链', '预期证据', '教研会决议'].includes(name)) return;
+    if (!['教学评一致性', '预期误概念', '教研会决议'].includes(name)) return;
     const start = (match.index ?? 0) + match[0].length;
     const end = index + 1 < headings.length ? headings[index + 1].index ?? body.length : body.length;
     values[name] = body.slice(start, end).replace(/\n+$/, '');
@@ -52,7 +52,7 @@ export default function PrepPanel({ course, request, onSelectLesson, onCreated, 
   const dirty = document !== null && editedBody !== document.body;
   const [structured, setStructured] = useState(false);
   const [fields, setFields] = useState<Record<string, string>>({});
-  const sectionNames = ['问题链', '预期证据', '教研会决议'];
+  const sectionNames = ['教学评一致性', '预期误概念', '教研会决议'];
   const structuredDirty = document !== null && structured && sectionNames.some(name => fields[name] !== (parseSections(document.body)[name] ?? ''));
 
   const refresh = useCallback(async () => {
