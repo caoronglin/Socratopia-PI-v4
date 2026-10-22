@@ -161,4 +161,4 @@ jobs:
           gh release create "$TAG" dist/*.zip dist/*.sha256 \
             --target "$GITHUB_SHA" --prerelease \
             --title "Socratopia v5 Web Alpha (native executables)" \
-            --notes "Alpha preview only: Pi native SDK for classroom, AgentScope for tutors, Python for course authority, React UI. Bundled Node; no user data or secrets. Four-platform extracted binary smoke checks passed; live external models not tested."
+            --notes "Alpha preview only: AgentScope-only for classroom and tutor turns, FastAPI for deterministic course authority, React 19 and Ant Design 6 UI. No Pi SDK or bundled Node runtime; no user data or secrets. Four-platform extracted executable smoke checks passed; live external model quality not tested."
